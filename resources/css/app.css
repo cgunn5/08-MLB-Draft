@@ -1,0 +1,39 @@
+/* Bundled through Vite so dev server resolves the file (absolute /fonts/ breaks with HMR) */
+@font-face {
+    font-family: Carbon;
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('../fonts/Carbon-Regular.ttf') format('truetype');
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    [x-cloak] {
+        display: none !important;
+    }
+
+    html {
+        font-family: Carbon, ui-sans-serif, system-ui, sans-serif;
+        font-weight: 400;
+    }
+
+    body {
+        @apply font-sans antialiased uppercase;
+        font-family: Carbon, ui-sans-serif, system-ui, sans-serif;
+        font-weight: 400;
+    }
+}
+
+@layer utilities {
+    .cf-value-high {
+        @apply text-red-600 bg-red-50;
+    }
+
+    .cf-value-low {
+        @apply text-blue-700 bg-blue-50;
+    }
+}

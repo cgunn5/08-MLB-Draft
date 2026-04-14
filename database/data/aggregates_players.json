@@ -1,0 +1,1957 @@
+[
+  {
+    "first_name": "Roch",
+    "last_name": "Cholowsky",
+    "player_pool": "ncaa",
+    "school": "UCLA",
+    "position": "SS",
+    "aggregate_rank": 1,
+    "aggregate_score": 0.9999999999999999,
+    "source_ranks": {
+      "model": 1,
+      "mlb": 1,
+      "espn": 1,
+      "law": 1,
+      "fangraphs": 1,
+      "ba": 1
+    }
+  },
+  {
+    "first_name": "Grady",
+    "last_name": "Emerson",
+    "player_pool": "hs",
+    "school": "Fort Worth Christian (TX)",
+    "position": "SS",
+    "aggregate_rank": 2,
+    "aggregate_score": 2.3,
+    "source_ranks": {
+      "model": 2,
+      "mlb": 2,
+      "espn": 2,
+      "law": 4,
+      "fangraphs": 3,
+      "ba": 2
+    }
+  },
+  {
+    "first_name": "Vahn",
+    "last_name": "Lackey",
+    "player_pool": "ncaa",
+    "school": "Georgia Tech",
+    "position": "C",
+    "aggregate_rank": 3,
+    "aggregate_score": 5.500000000000001,
+    "source_ranks": {
+      "model": 4,
+      "mlb": 9,
+      "espn": 16,
+      "law": 2,
+      "fangraphs": 4,
+      "ba": 4
+    }
+  },
+  {
+    "first_name": "Drew",
+    "last_name": "Burress",
+    "player_pool": "ncaa",
+    "school": "Georgia Tech",
+    "position": "CF",
+    "aggregate_rank": 4,
+    "aggregate_score": 6.4,
+    "source_ranks": {
+      "model": 3,
+      "mlb": 5,
+      "espn": 4,
+      "law": 6,
+      "fangraphs": 23,
+      "ba": 11
+    }
+  },
+  {
+    "first_name": "AJ",
+    "last_name": "Gracia",
+    "player_pool": "ncaa",
+    "school": "Virginia",
+    "position": "OF",
+    "aggregate_rank": 5,
+    "aggregate_score": 6.6,
+    "source_ranks": {
+      "model": 5,
+      "mlb": 10,
+      "espn": 6,
+      "law": 13,
+      "fangraphs": 2,
+      "ba": 10
+    }
+  },
+  {
+    "first_name": "Justin",
+    "last_name": "Lebron",
+    "player_pool": "ncaa",
+    "school": "Alabama",
+    "position": "SS",
+    "aggregate_rank": 6,
+    "aggregate_score": 6.7,
+    "source_ranks": {
+      "model": 9,
+      "mlb": 3,
+      "espn": 3,
+      "law": 7,
+      "fangraphs": 6,
+      "ba": 3
+    }
+  },
+  {
+    "first_name": "Derek",
+    "last_name": "Curiel",
+    "player_pool": "ncaa",
+    "school": "LSU",
+    "position": "CF",
+    "aggregate_rank": 7,
+    "aggregate_score": 11.7,
+    "source_ranks": {
+      "model": 11,
+      "mlb": 6,
+      "espn": 5,
+      "law": 10,
+      "fangraphs": 26,
+      "ba": 15
+    }
+  },
+  {
+    "first_name": "Chris",
+    "last_name": "Hacopian",
+    "player_pool": "ncaa",
+    "school": "Texas A&M",
+    "position": "SS",
+    "aggregate_rank": 8,
+    "aggregate_score": 12.5,
+    "source_ranks": {
+      "model": 10,
+      "mlb": 11,
+      "espn": 11,
+      "law": 14,
+      "fangraphs": 33,
+      "ba": 6
+    }
+  },
+  {
+    "first_name": "Ace",
+    "last_name": "Reese",
+    "player_pool": "ncaa",
+    "school": "Mississippi St",
+    "position": "3B",
+    "aggregate_rank": 9,
+    "aggregate_score": 14.7,
+    "source_ranks": {
+      "model": 16,
+      "mlb": 12,
+      "espn": 23,
+      "law": 22,
+      "fangraphs": 5,
+      "ba": 5
+    }
+  },
+  {
+    "first_name": "Eric",
+    "last_name": "Becker",
+    "player_pool": "ncaa",
+    "school": "Virginia",
+    "position": "SS",
+    "aggregate_rank": 10,
+    "aggregate_score": 15.200000000000001,
+    "source_ranks": {
+      "model": 18,
+      "mlb": 15,
+      "espn": 13,
+      "law": 5,
+      "fangraphs": 10,
+      "ba": 19
+    }
+  },
+  {
+    "first_name": "Sawyer",
+    "last_name": "Strosnider",
+    "player_pool": "ncaa",
+    "school": "TCU",
+    "position": "COF",
+    "aggregate_rank": 11,
+    "aggregate_score": 16.5,
+    "source_ranks": {
+      "model": 22,
+      "mlb": 7,
+      "espn": 15,
+      "law": 12,
+      "fangraphs": 13,
+      "ba": 8
+    }
+  },
+  {
+    "first_name": "Trevor",
+    "last_name": "Condon",
+    "player_pool": "hs",
+    "school": "Etowah (GA)",
+    "position": "CF",
+    "aggregate_rank": 12,
+    "aggregate_score": 17.500000000000004,
+    "source_ranks": {
+      "model": 7,
+      "mlb": 23,
+      "espn": 19,
+      "law": null,
+      "fangraphs": 19,
+      "ba": 26
+    }
+  },
+  {
+    "first_name": "Chase",
+    "last_name": "Brunson",
+    "player_pool": "ncaa",
+    "school": "TCU",
+    "position": "CF",
+    "aggregate_rank": 13,
+    "aggregate_score": 18.400000000000002,
+    "source_ranks": {
+      "model": 12,
+      "mlb": 31,
+      "espn": 29,
+      "law": 19,
+      "fangraphs": 12,
+      "ba": 33
+    }
+  },
+  {
+    "first_name": "Blake",
+    "last_name": "Bowen",
+    "player_pool": "hs",
+    "school": "Jserra (CA)",
+    "position": "CF",
+    "aggregate_rank": 14,
+    "aggregate_score": 19.1,
+    "source_ranks": {
+      "model": 15,
+      "mlb": 24,
+      "espn": 10,
+      "law": 24,
+      "fangraphs": 38,
+      "ba": 20
+    }
+  },
+  {
+    "first_name": "Ryder",
+    "last_name": "Helfrick",
+    "player_pool": "ncaa",
+    "school": "Arkansas",
+    "position": "C",
+    "aggregate_rank": 15,
+    "aggregate_score": 19.500000000000004,
+    "source_ranks": {
+      "model": 14,
+      "mlb": 21,
+      "espn": 22,
+      "law": null,
+      "fangraphs": 16,
+      "ba": 13
+    }
+  },
+  {
+    "first_name": "Will",
+    "last_name": "Brick",
+    "player_pool": "hs",
+    "school": "Christian Brothers (TN)",
+    "position": "C",
+    "aggregate_rank": 16,
+    "aggregate_score": 24.099999999999998,
+    "source_ranks": {
+      "model": 19,
+      "mlb": 22,
+      "espn": 14,
+      "law": null,
+      "fangraphs": 30,
+      "ba": 27
+    }
+  },
+  {
+    "first_name": "Aiden",
+    "last_name": "Ruiz",
+    "player_pool": "hs",
+    "school": "The Stony Brook (NY)",
+    "position": "SS",
+    "aggregate_rank": 17,
+    "aggregate_score": 24.5,
+    "source_ranks": {
+      "model": 24,
+      "mlb": 27,
+      "espn": 37,
+      "law": 18,
+      "fangraphs": 22,
+      "ba": 21
+    }
+  },
+  {
+    "first_name": "Zion",
+    "last_name": "Rose",
+    "player_pool": "ncaa",
+    "school": "Louisville",
+    "position": "CF",
+    "aggregate_rank": 18,
+    "aggregate_score": 26.199999999999996,
+    "source_ranks": {
+      "model": 28,
+      "mlb": 19,
+      "espn": 25,
+      "law": 15,
+      "fangraphs": 34,
+      "ba": 29
+    }
+  },
+  {
+    "first_name": "Jared",
+    "last_name": "Grindlinger",
+    "player_pool": "hs",
+    "school": "Huntington Beach (CA)",
+    "position": "COF",
+    "aggregate_rank": 19,
+    "aggregate_score": 27.300000000000004,
+    "source_ranks": {
+      "model": 13,
+      "mlb": null,
+      "espn": 27,
+      "law": 11,
+      "fangraphs": null,
+      "ba": 24
+    }
+  },
+  {
+    "first_name": "Maddox",
+    "last_name": "Molony",
+    "player_pool": "ncaa",
+    "school": "Oregon",
+    "position": "SS",
+    "aggregate_rank": 20,
+    "aggregate_score": 28.700000000000003,
+    "source_ranks": {
+      "model": 21,
+      "mlb": 34,
+      "espn": 32,
+      "law": null,
+      "fangraphs": 32,
+      "ba": 31
+    }
+  },
+  {
+    "first_name": "Eric",
+    "last_name": "Booth Jr.",
+    "player_pool": "hs",
+    "school": "Oak Grove (MS)",
+    "position": "OF",
+    "aggregate_rank": 21,
+    "aggregate_score": 29.799999999999997,
+    "source_ranks": {
+      "model": 35,
+      "mlb": 20,
+      "espn": 24,
+      "law": 9,
+      "fangraphs": null,
+      "ba": 7
+    }
+  },
+  {
+    "first_name": "Connor",
+    "last_name": "Comeau",
+    "player_pool": "hs",
+    "school": "Anderson (TX)",
+    "position": "SS",
+    "aggregate_rank": 22,
+    "aggregate_score": 29.8,
+    "source_ranks": {
+      "model": 20,
+      "mlb": 43,
+      "espn": 26,
+      "law": null,
+      "fangraphs": 29,
+      "ba": 47
+    }
+  },
+  {
+    "first_name": "Daniel",
+    "last_name": "Cuvet",
+    "player_pool": "ncaa",
+    "school": "Miami",
+    "position": "3B",
+    "aggregate_rank": 23,
+    "aggregate_score": 31.300000000000004,
+    "source_ranks": {
+      "model": 8,
+      "mlb": 44,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 49
+    }
+  },
+  {
+    "first_name": "Caden",
+    "last_name": "Sorrell",
+    "player_pool": "ncaa",
+    "school": "Texas A&M",
+    "position": "OF",
+    "aggregate_rank": 24,
+    "aggregate_score": 32.3,
+    "source_ranks": {
+      "model": 49,
+      "mlb": 14,
+      "espn": 18,
+      "law": 16,
+      "fangraphs": 14,
+      "ba": 16
+    }
+  },
+  {
+    "first_name": "Tyler",
+    "last_name": "Bell",
+    "player_pool": "ncaa",
+    "school": "Kentucky",
+    "position": "SS",
+    "aggregate_rank": 25,
+    "aggregate_score": 33.300000000000004,
+    "source_ranks": {
+      "model": 53,
+      "mlb": 16,
+      "espn": 20,
+      "law": 3,
+      "fangraphs": 17,
+      "ba": 12
+    }
+  },
+  {
+    "first_name": "Jake",
+    "last_name": "Brown",
+    "player_pool": "ncaa",
+    "school": "LSU",
+    "position": "COF",
+    "aggregate_rank": 26,
+    "aggregate_score": 34.6,
+    "source_ranks": {
+      "model": 27,
+      "mlb": 37,
+      "espn": 30,
+      "law": null,
+      "fangraphs": null,
+      "ba": 28
+    }
+  },
+  {
+    "first_name": "Beau",
+    "last_name": "Peterson",
+    "player_pool": "hs",
+    "school": "Mill Valley (KS)",
+    "position": "3B",
+    "aggregate_rank": 27,
+    "aggregate_score": 36.099999999999994,
+    "source_ranks": {
+      "model": 29,
+      "mlb": 29,
+      "espn": null,
+      "law": null,
+      "fangraphs": 20,
+      "ba": 50
+    }
+  },
+  {
+    "first_name": "Aiden",
+    "last_name": "Robbins",
+    "player_pool": "ncaa",
+    "school": "Texas",
+    "position": "CF",
+    "aggregate_rank": 28,
+    "aggregate_score": 36.60000000000001,
+    "source_ranks": {
+      "model": 23,
+      "mlb": null,
+      "espn": 35,
+      "law": null,
+      "fangraphs": null,
+      "ba": 17
+    }
+  },
+  {
+    "first_name": "Logan",
+    "last_name": "Hughes",
+    "player_pool": "ncaa",
+    "school": "Texas Tech",
+    "position": "OF",
+    "aggregate_rank": 29,
+    "aggregate_score": 37.7,
+    "source_ranks": {
+      "model": 25,
+      "mlb": 38,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 34
+    }
+  },
+  {
+    "first_name": "Martin",
+    "last_name": "Shelar",
+    "player_pool": "hs",
+    "school": "Marist School (GA)",
+    "position": "CF",
+    "aggregate_rank": 30,
+    "aggregate_score": 38.00000000000001,
+    "source_ranks": {
+      "model": 6,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Chris",
+    "last_name": "Rembert",
+    "player_pool": "ncaa",
+    "school": "Auburn",
+    "position": "2B",
+    "aggregate_rank": 31,
+    "aggregate_score": 38.400000000000006,
+    "source_ranks": {
+      "model": 56,
+      "mlb": 17,
+      "espn": 21,
+      "law": 17,
+      "fangraphs": 27,
+      "ba": 22
+    }
+  },
+  {
+    "first_name": "Gavin",
+    "last_name": "Grahovac",
+    "player_pool": "ncaa",
+    "school": "Texas A&M",
+    "position": "3B",
+    "aggregate_rank": 32,
+    "aggregate_score": 40.30000000000001,
+    "source_ranks": {
+      "model": 46,
+      "mlb": 18,
+      "espn": 34,
+      "law": 21,
+      "fangraphs": 37,
+      "ba": 63
+    }
+  },
+  {
+    "first_name": "Jarren",
+    "last_name": "Advincula",
+    "player_pool": "ncaa",
+    "school": "Georgia Tech",
+    "position": "2B",
+    "aggregate_rank": 33,
+    "aggregate_score": 40.6,
+    "source_ranks": {
+      "model": 42,
+      "mlb": 26,
+      "espn": 36,
+      "law": null,
+      "fangraphs": 24,
+      "ba": 57
+    }
+  },
+  {
+    "first_name": "Keon",
+    "last_name": "Johnson",
+    "player_pool": "hs",
+    "school": "First Presbyterian (GA)",
+    "position": "SS",
+    "aggregate_rank": 34,
+    "aggregate_score": 42.1,
+    "source_ranks": {
+      "model": 37,
+      "mlb": 46,
+      "espn": 29,
+      "law": null,
+      "fangraphs": 21,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Rocco",
+    "last_name": "Maniscalco",
+    "player_pool": "hs",
+    "school": "Oxford (AL)",
+    "position": "SS",
+    "aggregate_rank": 35,
+    "aggregate_score": 42.699999999999996,
+    "source_ranks": {
+      "model": 67,
+      "mlb": 13,
+      "espn": 9,
+      "law": 25,
+      "fangraphs": 15,
+      "ba": 30
+    }
+  },
+  {
+    "first_name": "Lucas",
+    "last_name": "Moore",
+    "player_pool": "ncaa",
+    "school": "Louisville",
+    "position": "CF",
+    "aggregate_rank": 36,
+    "aggregate_score": 43.099999999999994,
+    "source_ranks": {
+      "model": 32,
+      "mlb": 48,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 43
+    }
+  },
+  {
+    "first_name": "Steven",
+    "last_name": "Milam",
+    "player_pool": "ncaa",
+    "school": "LSU",
+    "position": "2B",
+    "aggregate_rank": 37,
+    "aggregate_score": 43.50000000000001,
+    "source_ranks": {
+      "model": 17,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Roman",
+    "last_name": "Martin",
+    "player_pool": "ncaa",
+    "school": "UCLA",
+    "position": "3B",
+    "aggregate_rank": 38,
+    "aggregate_score": 44.0,
+    "source_ranks": {
+      "model": 30,
+      "mlb": null,
+      "espn": null,
+      "law": 20,
+      "fangraphs": null,
+      "ba": 60
+    }
+  },
+  {
+    "first_name": "Will",
+    "last_name": "Gasparino",
+    "player_pool": "ncaa",
+    "school": "UCLA",
+    "position": "CF",
+    "aggregate_rank": 39,
+    "aggregate_score": 44.5,
+    "source_ranks": {
+      "model": 34,
+      "mlb": null,
+      "espn": null,
+      "law": 28,
+      "fangraphs": null,
+      "ba": 37
+    }
+  },
+  {
+    "first_name": "Mulivai",
+    "last_name": "Levu",
+    "player_pool": "ncaa",
+    "school": "UCLA",
+    "position": "1B",
+    "aggregate_rank": 40,
+    "aggregate_score": 45.2,
+    "source_ranks": {
+      "model": 26,
+      "mlb": 55,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Ty",
+    "last_name": "Head",
+    "player_pool": "ncaa",
+    "school": "NC State",
+    "position": "CF",
+    "aggregate_rank": 41,
+    "aggregate_score": 45.699999999999996,
+    "source_ranks": {
+      "model": 31,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 39
+    }
+  },
+  {
+    "first_name": "Malachi",
+    "last_name": "Washington",
+    "player_pool": "hs",
+    "school": "Parkview (GA)",
+    "position": "CF",
+    "aggregate_rank": 42,
+    "aggregate_score": 47.099999999999994,
+    "source_ranks": {
+      "model": 38,
+      "mlb": 49,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 52
+    }
+  },
+  {
+    "first_name": "Gavin",
+    "last_name": "Gallaher",
+    "player_pool": "ncaa",
+    "school": "North Carolina",
+    "position": "3B",
+    "aggregate_rank": 43,
+    "aggregate_score": 48.19999999999999,
+    "source_ranks": {
+      "model": 39,
+      "mlb": 54,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 53
+    }
+  },
+  {
+    "first_name": "Kade",
+    "last_name": "Lewis",
+    "player_pool": "ncaa",
+    "school": "Wake Forrest",
+    "position": "1B",
+    "aggregate_rank": 44,
+    "aggregate_score": 49.400000000000006,
+    "source_ranks": {
+      "model": 36,
+      "mlb": 47,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Carson",
+    "last_name": "Tinney",
+    "player_pool": "ncaa",
+    "school": "Texas",
+    "position": "C",
+    "aggregate_rank": 45,
+    "aggregate_score": 49.79999999999999,
+    "source_ranks": {
+      "model": 51,
+      "mlb": null,
+      "espn": 33,
+      "law": null,
+      "fangraphs": 36,
+      "ba": 38
+    }
+  },
+  {
+    "first_name": "Cole",
+    "last_name": "Prosek",
+    "player_pool": "hs",
+    "school": "Magnolia Heights (MS)",
+    "position": "3B",
+    "aggregate_rank": 46,
+    "aggregate_score": 50.900000000000006,
+    "source_ranks": {
+      "model": 44,
+      "mlb": 57,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 52
+    }
+  },
+  {
+    "first_name": "Carter",
+    "last_name": "Beck",
+    "player_pool": "ncaa",
+    "school": "Indiana State",
+    "position": "CF",
+    "aggregate_rank": 47,
+    "aggregate_score": 51.5,
+    "source_ranks": {
+      "model": 33,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Alex",
+    "last_name": "Hernandez",
+    "player_pool": "ncaa",
+    "school": "Georgia Tech",
+    "position": "COF",
+    "aggregate_rank": 48,
+    "aggregate_score": 51.9,
+    "source_ranks": {
+      "model": 41,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 51
+    }
+  },
+  {
+    "first_name": "Andrew",
+    "last_name": "Williamson",
+    "player_pool": "ncaa",
+    "school": "UCF",
+    "position": "CF",
+    "aggregate_rank": 49,
+    "aggregate_score": 53.699999999999996,
+    "source_ranks": {
+      "model": 54,
+      "mlb": 51,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 36
+    }
+  },
+  {
+    "first_name": "Kevin",
+    "last_name": "Roberts Jr.",
+    "player_pool": "hs",
+    "school": "Jackson Prep (MS)",
+    "position": "CF",
+    "aggregate_rank": 50,
+    "aggregate_score": 53.9,
+    "source_ranks": {
+      "model": 65,
+      "mlb": 50,
+      "espn": 7,
+      "law": null,
+      "fangraphs": null,
+      "ba": 41
+    }
+  },
+  {
+    "first_name": "Landon",
+    "last_name": "Thome",
+    "player_pool": "hs",
+    "school": "Nazareth Academy (IL)",
+    "position": "2B",
+    "aggregate_rank": 51,
+    "aggregate_score": 54.3,
+    "source_ranks": {
+      "model": 62,
+      "mlb": 30,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 23
+    }
+  },
+  {
+    "first_name": "Jacob",
+    "last_name": "Lombard",
+    "player_pool": "hs",
+    "school": "Gulliver Prep (FL)",
+    "position": "SS",
+    "aggregate_rank": 52,
+    "aggregate_score": 54.599999999999994,
+    "source_ranks": {
+      "model": 97,
+      "mlb": 4,
+      "espn": 12,
+      "law": 8,
+      "fangraphs": 28,
+      "ba": 9
+    }
+  },
+  {
+    "first_name": "Peyton",
+    "last_name": "Bonds",
+    "player_pool": "ncaa",
+    "school": "Rutgers",
+    "position": "CF",
+    "aggregate_rank": 53,
+    "aggregate_score": 55.0,
+    "source_ranks": {
+      "model": 40,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Matt",
+    "last_name": "Ponatoski",
+    "player_pool": "hs",
+    "school": "Moeller (OH)",
+    "position": "SS",
+    "aggregate_rank": 54,
+    "aggregate_score": 56.3,
+    "source_ranks": {
+      "model": 51,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 45
+    }
+  },
+  {
+    "first_name": "Jaxon",
+    "last_name": "Willits",
+    "player_pool": "ncaa",
+    "school": "Oklahoma",
+    "position": "SS",
+    "aggregate_rank": 55,
+    "aggregate_score": 56.5,
+    "source_ranks": {
+      "model": 43,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Ryan",
+    "last_name": "Harwood",
+    "player_pool": "hs",
+    "school": "Casteel (AZ)",
+    "position": "COF",
+    "aggregate_rank": 56,
+    "aggregate_score": 57.5,
+    "source_ranks": {
+      "model": 45,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Elliot",
+    "last_name": "Lascelles",
+    "player_pool": "hs",
+    "school": "Upper Canada (HS)",
+    "position": "SS",
+    "aggregate_rank": 57,
+    "aggregate_score": 58.5,
+    "source_ranks": {
+      "model": 47,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Carson",
+    "last_name": "Kerce",
+    "player_pool": "ncaa",
+    "school": "Georgia Tech",
+    "position": "SS",
+    "aggregate_rank": 58,
+    "aggregate_score": 59.0,
+    "source_ranks": {
+      "model": 48,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Myles",
+    "last_name": "Bailey",
+    "player_pool": "ncaa",
+    "school": "Florida St.",
+    "position": "1B",
+    "aggregate_rank": 59,
+    "aggregate_score": 59.89999999999999,
+    "source_ranks": {
+      "model": 61,
+      "mlb": 56,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 58
+    }
+  },
+  {
+    "first_name": "Dominic",
+    "last_name": "Woodward",
+    "player_pool": "hs",
+    "school": "State Col Florida Manatee",
+    "position": "COF",
+    "aggregate_rank": 60,
+    "aggregate_score": 60.0,
+    "source_ranks": {
+      "model": 50,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Henry",
+    "last_name": "Ford",
+    "player_pool": "ncaa",
+    "school": "Tennessee",
+    "position": "1B",
+    "aggregate_rank": 61,
+    "aggregate_score": 60.199999999999996,
+    "source_ranks": {
+      "model": 76,
+      "mlb": 41,
+      "espn": null,
+      "law": null,
+      "fangraphs": 18,
+      "ba": 46
+    }
+  },
+  {
+    "first_name": "Brady",
+    "last_name": "Harris",
+    "player_pool": "hs",
+    "school": "Trinity Christian (FL)",
+    "position": "CF",
+    "aggregate_rank": 62,
+    "aggregate_score": 61.900000000000006,
+    "source_ranks": {
+      "model": 81,
+      "mlb": 25,
+      "espn": 31,
+      "law": null,
+      "fangraphs": null,
+      "ba": 42
+    }
+  },
+  {
+    "first_name": "Brayden",
+    "last_name": "Martin",
+    "player_pool": "ncaa",
+    "school": "Maryland",
+    "position": "COF",
+    "aggregate_rank": 63,
+    "aggregate_score": 62.5,
+    "source_ranks": {
+      "model": 55,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Cole",
+    "last_name": "Koeninger",
+    "player_pool": "hs",
+    "school": "Keller (TX)",
+    "position": "SS",
+    "aggregate_rank": 64,
+    "aggregate_score": 62.599999999999994,
+    "source_ranks": {
+      "model": 82,
+      "mlb": 40,
+      "espn": 28,
+      "law": null,
+      "fangraphs": null,
+      "ba": 32
+    }
+  },
+  {
+    "first_name": "Teagan",
+    "last_name": "Scott",
+    "player_pool": "hs",
+    "school": "South Salem (OR)",
+    "position": "C",
+    "aggregate_rank": 65,
+    "aggregate_score": 63.5,
+    "source_ranks": {
+      "model": 57,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Josiah",
+    "last_name": "Kemp",
+    "player_pool": "hs",
+    "school": "Choctaw (OK)",
+    "position": "CF",
+    "aggregate_rank": 66,
+    "aggregate_score": 64.0,
+    "source_ranks": {
+      "model": 58,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Trey",
+    "last_name": "Ebel",
+    "player_pool": "hs",
+    "school": "Corona (CA)",
+    "position": "SS",
+    "aggregate_rank": 67,
+    "aggregate_score": 64.5,
+    "source_ranks": {
+      "model": 59,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Ryne",
+    "last_name": "Barker",
+    "player_pool": "hs",
+    "school": "Casteel (AZ)",
+    "position": "3B",
+    "aggregate_rank": 68,
+    "aggregate_score": 65.0,
+    "source_ranks": {
+      "model": 60,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Kyle",
+    "last_name": "Jones",
+    "player_pool": "ncaa",
+    "school": "Florida",
+    "position": "CF",
+    "aggregate_rank": 69,
+    "aggregate_score": 65.6,
+    "source_ranks": {
+      "model": 69,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 48
+    }
+  },
+  {
+    "first_name": "Taj",
+    "last_name": "Marchand",
+    "player_pool": "hs",
+    "school": "James Island (SC)",
+    "position": "SS",
+    "aggregate_rank": 70,
+    "aggregate_score": 66.4,
+    "source_ranks": {
+      "model": 68,
+      "mlb": null,
+      "espn": null,
+      "law": 27,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Dylan",
+    "last_name": "Bowen",
+    "player_pool": "hs",
+    "school": "Hanover Central (IN)",
+    "position": "SS",
+    "aggregate_rank": 71,
+    "aggregate_score": 66.5,
+    "source_ranks": {
+      "model": 63,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Jack",
+    "last_name": "Natili",
+    "player_pool": "ncaa",
+    "school": "Cincinatti",
+    "position": "C",
+    "aggregate_rank": 72,
+    "aggregate_score": 67.0,
+    "source_ranks": {
+      "model": 64,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Dee",
+    "last_name": "Kennedy",
+    "player_pool": "ncaa",
+    "school": "Kansas State",
+    "position": "SS",
+    "aggregate_rank": 73,
+    "aggregate_score": 67.89999999999999,
+    "source_ranks": {
+      "model": 72,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 56
+    }
+  },
+  {
+    "first_name": "Joe",
+    "last_name": "Tiroly",
+    "player_pool": "ncaa",
+    "school": "Virginia",
+    "position": "2B",
+    "aggregate_rank": 74,
+    "aggregate_score": 68.0,
+    "source_ranks": {
+      "model": 66,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Abram",
+    "last_name": "Sherrin",
+    "player_pool": "hs",
+    "school": "Liberty (AZ)",
+    "position": "CF",
+    "aggregate_rank": 75,
+    "aggregate_score": 70.0,
+    "source_ranks": {
+      "model": 70,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "James",
+    "last_name": "Clark",
+    "player_pool": "hs",
+    "school": "St. John Bosco (CA)",
+    "position": "SS",
+    "aggregate_rank": 76,
+    "aggregate_score": 70.1,
+    "source_ranks": {
+      "model": 109,
+      "mlb": 35,
+      "espn": 17,
+      "law": 23,
+      "fangraphs": null,
+      "ba": 18
+    }
+  },
+  {
+    "first_name": "Jon",
+    "last_name": "Mora",
+    "player_pool": "hs",
+    "school": "Somerset Academy (FL)",
+    "position": "CF",
+    "aggregate_rank": 77,
+    "aggregate_score": 70.5,
+    "source_ranks": {
+      "model": 71,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Brendan",
+    "last_name": "Brock",
+    "player_pool": "ncaa",
+    "school": "Oklahoma",
+    "position": "C",
+    "aggregate_rank": 78,
+    "aggregate_score": 71.2,
+    "source_ranks": {
+      "model": 79,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 54
+    }
+  },
+  {
+    "first_name": "Noah",
+    "last_name": "Danza",
+    "player_pool": "hs",
+    "school": "Gloucester Catholic (NJ)",
+    "position": "SS",
+    "aggregate_rank": 79,
+    "aggregate_score": 71.5,
+    "source_ranks": {
+      "model": 73,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Marvin",
+    "last_name": "Montenegro",
+    "player_pool": "hs",
+    "school": "Polk State",
+    "position": "C",
+    "aggregate_rank": 80,
+    "aggregate_score": 72.0,
+    "source_ranks": {
+      "model": 74,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Ethan",
+    "last_name": "Bass",
+    "player_pool": "hs",
+    "school": "Glenbrook North (IL)",
+    "position": "SS",
+    "aggregate_rank": 81,
+    "aggregate_score": 72.1,
+    "source_ranks": {
+      "model": 83,
+      "mlb": 39,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Tre",
+    "last_name": "Broussard",
+    "player_pool": "ncaa",
+    "school": "Houston",
+    "position": "CF",
+    "aggregate_rank": 82,
+    "aggregate_score": 72.10000000000001,
+    "source_ranks": {
+      "model": 92,
+      "mlb": 32,
+      "espn": null,
+      "law": null,
+      "fangraphs": 25,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Emani",
+    "last_name": "Ford",
+    "player_pool": "hs",
+    "school": "Parkview (GA)",
+    "position": "SS",
+    "aggregate_rank": 83,
+    "aggregate_score": 72.5,
+    "source_ranks": {
+      "model": 75,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Archer",
+    "last_name": "Horn",
+    "player_pool": "hs",
+    "school": "St. Ignatius (CA)",
+    "position": "SS",
+    "aggregate_rank": 84,
+    "aggregate_score": 73.3,
+    "source_ranks": {
+      "model": 102,
+      "mlb": 36,
+      "espn": 36,
+      "law": null,
+      "fangraphs": null,
+      "ba": 35
+    }
+  },
+  {
+    "first_name": "Troy",
+    "last_name": "Southisene",
+    "player_pool": "hs",
+    "school": "Basic (NV)",
+    "position": "SS",
+    "aggregate_rank": 85,
+    "aggregate_score": 73.5,
+    "source_ranks": {
+      "model": 77,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Will",
+    "last_name": "Adams",
+    "player_pool": "hs",
+    "school": "Hoover (AL)",
+    "position": "COF",
+    "aggregate_rank": 86,
+    "aggregate_score": 74.0,
+    "source_ranks": {
+      "model": 78,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "RJ",
+    "last_name": "Cope",
+    "player_pool": "hs",
+    "school": "Georgia Premier Academy (GA)",
+    "position": "1B",
+    "aggregate_rank": 87,
+    "aggregate_score": 75.0,
+    "source_ranks": {
+      "model": 80,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Camden",
+    "last_name": "Johnson",
+    "player_pool": "ncaa",
+    "school": "Oklahoma",
+    "position": "3B",
+    "aggregate_rank": 88,
+    "aggregate_score": 75.2,
+    "source_ranks": {
+      "model": 89,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 44
+    }
+  },
+  {
+    "first_name": "Dalton",
+    "last_name": "Wentz",
+    "player_pool": "ncaa",
+    "school": "Wake Forest",
+    "position": "3B",
+    "aggregate_rank": 89,
+    "aggregate_score": 77.0,
+    "source_ranks": {
+      "model": 84,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Brady",
+    "last_name": "Marconi",
+    "player_pool": "hs",
+    "school": "Charlotte Catholic (NC)",
+    "position": "C",
+    "aggregate_rank": 90,
+    "aggregate_score": 77.5,
+    "source_ranks": {
+      "model": 85,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Robert",
+    "last_name": "Omidi",
+    "player_pool": "hs",
+    "school": "St. Martin (CA)",
+    "position": "3B",
+    "aggregate_rank": 91,
+    "aggregate_score": 78.0,
+    "source_ranks": {
+      "model": 86,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Wessley",
+    "last_name": "Roberson",
+    "player_pool": "hs",
+    "school": "Glynn Academy (GA)",
+    "position": "SS",
+    "aggregate_rank": 92,
+    "aggregate_score": 78.5,
+    "source_ranks": {
+      "model": 87,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Slaide",
+    "last_name": "Burd",
+    "player_pool": "hs",
+    "school": "Hilton Head Academy (SC)",
+    "position": "CF",
+    "aggregate_rank": 93,
+    "aggregate_score": 79.0,
+    "source_ranks": {
+      "model": 88,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Bo",
+    "last_name": "Lawrence",
+    "player_pool": "hs",
+    "school": "Christ Church Episopal (SC)",
+    "position": "3B",
+    "aggregate_rank": 94,
+    "aggregate_score": 79.39999999999999,
+    "source_ranks": {
+      "model": 94,
+      "mlb": null,
+      "espn": 38,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Brayden",
+    "last_name": "Dowd",
+    "player_pool": "ncaa",
+    "school": "Florida State",
+    "position": "3B",
+    "aggregate_rank": 95,
+    "aggregate_score": 80.0,
+    "source_ranks": {
+      "model": 90,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Ryan",
+    "last_name": "Cooney",
+    "player_pool": "ncaa",
+    "school": "Oregon",
+    "position": "2B",
+    "aggregate_rank": 96,
+    "aggregate_score": 80.5,
+    "source_ranks": {
+      "model": 91,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Jet",
+    "last_name": "Berry",
+    "player_pool": "hs",
+    "school": "Queen Creek (AZ)",
+    "position": "SS",
+    "aggregate_rank": 97,
+    "aggregate_score": 81.5,
+    "source_ranks": {
+      "model": 93,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Anthony",
+    "last_name": "Murphy",
+    "player_pool": "hs",
+    "school": "Corona (CA)",
+    "position": "CF",
+    "aggregate_rank": 98,
+    "aggregate_score": 82.0,
+    "source_ranks": {
+      "model": 100,
+      "mlb": 53,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Ethan",
+    "last_name": "Surowiec",
+    "player_pool": "ncaa",
+    "school": "Florida",
+    "position": "3B",
+    "aggregate_rank": 99,
+    "aggregate_score": 82.5,
+    "source_ranks": {
+      "model": 95,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Aemed",
+    "last_name": "Nasser",
+    "player_pool": "hs",
+    "school": "Central Point (FL)",
+    "position": "CF",
+    "aggregate_rank": 100,
+    "aggregate_score": 83.0,
+    "source_ranks": {
+      "model": 96,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Brody",
+    "last_name": "Briggs",
+    "player_pool": "ncaa",
+    "school": "Arizona State",
+    "position": "C",
+    "aggregate_rank": 101,
+    "aggregate_score": 84.0,
+    "source_ranks": {
+      "model": 98,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Ethan",
+    "last_name": "Mendoza",
+    "player_pool": "ncaa",
+    "school": "Texas",
+    "position": "2B",
+    "aggregate_rank": 102,
+    "aggregate_score": 84.5,
+    "source_ranks": {
+      "model": 99,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Cam",
+    "last_name": "Kozeal",
+    "player_pool": "ncaa",
+    "school": "Arkansas",
+    "position": "2B",
+    "aggregate_rank": 103,
+    "aggregate_score": 88.0,
+    "source_ranks": {
+      "model": 111,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 62
+    }
+  },
+  {
+    "first_name": "Noah",
+    "last_name": "Wilson",
+    "player_pool": "hs",
+    "school": "McCallie (TN)",
+    "position": "OF",
+    "aggregate_rank": 104,
+    "aggregate_score": 88.3,
+    "source_ranks": {
+      "model": 119,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 25
+    }
+  },
+  {
+    "first_name": "Jason",
+    "last_name": "Amalbert",
+    "player_pool": "hs",
+    "school": "DePaul Catholic (NJ)",
+    "position": "SS",
+    "aggregate_rank": 105,
+    "aggregate_score": 136.8,
+    "source_ranks": {
+      "model": 210,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 55
+    }
+  },
+  {
+    "first_name": "Jorvorskie",
+    "last_name": "Lane Jr.",
+    "player_pool": "hs",
+    "school": "Grapevine (TX)",
+    "position": "CF",
+    "aggregate_rank": 106,
+    "aggregate_score": 144.5,
+    "source_ranks": {
+      "model": 229,
+      "mlb": 33,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Aiden",
+    "last_name": "Teel",
+    "player_pool": "ncaa",
+    "school": "Mississippi St",
+    "position": "CF",
+    "aggregate_rank": 107,
+    "aggregate_score": 165.3,
+    "source_ranks": {
+      "model": 267,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": 31,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Tyler",
+    "last_name": "Spangler",
+    "player_pool": "hs",
+    "school": "De La Salle (CA)",
+    "position": "SS",
+    "aggregate_rank": 108,
+    "aggregate_score": 172.20000000000002,
+    "source_ranks": {
+      "model": null,
+      "mlb": 8,
+      "espn": 8,
+      "law": 26,
+      "fangraphs": 11,
+      "ba": 14
+    }
+  },
+  {
+    "first_name": "Rookie",
+    "last_name": "Shephard",
+    "player_pool": "hs",
+    "school": "Faith Lutheran (NV)",
+    "position": "SS",
+    "aggregate_rank": 109,
+    "aggregate_score": 180.9,
+    "source_ranks": {
+      "model": 298,
+      "mlb": 52,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Caden",
+    "last_name": "Bogenpohl",
+    "player_pool": "ncaa",
+    "school": "Missouri St",
+    "position": "OF",
+    "aggregate_rank": 110,
+    "aggregate_score": 192.20000000000002,
+    "source_ranks": {
+      "model": null,
+      "mlb": 28,
+      "espn": null,
+      "law": null,
+      "fangraphs": 35,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Brady",
+    "last_name": "Ballinger",
+    "player_pool": "ncaa",
+    "school": "Kansas",
+    "position": "1B",
+    "aggregate_rank": 111,
+    "aggregate_score": 192.8,
+    "source_ranks": {
+      "model": null,
+      "mlb": 42,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 51
+    }
+  },
+  {
+    "first_name": "Dominic",
+    "last_name": "Santarelli",
+    "player_pool": "hs",
+    "school": "St. Joseph (WI)",
+    "position": "1B",
+    "aggregate_rank": 112,
+    "aggregate_score": 193.30000000000004,
+    "source_ranks": {
+      "model": null,
+      "mlb": 58,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 40
+    }
+  },
+  {
+    "first_name": "Will",
+    "last_name": "Yow",
+    "player_pool": "ncaa",
+    "school": "St. Anne's Belfield (VA)",
+    "position": "SS",
+    "aggregate_rank": 113,
+    "aggregate_score": 194.20000000000002,
+    "source_ranks": {
+      "model": null,
+      "mlb": 45,
+      "espn": 39,
+      "law": null,
+      "fangraphs": null,
+      "ba": null
+    }
+  },
+  {
+    "first_name": "Jace",
+    "last_name": "Mataczynski",
+    "player_pool": "hs",
+    "school": "Hudson (WI)",
+    "position": "SS",
+    "aggregate_rank": 114,
+    "aggregate_score": 197.70000000000005,
+    "source_ranks": {
+      "model": null,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 59
+    }
+  },
+  {
+    "first_name": "Jake",
+    "last_name": "Schaffner",
+    "player_pool": "ncaa",
+    "school": "North Carolina",
+    "position": "SS",
+    "aggregate_rank": 115,
+    "aggregate_score": 197.90000000000003,
+    "source_ranks": {
+      "model": null,
+      "mlb": null,
+      "espn": null,
+      "law": null,
+      "fangraphs": null,
+      "ba": 61
+    }
+  }
+]
