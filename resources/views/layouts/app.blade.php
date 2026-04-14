@@ -17,7 +17,7 @@
             <!-- Page Heading -->
             @isset($header)
                 <header class="bg-white shadow">
-                    <div class="w-full py-4 px-3 sm:px-4 lg:px-6 sm:py-5">
+                    <div class="w-full px-3 py-4 sm:px-4 sm:py-5 lg:px-6 xl:px-8 2xl:px-4">
                         {{ $header }}
                     </div>
                 </header>

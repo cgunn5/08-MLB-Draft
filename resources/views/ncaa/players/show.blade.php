@@ -14,10 +14,10 @@
         </div>
     </x-slot>
 
-    <div class="w-full py-4 sm:py-5">
-        <div class="w-full px-3 sm:px-4 lg:px-6">
+    <div class="w-full py-4 sm:py-5 xl:py-7 2xl:py-6">
+        <div class="w-full px-3 sm:px-4 lg:px-6 xl:px-8 2xl:px-4">
             <div class="w-full overflow-visible border border-gray-100 bg-white shadow-sm sm:rounded-lg">
-                <div class="w-full min-w-0 p-2 sm:p-3 lg:p-4">
+                <div class="w-full min-w-0 p-2 sm:p-3 lg:p-4 xl:p-6 2xl:p-6">
                     <x-player.profile-top :player="$player" :ncaa-players="$ncaaPlayers" />
                     <x-player.ranger-traits
                         :player="$player"

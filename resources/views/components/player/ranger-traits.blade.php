@@ -19,7 +19,7 @@
 
     {{-- Three vertical bands (always side-by-side like the reference board); tables scroll inside each column. --}}
     <div
-        class="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] items-stretch gap-2 sm:gap-3 md:gap-5 lg:gap-6"
+        class="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] items-stretch gap-2 sm:gap-3 md:gap-5 lg:gap-6 xl:gap-8 2xl:gap-7"
     >
         <div
             class="flex min-h-0 min-w-0 flex-col justify-between gap-5 md:h-full md:gap-6"

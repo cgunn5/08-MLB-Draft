@@ -47,7 +47,7 @@
 >
     <svg
         viewBox="0 5 220 200"
-        class="h-auto w-full max-w-[4.25rem] max-h-[3.35rem] shrink-0 sm:max-w-[5.5rem] sm:max-h-[4.35rem] md:max-w-[6.25rem] md:max-h-[4.9rem] lg:max-w-[7rem] lg:max-h-[5.5rem]"
+        class="h-auto w-full max-w-[4.25rem] max-h-[3.35rem] shrink-0 sm:max-w-[5.5rem] sm:max-h-[4.35rem] md:max-w-[6.25rem] md:max-h-[4.9rem] lg:max-w-[7rem] lg:max-h-[5.5rem] 2xl:max-w-[10.25rem] 2xl:max-h-[8rem]"
         preserveAspectRatio="xMidYMid meet"
         role="img"
         aria-label="{{ __('SWING METRICS RADAR (PLACEHOLDER)') }}"
@@ -157,7 +157,7 @@
     </svg>
 
     <div
-        class="flex flex-wrap items-center justify-center gap-x-1 gap-y-px font-sans font-[700] text-[0.5rem] leading-none text-gray-900 sm:gap-x-1.5 sm:text-[0.53125rem]"
+        class="flex flex-wrap items-center justify-center gap-x-1 gap-y-px font-sans font-[700] text-[0.5rem] leading-none text-gray-900 sm:gap-x-1.5 sm:text-[0.53125rem] 2xl:gap-x-2 2xl:text-[0.625rem]"
     >
         <span class="inline-flex items-center gap-px sm:gap-0.5">
             <span class="inline-block h-1 w-1 shrink-0 rounded-[0.5px] bg-blue-600 sm:h-1.5 sm:w-1.5" aria-hidden="true"></span>

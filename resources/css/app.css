@@ -16,9 +16,21 @@
         display: none !important;
     }
 
+    /*
+     * Lock 16px root below 2xl so laptop / standard desktop match the original design.
+     * From 1536px up, scale rem globally for big monitors (text, spacing, most max-* in rem).
+     */
     html {
         font-family: Carbon, ui-sans-serif, system-ui, sans-serif;
         font-weight: 400;
+        font-size: 16px;
+    }
+
+    @media (min-width: 1536px) {
+        html {
+            /* 16px at 1536px; ~1rem per ~96px of viewport width beyond that (steeper than vw-only below breakpoint). */
+            font-size: clamp(16px, 1vw + 0.64px, 44px);
+        }
     }
 
     body {

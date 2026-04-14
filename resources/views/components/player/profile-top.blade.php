@@ -24,7 +24,7 @@
     <div
         {{ $attributes->merge([
             'class' =>
-                'grid w-full min-w-0 grid-cols-3 items-stretch gap-2 sm:gap-3 md:gap-4',
+                'grid w-full min-w-0 grid-cols-3 items-stretch gap-2 sm:gap-3 md:gap-4 2xl:gap-5',
         ]) }}
     >
         {{-- Left: master note --}}
@@ -66,7 +66,7 @@
                                 <button
                                     id="profile-player-combobox-trigger"
                                     type="button"
-                                    class="flex w-full min-w-0 max-w-full cursor-pointer items-center justify-center gap-1 rounded-sm border-0 bg-white bg-[length:0.55rem] bg-[right_0.3rem_center] bg-no-repeat py-0.5 pl-1 pr-5 text-center font-sans font-[700] text-xs leading-tight tracking-wide text-red-600 shadow-none ring-0 sm:bg-[right_0.35rem_center] sm:py-1 sm:pr-5 sm:text-sm md:text-base"
+                                    class="flex w-full min-w-0 max-w-full cursor-pointer items-center justify-center gap-1 rounded-sm border-0 bg-white bg-[length:0.55rem] bg-[right_0.3rem_center] bg-no-repeat py-0.5 pl-1 pr-5 text-center font-sans font-[700] text-xs leading-tight tracking-wide text-red-600 shadow-none ring-0 sm:bg-[right_0.35rem_center] sm:py-1 sm:pr-5 sm:text-sm md:text-base 2xl:text-lg"
                                     style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke-width=%222%22 stroke=%22%23dc2626%22%3E%3Cpath stroke-linecap=%22round%22 stroke-linejoin=%22round%22 d=%22M19.5 8.25l-7.5 7.5-7.5-7.5%22/%3E%3C/svg%3E')"
                                     @click="toggle()"
                                     :aria-expanded="open"
@@ -140,7 +140,7 @@
         {{-- Right: grades | radar | logo (contained to column 3) --}}
         <div class="relative z-0 flex min-h-0 min-w-0 flex-col overflow-hidden">
             <div
-                class="flex min-h-[2.7rem] w-full min-w-0 max-w-full flex-1 flex-col items-center justify-center gap-0.5 sm:min-h-[3.15rem] sm:flex-row sm:items-stretch sm:justify-between sm:gap-1.5 md:min-h-0 md:gap-2"
+                class="flex min-h-[2.7rem] w-full min-w-0 max-w-full flex-1 flex-col items-center justify-center gap-0.5 sm:min-h-[3.15rem] sm:flex-row sm:items-stretch sm:justify-between sm:gap-1.5 md:min-h-0 md:gap-2 2xl:gap-3"
             >
                 <div
                     class="flex h-full min-h-0 min-w-0 w-full shrink-0 items-stretch justify-center sm:flex-1 sm:min-w-0"
@@ -150,7 +150,7 @@
                         <div
                             role="table"
                             aria-label="{{ __('Grade summary') }}"
-                            class="grid h-full min-h-0 w-[4.125rem] grid-cols-[11fr_14fr] grid-rows-[repeat(7,minmax(0,1fr))] gap-px bg-gray-300 p-px font-sans font-[700] text-[0.328125rem] leading-none sm:w-[4.375rem] sm:text-[0.339844rem] md:w-[4.625rem] md:text-[0.351563rem]"
+                            class="grid h-full min-h-0 w-[4.125rem] grid-cols-[11fr_14fr] grid-rows-[repeat(7,minmax(0,1fr))] gap-px bg-gray-300 p-px font-sans font-[700] text-[0.328125rem] leading-none sm:w-[4.375rem] sm:text-[0.339844rem] md:w-[4.625rem] md:text-[0.351563rem] 2xl:w-[5.35rem] 2xl:text-[0.38rem]"
                         >
                             @foreach (\App\Models\Player::gradeRowDefinitions() as $label => $attribute)
                                 <div role="row" class="contents">
@@ -180,7 +180,7 @@
                     <img
                         src="{{ asset('images/mlb-draft-logo.png') }}"
                         alt="{{ __('MLB DRAFT') }}"
-                        class="h-auto max-h-[2.35rem] w-auto max-w-[2.05rem] object-contain object-right sm:max-h-[3rem] sm:max-w-[2.6rem] md:max-h-[3.65rem] md:max-w-[3.15rem] lg:max-h-[4.1rem] lg:max-w-[3.5rem]"
+                        class="h-auto max-h-[2.35rem] w-auto max-w-[2.05rem] object-contain object-right sm:max-h-[3rem] sm:max-w-[2.6rem] md:max-h-[3.65rem] md:max-w-[3.15rem] lg:max-h-[4.1rem] lg:max-w-[3.5rem] 2xl:max-h-[5.75rem] 2xl:max-w-[5rem]"
                         width="160"
                         height="192"
                     />
