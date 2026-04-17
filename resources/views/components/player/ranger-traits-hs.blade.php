@@ -1,4 +1,7 @@
-@props(['player'])
+@props([
+    'player',
+    'rangerSheet' => [],
+])
 
 <section
     {{ $attributes->merge([
@@ -32,7 +35,7 @@
             aria-label="{{ __('Circuit stats') }}"
         >
             <div class="flex min-h-0 min-w-0 flex-1 flex-col">
-                @include('components.player.ranger-traits-hs.columns-left', ['player' => $player])
+                @include('components.player.ranger-traits-hs.columns-left', ['player' => $player, 'rangerSheet' => $rangerSheet])
             </div>
         </div>
         <div
@@ -40,14 +43,14 @@
             role="region"
             aria-label="{{ __('Approach and impact') }}"
         >
-            @include('components.player.ranger-traits-hs.columns-middle', ['player' => $player])
+            @include('components.player.ranger-traits-hs.columns-middle', ['player' => $player, 'rangerSheet' => $rangerSheet])
         </div>
         <div
             class="flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain pb-2 sm:pb-2.5"
             role="region"
             aria-label="{{ __('Adjustability and swing') }}"
         >
-            @include('components.player.ranger-traits-hs.columns-right', ['player' => $player])
+            @include('components.player.ranger-traits-hs.columns-right', ['player' => $player, 'rangerSheet' => $rangerSheet])
         </div>
     </div>
 </section>

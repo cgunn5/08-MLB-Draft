@@ -46,7 +46,7 @@
         $slotWrapClass = $tightStack
             /* flex + gap: reliable spacing between stacked tables (space-y can collapse with overflow-x-auto wrappers). */
             ? 'flex min-w-0 flex-col gap-2 pt-1.5 sm:gap-2 sm:pt-2 md:gap-2.5 md:pt-2.5'
-            : 'min-w-0 space-y-3 pt-3 sm:space-y-4 sm:pt-4 md:space-y-5 md:pt-5';
+            : 'min-w-0 space-y-3 pt-[calc(0.75rem*0.85)] sm:space-y-4 sm:pt-[calc(1rem*0.85)] md:space-y-5 md:pt-[calc(1.25rem*0.85)]';
     } else {
         $slotWrapClass = 'min-w-0 space-y-4 pt-4 sm:space-y-5 sm:pt-5 md:space-y-6 md:pt-6';
     }

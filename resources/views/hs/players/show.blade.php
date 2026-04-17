@@ -39,6 +39,7 @@
                     </div>
                     <x-player.ranger-traits-hs
                         :player="$player"
+                        :ranger-sheet="$rangerSheet"
                         class="relative z-0 mt-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pt-4 sm:pt-5 md:pt-6"
                     />
                 </div>

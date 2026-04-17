@@ -35,6 +35,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('/notes/section', [NoteInputController::class, 'updateSection'])->name('notes.update-section');
     Route::delete('/notes/section', [NoteInputController::class, 'destroySection'])->name('notes.destroy-section');
     Route::get('/data-sources', [DataSourceController::class, 'index'])->name('data-sources.index');
+    Route::post('/data-sources', [DataSourceController::class, 'store'])->name('data-sources.store');
+    Route::get('/data-sources/uploads/{dataSourceUpload}/player-names', [DataSourceController::class, 'playerNames'])->name('data-sources.uploads.player-names');
+    Route::get('/data-sources/uploads/{dataSourceUpload}/table-data', [DataSourceController::class, 'tableData'])->name('data-sources.uploads.table-data');
+    Route::patch('/data-sources/uploads/{dataSourceUpload}/settings', [DataSourceController::class, 'updateSettings'])->name('data-sources.uploads.settings');
+    Route::patch('/data-sources/uploads/{dataSourceUpload}/rows/{ordinal}', [DataSourceController::class, 'updateRow'])->name('data-sources.uploads.rows.update')->whereNumber('ordinal');
+    Route::delete('/data-sources/uploads/{dataSourceUpload}/rows/{ordinal}', [DataSourceController::class, 'destroyRow'])->name('data-sources.uploads.rows.destroy')->whereNumber('ordinal');
+    Route::delete('/data-sources/uploads/{dataSourceUpload}', [DataSourceController::class, 'destroyUpload'])->name('data-sources.uploads.delete');
+    Route::get('/data-sources/uploads/{dataSourceUpload}', [DataSourceController::class, 'show'])->name('data-sources.uploads.show');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

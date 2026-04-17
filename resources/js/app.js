@@ -4,7 +4,757 @@ import Alpine from 'alpinejs';
 
 window.Alpine = Alpine;
 
+/**
+ * RFC4180-style CSV parse (quoted fields, escaped quotes). Sufficient to match typical exports.
+ *
+ * @param {string} text
+ * @return {string[][]}
+ */
+function parseCsvText(text) {
+    const rows = [];
+    let row = [];
+    let field = '';
+    let inQuotes = false;
+
+    const pushField = () => {
+        row.push(field);
+        field = '';
+    };
+
+    const pushRow = () => {
+        rows.push(row);
+        row = [];
+    };
+
+    for (let i = 0; i < text.length; i++) {
+        const c = text[i];
+        if (inQuotes) {
+            if (c === '"' && text[i + 1] === '"') {
+                field += '"';
+                i++;
+            } else if (c === '"') {
+                inQuotes = false;
+            } else {
+                field += c;
+            }
+        } else if (c === '"') {
+            inQuotes = true;
+        } else if (c === ',') {
+            pushField();
+        } else if (c === '\n') {
+            pushField();
+            pushRow();
+        } else if (c === '\r') {
+            // ignore
+        } else {
+            field += c;
+        }
+    }
+
+    pushField();
+    if (row.length > 1 || row[0] !== '') {
+        pushRow();
+    }
+
+    return rows;
+}
+
+/**
+ * @param {string[]} row
+ */
+function isBlankCsvRow(row) {
+    if (!row || row.length === 0) {
+        return true;
+    }
+
+    return row.every((cell) => String(cell ?? '').trim() === '');
+}
+
 document.addEventListener('alpine:init', () => {
+    Alpine.data('csvUploadPreview', (config) => ({
+        sourceName: config.oldName ?? '',
+        maxPreviewRows: config.maxPreviewRows ?? 15,
+        maxFileBytes: config.maxFileBytes ?? 10 * 1024 * 1024,
+        previewHeaders: [],
+        previewRows: [],
+        previewError: '',
+        previewNotice: '',
+        fileLabel: '',
+
+        get canSave() {
+            return (
+                this.sourceName.trim() !== '' &&
+                this.previewHeaders.length > 0 &&
+                this.previewError === '' &&
+                this.fileLabel !== ''
+            );
+        },
+
+        onFileChange(event) {
+            const input = event.target;
+            const file = input.files?.[0];
+            this.previewError = '';
+            this.previewNotice = '';
+            this.previewHeaders = [];
+            this.previewRows = [];
+            this.fileLabel = '';
+
+            if (!file) {
+                return;
+            }
+
+            this.fileLabel = file.name;
+
+            if (file.size > this.maxFileBytes) {
+                this.previewError = 'File is too large (maximum 10 MB).';
+                input.value = '';
+
+                return;
+            }
+
+            const chunkLimit = file.size <= 2 * 1024 * 1024 ? file.size : 512 * 1024;
+            const blob = file.slice(0, chunkLimit);
+
+            blob
+                .text()
+                .then((text) => {
+                    const rows = parseCsvText(text);
+                    if (rows.length === 0) {
+                        this.previewError = 'Could not read any rows from this file.';
+                        input.value = '';
+
+                        return;
+                    }
+
+                    const headers = rows[0].map((h) => String(h ?? '').trim());
+                    if (headers.length === 0 || (headers.length === 1 && headers[0] === '')) {
+                        this.previewError = 'The first row must contain column headers.';
+                        input.value = '';
+
+                        return;
+                    }
+
+                    this.previewHeaders = headers;
+                    const body = rows.slice(1).filter((r) => !isBlankCsvRow(r));
+                    this.previewRows = body.slice(0, this.maxPreviewRows);
+
+                    if (chunkLimit < file.size) {
+                        this.previewNotice = 'Preview shows the beginning of the file only.';
+                    }
+                })
+                .catch(() => {
+                    this.previewError = 'Could not read the file.';
+                    input.value = '';
+                });
+        },
+
+        clearFile() {
+            const input = this.$refs.csvFile;
+            if (input) {
+                input.value = '';
+            }
+            this.previewHeaders = [];
+            this.previewRows = [];
+            this.previewError = '';
+            this.previewNotice = '';
+            this.fileLabel = '';
+        },
+    }));
+
+    Alpine.data('dataSourceLibrary', (config) => ({
+        tableDataBase: (config.tableDataBase ?? '').replace(/\/?$/, ''),
+        uploadSummaries: Array.isArray(config.uploadSummaries) ? config.uploadSummaries : [],
+        activeId: config.initialActiveId ?? null,
+        page: 1,
+        headers: [],
+        rows: [],
+        rowOrdinals: [],
+        columnOrder: [],
+        heatRules: {},
+        heatColumnStats: {},
+        totalRows: 0,
+        lastPage: 1,
+        from: 0,
+        to: 0,
+        originalFilename: '',
+        loading: false,
+        loadError: '',
+        playerNamesAll: [],
+        playerNamesLoading: false,
+        selectedPlayers: [],
+        playerPickerQuery: '',
+        playerPickerOpen: false,
+        editingOrdinal: null,
+        editPlayerDraft: '',
+        columnDragFrom: null,
+        columnDragOver: null,
+        heatMenuForIdx: null,
+        sortColumn: null,
+        sortDirection: 'asc',
+        thresholdDraft: [],
+
+        get datasetGridStyle() {
+            const n = Array.isArray(this.headers) ? this.headers.length : 0;
+            if (n === 0) {
+                return { gridTemplateColumns: 'minmax(10rem, 1fr)' };
+            }
+            if (n === 1) {
+                return { gridTemplateColumns: 'minmax(10rem, 1fr)' };
+            }
+
+            return {
+                gridTemplateColumns: `minmax(12rem, 1.15fr) repeat(${n - 1}, minmax(6.5rem, 1fr))`,
+            };
+        },
+
+        get datasetGridMinWidth() {
+            const n = Array.isArray(this.headers) ? this.headers.length : 0;
+            if (n === 0) {
+                return '12rem';
+            }
+            if (n === 1) {
+                return '14rem';
+            }
+
+            return `${14 + (n - 1) * 6.5}rem`;
+        },
+
+        settingsUrl() {
+            return `${this.tableDataBase}/${this.activeId}/settings`;
+        },
+
+        rowUrl(ordinal) {
+            return `${this.tableDataBase}/${this.activeId}/rows/${ordinal}`;
+        },
+
+        activeUploadName() {
+            const id = this.activeId;
+            const row = this.uploadSummaries.find((u) => Number(u.id) === Number(id));
+
+            return row?.name ?? '';
+        },
+
+        get forHsRangerTraitsActive() {
+            const row = this.uploadSummaries.find((u) => Number(u.id) === Number(this.activeId));
+
+            return row?.for_hs_ranger_traits === true;
+        },
+
+        async toggleForHsRangerTraits() {
+            if (!this.activeId) {
+                return;
+            }
+            const next = !this.forHsRangerTraitsActive;
+            try {
+                await window.axios.patch(`${this.tableDataBase}/${this.activeId}/settings`, {
+                    for_hs_ranger_traits: next,
+                });
+                this.uploadSummaries = this.uploadSummaries.map((u) => ({
+                    ...u,
+                    for_hs_ranger_traits: Number(u.id) === Number(this.activeId) ? next : false,
+                }));
+            } catch {
+                this.loadError = 'Could not update HS Ranger Traits data source.';
+            }
+        },
+
+        toggleSortColumn(hIdx) {
+            if (this.sortColumn === hIdx) {
+                this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                this.sortColumn = hIdx;
+                this.sortDirection = 'asc';
+            }
+            this.loadPage(1);
+        },
+
+        sortControlTitle(hIdx) {
+            const label = String(this.headers[hIdx] ?? '').trim() || 'column';
+            if (this.sortColumn !== hIdx) {
+                return `Sort by ${label}`;
+            }
+
+            return this.sortDirection === 'asc'
+                ? `Sorted by ${label}, ascending (click for descending)`
+                : `Sorted by ${label}, descending (click for ascending)`;
+        },
+
+        syncThresholdDraftLength() {
+            const n = Array.isArray(this.headers) ? this.headers.length : 0;
+            const next = [];
+            for (let i = 0; i < n; i++) {
+                const prev = this.thresholdDraft[i];
+                next[i] =
+                    prev && typeof prev === 'object'
+                        ? { min: prev.min ?? '', max: prev.max ?? '' }
+                        : { min: '', max: '' };
+            }
+            this.thresholdDraft = next;
+        },
+
+        buildColumnThresholdsPayload() {
+            const list = [];
+            const n = Array.isArray(this.headers) ? this.headers.length : 0;
+            for (let i = 0; i < n; i++) {
+                const d = this.thresholdDraft[i];
+                if (!d) {
+                    continue;
+                }
+                const rawMin = String(d.min ?? '').trim();
+                const rawMax = String(d.max ?? '').trim();
+                const min = rawMin === '' ? NaN : Number(rawMin);
+                const max = rawMax === '' ? NaN : Number(rawMax);
+                /** @type {{ col: number, min?: number, max?: number }} */
+                const o = { col: i };
+                let ok = false;
+                if (rawMin !== '' && !Number.isNaN(min)) {
+                    o.min = min;
+                    ok = true;
+                }
+                if (rawMax !== '' && !Number.isNaN(max)) {
+                    o.max = max;
+                    ok = true;
+                }
+                if (ok) {
+                    list.push(o);
+                }
+            }
+
+            return list;
+        },
+
+        onThresholdInputsChanged() {
+            this.loadPage(1);
+        },
+
+        clearColumnThresholds() {
+            this.syncThresholdDraftLength();
+            for (let i = 0; i < this.thresholdDraft.length; i++) {
+                this.thresholdDraft[i] = { min: '', max: '' };
+            }
+            this.loadPage(1);
+        },
+
+        async deleteActiveUpload() {
+            if (this.activeId === null) {
+                return;
+            }
+            const label = this.activeUploadName() || 'dataset';
+            if (!window.confirm(`Delete “${label}” permanently? The saved CSV will be removed.`)) {
+                return;
+            }
+            try {
+                const { data } = await window.axios.delete(`${this.tableDataBase}/${this.activeId}`, {
+                    headers: { Accept: 'application/json' },
+                });
+                const url = data?.redirect ?? '/data-sources';
+                window.location.assign(url);
+            } catch {
+                this.loadError = 'Could not delete this dataset.';
+            }
+        },
+
+        async init() {
+            if (!this.activeId) {
+                return;
+            }
+            await this.loadPlayerNames();
+            await this.$nextTick();
+            await this.loadPage(1);
+        },
+
+        get filteredPlayerPickerOptions() {
+            const q = (this.playerPickerQuery ?? '').trim().toLowerCase();
+            const selectedLower = new Set(this.selectedPlayers.map((s) => String(s).toLowerCase()));
+            let list = this.playerNamesAll.filter((n) => !selectedLower.has(String(n).toLowerCase()));
+            if (q !== '') {
+                list = list.filter((n) => String(n).toLowerCase().includes(q));
+            }
+
+            return list.slice(0, 50);
+        },
+
+        async loadPlayerNames() {
+            if (!this.activeId) {
+                return;
+            }
+            this.playerNamesLoading = true;
+            try {
+                const { data } = await window.axios.get(`${this.tableDataBase}/${this.activeId}/player-names`, {
+                    headers: { Accept: 'application/json' },
+                });
+                this.playerNamesAll = Array.isArray(data.names) ? data.names : [];
+            } catch {
+                this.playerNamesAll = [];
+            } finally {
+                this.playerNamesLoading = false;
+            }
+        },
+
+        selectPlayerFromPicker(name) {
+            const s = String(name ?? '').trim();
+            if (s === '') {
+                return;
+            }
+            const exists = this.selectedPlayers.some((p) => String(p).toLowerCase() === s.toLowerCase());
+            if (exists) {
+                return;
+            }
+            this.selectedPlayers = [...this.selectedPlayers, s];
+            this.playerPickerQuery = '';
+            this.loadPage(1);
+        },
+
+        removeSelectedPlayer(name) {
+            this.selectedPlayers = this.selectedPlayers.filter((p) => p !== name);
+            this.loadPage(1);
+        },
+
+        async selectUpload(id) {
+            const n = Number(id);
+            const changed = this.activeId !== n;
+            this.activeId = n;
+            if (changed) {
+                this.selectedPlayers = [];
+                this.playerPickerQuery = '';
+                this.playerPickerOpen = false;
+                this.sortColumn = null;
+                this.sortDirection = 'asc';
+                this.thresholdDraft = [];
+                this.page = 1;
+                this.cancelEditPlayer();
+                await this.loadPlayerNames();
+            }
+            await this.loadPage(this.page);
+        },
+
+        cancelEditPlayer() {
+            this.editingOrdinal = null;
+            this.editPlayerDraft = '';
+        },
+
+        startEditPlayer(ordinal, name) {
+            this.editingOrdinal = ordinal;
+            this.editPlayerDraft = name ?? '';
+        },
+
+        async saveEditPlayer() {
+            if (this.editingOrdinal === null) {
+                return;
+            }
+            try {
+                await window.axios.patch(this.rowUrl(this.editingOrdinal), {
+                    player: this.editPlayerDraft,
+                });
+                this.cancelEditPlayer();
+                await this.loadPage(this.page);
+            } catch {
+                this.loadError = 'Could not save player name.';
+            }
+        },
+
+        async removePlayer(ordinal) {
+            if (!window.confirm('Remove this player row from the saved CSV file?')) {
+                return;
+            }
+            try {
+                const { data } = await window.axios.delete(this.rowUrl(ordinal));
+                if (typeof data.row_count === 'number') {
+                    this.totalRows = data.row_count;
+                }
+                this.cancelEditPlayer();
+                await this.loadPage(this.page);
+            } catch {
+                this.loadError = 'Could not delete row.';
+            }
+        },
+
+        heatRuleTitle(headerName) {
+            const r = this.heatRules[headerName];
+            if (!r || !r.enabled) {
+                return 'Column colors: off — click to change';
+            }
+            const stats = this.heatColumnStats[headerName];
+            const min = Number(stats?.min);
+            const max = Number(stats?.max);
+            if (!stats || Number.isNaN(min) || Number.isNaN(max) || Math.abs(max - min) < 1e-6) {
+                return 'Column colors: on (no range — all values match or non-numeric) — click to change';
+            }
+
+            return r.higher_is_better
+                ? 'Column colors: red = high — click to change'
+                : 'Column colors: red = low — click to change';
+        },
+
+        heatIsOn(headerName) {
+            const r = this.heatRules[headerName];
+            if (!r?.enabled) {
+                return false;
+            }
+            const stats = this.heatColumnStats[headerName];
+            const min = Number(stats?.min);
+            const max = Number(stats?.max);
+
+            return !(!stats || Number.isNaN(min) || Number.isNaN(max) || Math.abs(max - min) < 1e-6);
+        },
+
+        heatButtonSurface(headerName) {
+            const r = this.heatRules[headerName];
+            if (!r?.enabled) {
+                return { backgroundColor: '#f3f4f6' };
+            }
+            const stats = this.heatColumnStats[headerName];
+            const min = Number(stats?.min);
+            const max = Number(stats?.max);
+            if (!stats || Number.isNaN(min) || Number.isNaN(max) || Math.abs(max - min) < 1e-6) {
+                return { backgroundColor: '#f3f4f6' };
+            }
+
+            return r.higher_is_better
+                ? { background: 'linear-gradient(90deg, #fecaca 0%, #bfdbfe 100%)' }
+                : { background: 'linear-gradient(90deg, #bfdbfe 0%, #fecaca 100%)' };
+        },
+
+        toggleHeatMenu(hIdx) {
+            this.heatMenuForIdx = this.heatMenuForIdx === hIdx ? null : hIdx;
+        },
+
+        closeHeatMenu() {
+            this.heatMenuForIdx = null;
+        },
+
+        async pickHeatRule(headerName, mode) {
+            this.heatMenuForIdx = null;
+            await this.setHeatRule(headerName, mode);
+        },
+
+        async setHeatRule(headerName, mode) {
+            let next;
+            if (mode === 'off') {
+                next = { enabled: false, higher_is_better: true };
+            } else if (mode === 'high') {
+                next = { enabled: true, higher_is_better: true };
+            } else {
+                next = { enabled: true, higher_is_better: false };
+            }
+            this.heatRules = { ...this.heatRules, [headerName]: next };
+            await this.persistHeatRules();
+        },
+
+        async persistHeatRules() {
+            try {
+                await window.axios.patch(this.settingsUrl(), { heat_rules: this.heatRules });
+                await this.loadPage(this.page);
+            } catch {
+                this.loadError = 'Could not save heat rules.';
+            }
+        },
+
+        onColumnDragStart(hIdx, event) {
+            if (hIdx <= 0) {
+                event.preventDefault();
+
+                return;
+            }
+            this.columnDragFrom = hIdx;
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', String(hIdx));
+        },
+
+        onColumnDragOver(hIdx, event) {
+            if (hIdx <= 0 || this.columnDragFrom === null) {
+                return;
+            }
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            this.columnDragOver = hIdx;
+        },
+
+        onColumnDragLeave(hIdx) {
+            if (this.columnDragOver === hIdx) {
+                this.columnDragOver = null;
+            }
+        },
+
+        onColumnDragEnd() {
+            this.columnDragFrom = null;
+            this.columnDragOver = null;
+        },
+
+        async onColumnDrop(hIdx, event) {
+            event.preventDefault();
+            const raw = event.dataTransfer.getData('text/plain');
+            const parsed = Number.parseInt(raw, 10);
+            const fromIdx = Number.isFinite(parsed) ? parsed : this.columnDragFrom;
+            this.columnDragOver = null;
+            this.columnDragFrom = null;
+            if (fromIdx === null || fromIdx <= 0 || hIdx <= 0) {
+                return;
+            }
+            await this.moveColumnTo(fromIdx, hIdx);
+        },
+
+        async moveColumnTo(fromIdx, toIdx) {
+            const n = this.headers.length;
+            if (fromIdx === toIdx || fromIdx <= 0 || toIdx <= 0 || fromIdx >= n || toIdx >= n) {
+                return;
+            }
+            let order = [...this.columnOrder];
+            if (order.length !== n) {
+                order = Array.from({ length: n }, (_, i) => i);
+            }
+            const [removed] = order.splice(fromIdx, 1);
+            order.splice(toIdx, 0, removed);
+            try {
+                await window.axios.patch(this.settingsUrl(), { column_order: order });
+                await this.loadPage(this.page);
+            } catch {
+                this.loadError = 'Could not reorder columns.';
+            }
+        },
+
+        rowOrdinalAt(rIdx) {
+            const o = this.rowOrdinals[rIdx];
+
+            return o === undefined || o === null ? null : o;
+        },
+
+        datasetCellStyle(headerName, raw) {
+            const rule = this.heatRules[headerName];
+            const stats = this.heatColumnStats[headerName];
+            if (!rule?.enabled || !stats || stats.min === undefined || stats.max === undefined) {
+                return null;
+            }
+            const v = Number.parseFloat(String(raw).replace(/[,% ]/g, ''));
+            if (Number.isNaN(v)) {
+                return null;
+            }
+            const min = Number(stats.min);
+            const max = Number(stats.max);
+            const medianFallback = (min + max) / 2;
+            const median =
+                stats.median !== undefined && stats.median !== null ? Number(stats.median) : medianFallback;
+            if (Number.isNaN(min) || Number.isNaN(max) || Number.isNaN(median) || Math.abs(max - min) < 1e-6) {
+                return null;
+            }
+            const eps = 1e-6;
+            /** t in [0,1]: 0 = red, 0.5 = white (median), 1 = blue */
+            let t;
+            if (rule.higher_is_better) {
+                if (v <= median) {
+                    t = median - min < eps ? 0.5 : 0.5 + (0.5 * (median - v)) / (median - min);
+                } else {
+                    t = max - median < eps ? 0.5 : 0.5 - (0.5 * (v - median)) / (max - median);
+                }
+            } else if (v <= median) {
+                t = median - min < eps ? 0.5 : (0.5 * (v - min)) / (median - min);
+            } else {
+                t = max - median < eps ? 0.5 : 0.5 + (0.5 * (v - median)) / (max - median);
+            }
+            t = Math.min(1, Math.max(0, t));
+            const redR = 255;
+            const redG = 0;
+            const redB = 0;
+            const blueR = 90;
+            const blueG = 125;
+            const blueB = 188;
+            let r;
+            let g;
+            let b;
+            if (t <= 0.5) {
+                const linearU = t / 0.5;
+                const u = linearU ** 1.12;
+                r = Math.round(redR + (255 - redR) * u);
+                g = Math.round(redG + (255 - redG) * u);
+                b = Math.round(redB + (255 - redB) * u);
+            } else {
+                const linearU = (t - 0.5) / 0.5;
+                const u = 1 - (1 - linearU) ** 2;
+                r = Math.round(255 + (blueR - 255) * u);
+                g = Math.round(255 + (blueG - 255) * u);
+                b = Math.round(255 + (blueB - 255) * u);
+            }
+            const whiteText = t <= 0.15 || t >= 0.85;
+
+            return {
+                backgroundColor: `rgb(${r},${g},${b})`,
+                color: whiteText ? '#ffffff' : '#111827',
+            };
+        },
+
+        async loadPage(p) {
+            if (!this.activeId) {
+                return;
+            }
+            this.loading = true;
+            this.loadError = '';
+            this.page = p;
+            try {
+                const params = { page: p };
+                if (this.selectedPlayers.length > 0) {
+                    params.players = this.selectedPlayers;
+                }
+                if (this.sortColumn !== null && typeof this.sortColumn === 'number') {
+                    params.sort_column = this.sortColumn;
+                    params.sort_direction = this.sortDirection;
+                }
+                const th = this.buildColumnThresholdsPayload();
+                if (th.length > 0) {
+                    params.column_thresholds = JSON.stringify(th);
+                }
+                const { data } = await window.axios.get(`${this.tableDataBase}/${this.activeId}/table-data`, {
+                    params,
+                    headers: { Accept: 'application/json' },
+                });
+                this.headers = data.headers ?? [];
+                this.syncThresholdDraftLength();
+                this.rows = data.rows ?? [];
+                this.rowOrdinals = data.row_ordinals ?? [];
+                this.columnOrder = Array.isArray(data.column_order) ? data.column_order : [];
+                this.heatRules =
+                    data.heat_rules && typeof data.heat_rules === 'object' && !Array.isArray(data.heat_rules)
+                        ? { ...data.heat_rules }
+                        : {};
+                this.heatColumnStats =
+                    data.heat_column_stats &&
+                    typeof data.heat_column_stats === 'object' &&
+                    !Array.isArray(data.heat_column_stats)
+                        ? { ...data.heat_column_stats }
+                        : {};
+                this.page = data.page ?? 1;
+                this.lastPage = data.lastPage ?? 1;
+                this.from = data.from ?? 0;
+                this.to = data.to ?? 0;
+                this.totalRows = data.totalRows ?? 0;
+                this.originalFilename = data.original_filename ?? '';
+                this.heatMenuForIdx = null;
+                if (data.sort && typeof data.sort.column === 'number') {
+                    this.sortColumn = data.sort.column;
+                    this.sortDirection = data.sort.direction === 'desc' ? 'desc' : 'asc';
+                } else {
+                    this.sortColumn = null;
+                }
+            } catch (err) {
+                const status = err?.response?.status;
+                this.loadError =
+                    status === 404
+                        ? 'That dataset file is missing on the server.'
+                        : 'Could not load this dataset. Check the connection and try again.';
+                this.headers = [];
+                this.thresholdDraft = [];
+                this.rows = [];
+                this.rowOrdinals = [];
+                this.columnOrder = [];
+                this.heatRules = {};
+                this.heatColumnStats = {};
+                this.heatMenuForIdx = null;
+                this.sortColumn = null;
+            } finally {
+                this.loading = false;
+            }
+        },
+    }));
+
     Alpine.data('playerListTable', (config) => ({
         rows: config.rows,
         deleteConfirm: config.deleteConfirm ?? '',

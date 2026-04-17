@@ -41,6 +41,11 @@
 }
 
 @layer components {
+    /* Dataset CSV viewer: inherit Carbon from html/body; avoid global body uppercase in markup via normal-case on the grid. */
+    .dataset-csv-grid {
+        font-family: Carbon, ui-sans-serif, system-ui, sans-serif;
+    }
+
     /*
      * Main app nav: fixed px heights so the bar/logo never scale with html { font-size: clamp(...) } on 2xl.
      * Logo also needs !important height/max-height so it wins over Tailwind preflight img { height: auto; max-width: 100% },
