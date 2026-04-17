@@ -9,10 +9,11 @@ class NcaaDashboardController extends Controller
 {
     public function index(): View
     {
-        $players = Player::query()->ncaa()->orderedByName()->get();
+        $ncaaPlayers = Player::query()->ncaa()->orderedByName()->get();
 
-        return view('ncaa.index', [
-            'players' => $players,
+        return view('ncaa.players.show', [
+            'player' => Player::profilePlaceholder('ncaa'),
+            'ncaaPlayers' => $ncaaPlayers,
         ]);
     }
 }

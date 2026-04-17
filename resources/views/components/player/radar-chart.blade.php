@@ -1,6 +1,26 @@
 @props([
     'player' => null,
+    'comfortable' => false,
+    'compact' => false,
+    'showLegend' => true,
 ])
+
+@php
+    $showLegend = filter_var($showLegend, FILTER_VALIDATE_BOOLEAN);
+    if ($compact) {
+        /* Pixels: root font-size scales on wide screens (see app.css); rem would blow past the 32–34px strip. */
+        $svgSize = 'max-w-[30px] max-h-[24px] sm:max-w-[32px] sm:max-h-[26px]';
+        $legendText = 'text-[0.4rem] sm:text-[0.45rem]';
+    } elseif ($comfortable) {
+        $svgSize =
+            'max-w-[5.25rem] max-h-[4.15rem] sm:max-w-[6.75rem] sm:max-h-[5.35rem] md:max-w-[7.65rem] md:max-h-[6rem] lg:max-w-[8.5rem] lg:max-h-[6.75rem] 2xl:max-w-[12rem] 2xl:max-h-[9.35rem]';
+        $legendText = 'text-[0.625rem] sm:text-[0.6875rem] md:text-[0.75rem] 2xl:text-[0.875rem]';
+    } else {
+        $svgSize =
+            'max-w-[4.25rem] max-h-[3.35rem] sm:max-w-[5.5rem] sm:max-h-[4.35rem] md:max-w-[6.25rem] md:max-h-[4.9rem] lg:max-w-[7rem] lg:max-h-[5.5rem] 2xl:max-w-[10.25rem] 2xl:max-h-[8rem]';
+        $legendText = 'text-[0.5rem] sm:text-[0.53125rem] 2xl:text-[0.625rem]';
+    }
+@endphp
 
 {{-- Placeholder hex radar; wire $player + metrics when data model exists --}}
 @php $cx = 110;
@@ -47,7 +67,7 @@
 >
     <svg
         viewBox="0 5 220 200"
-        class="h-auto w-full max-w-[4.25rem] max-h-[3.35rem] shrink-0 sm:max-w-[5.5rem] sm:max-h-[4.35rem] md:max-w-[6.25rem] md:max-h-[4.9rem] lg:max-w-[7rem] lg:max-h-[5.5rem] 2xl:max-w-[10.25rem] 2xl:max-h-[8rem]"
+        class="h-auto w-full shrink-0 {{ $svgSize }}"
         preserveAspectRatio="xMidYMid meet"
         role="img"
         aria-label="{{ __('SWING METRICS RADAR (PLACEHOLDER)') }}"
@@ -157,7 +177,7 @@
     </svg>
 
     <div
-        class="flex flex-wrap items-center justify-center gap-x-1 gap-y-px font-sans font-[700] text-[0.5rem] leading-none text-gray-900 sm:gap-x-1.5 sm:text-[0.53125rem] 2xl:gap-x-2 2xl:text-[0.625rem]"
+        class="flex flex-wrap items-center justify-center gap-x-1 gap-y-px font-sans font-[700] leading-none text-gray-900 sm:gap-x-1.5 2xl:gap-x-2 {{ $legendText }} {{ $compact || ! $showLegend ? 'hidden' : '' }}"
     >
         <span class="inline-flex items-center gap-px sm:gap-0.5">
             <span class="inline-block h-1 w-1 shrink-0 rounded-[0.5px] bg-blue-600 sm:h-1.5 sm:w-1.5" aria-hidden="true"></span>

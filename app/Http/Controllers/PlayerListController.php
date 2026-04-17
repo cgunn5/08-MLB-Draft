@@ -5,31 +5,42 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StorePlayerRequest;
 use App\Models\Player;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class PlayerListController extends Controller
 {
-    public function index(Request $request): View
+    public function index(): View
     {
-        $search = trim((string) $request->query('q', ''));
+        $players = Player::query()->orderedForPlayerList()->get();
 
-        $query = Player::query()->orderedForPlayerList();
+        $tableRows = $players->map(static function (Player $player): array {
+            $r = $player->source_ranks ?? [];
 
-        if ($search !== '') {
-            $query->where(function ($q) use ($search): void {
-                $like = '%'.$search.'%';
-                $q->where('first_name', 'like', $like)
-                    ->orWhere('last_name', 'like', $like)
-                    ->orWhere('school', 'like', $like);
-            });
-        }
-
-        $players = $query->get();
+            return [
+                'id' => $player->id,
+                'aggregate_rank' => $player->aggregate_rank,
+                'name' => strtoupper($player->last_name).', '.strtoupper($player->first_name),
+                'player_pool' => $player->player_pool,
+                'school' => $player->school,
+                'position' => $player->position,
+                'aggregate_score' => $player->aggregate_score !== null ? (float) $player->aggregate_score : null,
+                'mdl' => isset($r['model']) ? (int) $r['model'] : null,
+                'mlb' => isset($r['mlb']) ? (int) $r['mlb'] : null,
+                'espn' => isset($r['espn']) ? (int) $r['espn'] : null,
+                'law' => isset($r['law']) ? (int) $r['law'] : null,
+                'fg' => isset($r['fangraphs']) ? (int) $r['fangraphs'] : null,
+                'ba' => isset($r['ba']) ? (int) $r['ba'] : null,
+                'profile_url' => match ($player->player_pool) {
+                    'ncaa' => route('ncaa.players.show', $player),
+                    'hs' => route('hs.players.show', $player),
+                    default => null,
+                },
+            ];
+        })->values()->all();
 
         return view('players.index', [
             'players' => $players,
-            'search' => $search,
+            'tableRows' => $tableRows,
         ]);
     }
 
@@ -48,5 +59,14 @@ class PlayerListController extends Controller
         return redirect()
             ->route('players.index')
             ->with('status', __('Player added.'));
+    }
+
+    public function destroy(Player $player): RedirectResponse
+    {
+        $player->delete();
+
+        return redirect()
+            ->route('players.index')
+            ->with('status', __('Player removed.'));
     }
 }

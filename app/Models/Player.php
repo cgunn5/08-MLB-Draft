@@ -67,6 +67,35 @@ class Player extends Model
     }
 
     /**
+     * HS profile grades table (no ADJ row; matches board layout).
+     *
+     * @return array<string, string>
+     */
+    public static function gradeRowDefinitionsHs(): array
+    {
+        return [
+            'ROLE' => 'grade_role',
+            'PERF' => 'grade_perf',
+            'APPROACH' => 'grade_approach',
+            'CONTACT' => 'grade_contact',
+            'DAMAGE' => 'grade_damage',
+            'SWING' => 'grade_swing',
+        ];
+    }
+
+    /**
+     * In-memory player for HS/NCAA dashboard landing: full profile shell with no persisted row.
+     */
+    public static function profilePlaceholder(string $playerPool): self
+    {
+        return new self([
+            'player_pool' => $playerPool,
+            'first_name' => '',
+            'last_name' => '',
+        ]);
+    }
+
+    /**
      * One-line roster / aggregate summary for under the name selector (list-backed fields).
      */
     public function listSummaryLine(): ?string
@@ -79,6 +108,28 @@ class Player extends Model
         ]));
 
         return $parts !== [] ? implode(' · ', $parts) : null;
+    }
+
+    /**
+     * Two-line summary under the player combobox: school/position, then RK/AGG.
+     *
+     * @return array{school_position: ?string, rank_agg: ?string}
+     */
+    public function listSummaryLinesForSelect(): array
+    {
+        $schoolPositionParts = array_values(array_filter([
+            filled($this->school) ? (string) $this->school : null,
+            filled($this->position) ? (string) $this->position : null,
+        ]));
+        $rankAggParts = array_values(array_filter([
+            $this->aggregate_rank !== null ? 'RK '.$this->aggregate_rank : null,
+            $this->aggregate_score !== null ? 'AGG '.number_format((float) $this->aggregate_score, 1) : null,
+        ]));
+
+        return [
+            'school_position' => $schoolPositionParts !== [] ? implode(' · ', $schoolPositionParts) : null,
+            'rank_agg' => $rankAggParts !== [] ? implode(' · ', $rankAggParts) : null,
+        ];
     }
 
     /**
@@ -106,6 +157,15 @@ class Player extends Model
     public function scopeNcaa(Builder $query): Builder
     {
         return $query->where('player_pool', 'ncaa');
+    }
+
+    /**
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeHs(Builder $query): Builder
+    {
+        return $query->where('player_pool', 'hs');
     }
 
     /**

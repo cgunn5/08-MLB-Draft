@@ -2,11 +2,12 @@
     $pitchCols = ['P', 'xwOBAcon', 'OBP', 'CH%', 'SwM%', 'IZ SwM%', 'BB%'];
 @endphp
 
-<x-player.ranger-trait-block :title="__('Pitch Coverage')" :note="$player->note_pitch_coverage">
+<x-player.ranger-trait-block dense :tight-stack="true" :title="__('Pitch Coverage')" :note="$player->note_pitch_coverage">
         @foreach (['FB', 'SL', 'CH'] as $pitchLabel)
             <div class="min-w-0 overflow-x-auto">
+                <div class="ranger-traits-table-clip">
                 <table
-                    class="w-full min-w-[36rem] table-fixed border-collapse border border-gray-800 text-center text-[calc(0.52rem/2)] font-[700] sm:min-w-0 sm:text-[calc(0.6rem/2)] [&_th]:align-middle [&_th]:text-center [&_th]:font-[700] [&_td]:align-middle [&_td]:text-center [&_td]:font-[700]"
+                    class="ncaa-ranger-traits-table w-full min-w-[36rem] table-fixed border-collapse border border-gray-800 text-center font-[700] sm:min-w-0 [&_th]:align-middle [&_th]:text-center [&_th]:font-[700] [&_td]:align-middle [&_td]:text-center [&_td]:font-[700]"
                 >
                     @include('components.player.ranger-traits.table-colgroup', ['cols' => 1 + count($pitchCols)])
                     <thead>
@@ -49,8 +50,9 @@
                         @endforeach
                     </tbody>
                 </table>
+                </div>
             </div>
         @endforeach
     </x-player.ranger-trait-block>
 
-    <x-player.ranger-trait-block :title="__('Swing')" :note="$player->note_swing" />
+    <x-player.ranger-trait-block dense :tight-stack="true" :title="__('Swing')" :note="$player->note_swing" />

@@ -3,7 +3,7 @@
 <section
     {{ $attributes->merge([
         'class' => 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
-        'aria-labelledby' => 'ranger-traits-heading',
+        'aria-labelledby' => 'ranger-traits-hs-heading',
     ]) }}
 >
     <div class="mb-4 flex shrink-0 items-center gap-2.5 sm:mb-5 sm:gap-3 md:mb-6 md:gap-4">
@@ -12,7 +12,7 @@
             aria-hidden="true"
         ></div>
         <h2
-            id="ranger-traits-heading"
+            id="ranger-traits-hs-heading"
             class="shrink-0 px-0.5 text-center font-[700] leading-none tracking-wide text-gray-900 text-[0.85rem] sm:text-[0.95rem] md:text-[1.05rem]"
         >
             {{ __('Ranger Traits') }}
@@ -23,36 +23,31 @@
         ></div>
     </div>
 
-    {{-- Three vertical bands; flex-1 + column scroll matches HS layout inside the NCAA profile pane. --}}
     <div
         class="grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] grid-rows-1 items-stretch gap-1.5 overflow-x-hidden sm:gap-2 md:gap-3 lg:gap-4 2xl:gap-5"
     >
         <div
             class="flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain pb-2 sm:pb-2.5"
             role="region"
-            aria-label="{{ __('Performance and engine') }}"
+            aria-label="{{ __('Circuit stats') }}"
         >
-            <div class="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 sm:gap-2 md:gap-2.5">
-                @include('components.player.ranger-traits.columns-left', ['player' => $player])
+            <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+                @include('components.player.ranger-traits-hs.columns-left', ['player' => $player])
             </div>
         </div>
         <div
             class="flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain pb-2 sm:pb-2.5"
             role="region"
-            aria-label="{{ __('Approach and left/right splits') }}"
+            aria-label="{{ __('Approach and impact') }}"
         >
-            <div class="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 sm:gap-2 md:gap-2.5">
-                @include('components.player.ranger-traits.columns-middle', ['player' => $player])
-            </div>
+            @include('components.player.ranger-traits-hs.columns-middle', ['player' => $player])
         </div>
         <div
             class="flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain pb-2 sm:pb-2.5"
             role="region"
-            aria-label="{{ __('Pitch coverage and swing') }}"
+            aria-label="{{ __('Adjustability and swing') }}"
         >
-            <div class="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 sm:gap-2 md:gap-2.5">
-                @include('components.player.ranger-traits.columns-right', ['player' => $player])
-            </div>
+            @include('components.player.ranger-traits-hs.columns-right', ['player' => $player])
         </div>
     </div>
 </section>

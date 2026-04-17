@@ -1,7 +1,8 @@
-<x-player.ranger-trait-block :title="__('Performance')" :note="$player->note_performance">
+<x-player.ranger-trait-block dense :tight-stack="true" :title="__('Performance')" :note="$player->note_performance">
         <div class="min-w-0 overflow-x-auto">
+            <div class="ranger-traits-table-clip">
             <table
-                class="w-full min-w-[36rem] table-fixed border-collapse border border-gray-800 text-center text-[calc(0.52rem/2)] font-[700] sm:min-w-0 sm:text-[calc(0.6rem/2)] [&_th]:align-middle [&_th]:text-center [&_th]:font-[700] [&_td]:align-middle [&_td]:text-center [&_td]:font-[700]"
+                class="ncaa-ranger-traits-table w-full min-w-[36rem] table-fixed border-collapse border border-gray-800 text-center font-[700] sm:min-w-0 [&_th]:align-middle [&_th]:text-center [&_th]:font-[700] [&_td]:align-middle [&_td]:text-center [&_td]:font-[700]"
             >
                 @include('components.player.ranger-traits.table-colgroup', ['cols' => 7])
                 <thead>
@@ -64,11 +65,13 @@
                     </tr>
                 </tbody>
             </table>
+            </div>
         </div>
 
         <div class="min-w-0 overflow-x-auto">
+            <div class="ranger-traits-table-clip">
             <table
-                class="w-full min-w-[32rem] table-fixed border-collapse border border-gray-800 text-center text-[calc(0.52rem/2)] font-[700] sm:min-w-0 sm:text-[calc(0.6rem/2)] [&_th]:align-middle [&_th]:text-center [&_th]:font-[700] [&_td]:align-middle [&_td]:text-center [&_td]:font-[700]"
+                class="ncaa-ranger-traits-table w-full min-w-[32rem] table-fixed border-collapse border border-gray-800 text-center font-[700] sm:min-w-0 [&_th]:align-middle [&_th]:text-center [&_th]:font-[700] [&_td]:align-middle [&_td]:text-center [&_td]:font-[700]"
             >
                 @include('components.player.ranger-traits.table-colgroup', ['cols' => 7])
                 <thead>
@@ -115,13 +118,15 @@
                     </tr>
                 </tbody>
             </table>
+            </div>
         </div>
     </x-player.ranger-trait-block>
 
-    <x-player.ranger-trait-block :title="__('Engine')" :note="$player->note_engine">
+    <x-player.ranger-trait-block dense :tight-stack="true" :title="__('Engine')" :note="$player->note_engine">
         <div class="min-w-0 overflow-x-auto">
+            <div class="ranger-traits-table-clip">
             <table
-                class="w-full min-w-[40rem] table-fixed border-collapse border border-gray-800 text-center text-[calc(0.52rem/2)] font-[700] sm:min-w-0 sm:text-[calc(0.6rem/2)] [&_th]:align-middle [&_th]:text-center [&_th]:font-[700] [&_td]:align-middle [&_td]:text-center [&_td]:font-[700]"
+                class="ncaa-ranger-traits-table w-full min-w-[40rem] table-fixed border-collapse border border-gray-800 text-center font-[700] sm:min-w-0 [&_th]:align-middle [&_th]:text-center [&_th]:font-[700] [&_td]:align-middle [&_td]:text-center [&_td]:font-[700]"
             >
                 @include('components.player.ranger-traits.table-colgroup', ['cols' => 7])
                 <thead>
@@ -162,5 +167,6 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
         </div>
     </x-player.ranger-trait-block>
