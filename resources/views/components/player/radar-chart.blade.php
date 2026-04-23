@@ -1,35 +1,38 @@
 @props([
     'player' => null,
+    'radar' => null,
     'comfortable' => false,
     'compact' => false,
     'showLegend' => true,
 ])
 
 @php
-    $showLegend = filter_var($showLegend, FILTER_VALIDATE_BOOLEAN);
+    $radar = is_array($radar) ? $radar : null;
+    $hasDynamicRadar = $radar !== null
+        && isset($radar['values'])
+        && is_array($radar['values'])
+        && count($radar['values']) >= 5;
+
     if ($compact) {
-        /* Pixels: root font-size scales on wide screens (see app.css); rem would blow past the 32–34px strip. */
         $svgSize = 'max-w-[30px] max-h-[24px] sm:max-w-[32px] sm:max-h-[26px]';
-        $legendText = 'text-[0.4rem] sm:text-[0.45rem]';
     } elseif ($comfortable) {
         $svgSize =
             'max-w-[5.25rem] max-h-[4.15rem] sm:max-w-[6.75rem] sm:max-h-[5.35rem] md:max-w-[7.65rem] md:max-h-[6rem] lg:max-w-[8.5rem] lg:max-h-[6.75rem] 2xl:max-w-[12rem] 2xl:max-h-[9.35rem]';
-        $legendText = 'text-[0.625rem] sm:text-[0.6875rem] md:text-[0.75rem] 2xl:text-[0.875rem]';
     } else {
         $svgSize =
             'max-w-[4.25rem] max-h-[3.35rem] sm:max-w-[5.5rem] sm:max-h-[4.35rem] md:max-w-[6.25rem] md:max-h-[4.9rem] lg:max-w-[7rem] lg:max-h-[5.5rem] 2xl:max-w-[10.25rem] 2xl:max-h-[8rem]';
-        $legendText = 'text-[0.5rem] sm:text-[0.53125rem] 2xl:text-[0.625rem]';
     }
 @endphp
 
-{{-- Placeholder hex radar; wire $player + metrics when data model exists --}}
-@php $cx = 110;
+@php
+    $cx = 110;
     $cy = 100;
     $rMax = 72;
-    $labels = ['XWOBACON', 'SWDEC', 'SWM', 'IZSWM%', 'GB%', 'EV95'];
+    $nAxes = 5;
+    $degStep = 360 / $nAxes;
 
-    $toPoint = function (int $vertex, float $pct) use ($cx, $cy, $rMax): string {
-        $deg = -90 + 60 * $vertex;
+    $toPoint = function (int $vertex, float $pct) use ($cx, $cy, $rMax, $degStep): string {
+        $deg = -90 + $degStep * $vertex;
         $rad = deg2rad($deg);
         $r = $rMax * ($pct / 100);
         $x = round($cx + $r * cos($rad), 2);
@@ -38,28 +41,43 @@
         return "{$x},{$y}";
     };
 
-    $hexRing = function (float $pct) use ($toPoint): string {
+    $polyRing = function (float $pct) use ($toPoint, $nAxes): string {
         $pts = [];
-        for ($i = 0; $i < 6; $i++) {
+        for ($i = 0; $i < $nAxes; $i++) {
             $pts[] = $toPoint($i, $pct);
         }
 
         return implode(' ', $pts);
     };
 
-    $polyFromValues = function (array $values) use ($toPoint): string {
+    $polyFromValues = function (array $values) use ($toPoint, $nAxes): string {
         $pts = [];
-        foreach ($values as $i => $v) {
-            $pts[] = $toPoint((int) $i, (float) $v);
+        for ($i = 0; $i < $nAxes; $i++) {
+            $v = (float) ($values[$i] ?? 0);
+            $pts[] = $toPoint($i, $v);
         }
 
         return implode(' ', $pts);
     };
 
-    // Static demo series (replace with player metrics later)
-    $avgVals = [35, 35, 35, 35, 35, 35];
-    $y2024 = [40, 90, 86, 84, 45, 36];
-    $y2025 = [48, 58, 76, 74, 70, 44];
+    if ($hasDynamicRadar) {
+        $chartValues = array_map(static fn ($v) => (float) $v, array_slice($radar['values'], 0, $nAxes));
+        /** @var list<array<string, mixed>> $axisMeta */
+        $axisMeta = isset($radar['axes']) && is_array($radar['axes']) ? $radar['axes'] : [];
+        $labels = [];
+        foreach (\App\Support\HsOverallRadarNtile::AXES as $idx => $def) {
+            $labels[$idx] = (string) ($axisMeta[$idx]['label'] ?? $def['label']);
+        }
+        $compScope = $radar['comp_scope'] ?? null;
+        $compScope = is_string($compScope) ? $compScope : null;
+        $compLabel = $compScope !== null ? $compScope : __('All');
+        $ariaRadar =
+            __('HS Overall vs draft comp: quintiles (NTILE 5) for OPS, SwM%, GB%, EV95, CH%.').' '.__('Comp set').': '.$compLabel;
+    } else {
+        $chartValues = array_fill(0, $nAxes, 35.0);
+        $labels = array_column(\App\Support\HsOverallRadarNtile::AXES, 'label');
+        $ariaRadar = __('Swing metrics radar (connect HS Overall data for comp quintiles).');
+    }
 @endphp
 
 <div
@@ -70,7 +88,7 @@
         class="h-auto w-full shrink-0 {{ $svgSize }}"
         preserveAspectRatio="xMidYMid meet"
         role="img"
-        aria-label="{{ __('SWING METRICS RADAR (PLACEHOLDER)') }}"
+        aria-label="{{ $ariaRadar }}"
     >
         <defs>
             <style>
@@ -83,14 +101,14 @@
 
         @foreach ([20, 40, 60, 80, 100] as $lvl)
             <polygon
-                points="{{ $hexRing($lvl) }}"
+                points="{{ $polyRing((float) $lvl) }}"
                 fill="none"
                 stroke="#d1d5db"
                 stroke-width="0.6"
             />
         @endforeach
 
-        @for ($i = 0; $i < 6; $i++)
+        @for ($i = 0; $i < $nAxes; $i++)
             <line
                 x1="{{ $cx }}"
                 y1="{{ $cy }}"
@@ -128,35 +146,28 @@
             </text>
         @endforeach
 
-        <polygon
-            points="{{ $polyFromValues($avgVals) }}"
-            fill="rgb(243 244 246)"
-            fill-opacity="0.85"
-            stroke="#9ca3af"
-            stroke-width="0.8"
-        />
-
-        <polygon
-            points="{{ $polyFromValues($y2024) }}"
-            fill="rgb(220 38 38)"
-            fill-opacity="0.22"
-            stroke="#dc2626"
-            stroke-width="1.8"
-            stroke-linejoin="round"
-        />
-
-        <polygon
-            points="{{ $polyFromValues($y2025) }}"
-            fill="rgb(37 99 235)"
-            fill-opacity="0.22"
-            stroke="#2563eb"
-            stroke-width="1.8"
-            stroke-linejoin="round"
-        />
+        @if ($hasDynamicRadar)
+            <polygon
+                points="{{ $polyFromValues($chartValues) }}"
+                fill="rgb(220 38 38)"
+                fill-opacity="0.22"
+                stroke="#dc2626"
+                stroke-width="1.8"
+                stroke-linejoin="round"
+            />
+        @else
+            <polygon
+                points="{{ $polyFromValues($chartValues) }}"
+                fill="rgb(243 244 246)"
+                fill-opacity="0.85"
+                stroke="#9ca3af"
+                stroke-width="0.8"
+            />
+        @endif
 
         @foreach ($labels as $i => $label)
             @php
-                $deg = -90 + 60 * $i;
+                $deg = -90 + $degStep * $i;
                 $rad = deg2rad($deg);
                 $lr = $rMax + 16;
                 $lx = round($cx + $lr * cos($rad), 1);
@@ -176,23 +187,4 @@
         @endforeach
     </svg>
 
-    <div
-        class="flex flex-wrap items-center justify-center gap-x-1 gap-y-px font-sans font-[700] leading-none text-gray-900 sm:gap-x-1.5 2xl:gap-x-2 {{ $legendText }} {{ $compact || ! $showLegend ? 'hidden' : '' }}"
-    >
-        <span class="inline-flex items-center gap-px sm:gap-0.5">
-            <span class="inline-block h-1 w-1 shrink-0 rounded-[0.5px] bg-blue-600 sm:h-1.5 sm:w-1.5" aria-hidden="true"></span>
-            2025
-        </span>
-        <span class="inline-flex items-center gap-px sm:gap-0.5">
-            <span class="inline-block h-1 w-1 shrink-0 rounded-[0.5px] bg-red-600 sm:h-1.5 sm:w-1.5" aria-hidden="true"></span>
-            2024
-        </span>
-        <span class="inline-flex items-center gap-px sm:gap-0.5">
-            <span
-                class="inline-block h-1 w-1 shrink-0 rounded-[0.5px] border border-gray-400 bg-gray-50 sm:h-1.5 sm:w-1.5"
-                aria-hidden="true"
-            ></span>
-            AVG
-        </span>
-    </div>
 </div>

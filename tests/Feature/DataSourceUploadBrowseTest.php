@@ -53,7 +53,9 @@ class DataSourceUploadBrowseTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Rankings', false);
-        $response->assertSee('FILTER BY PLAYER', false);
+        $response->assertSee('Filter Players', false);
+        $response->assertSee('Append row', false);
+        $response->assertSee('readOnlyById', false);
     }
 
     public function test_authenticated_user_can_fetch_table_data_json(): void
@@ -82,6 +84,7 @@ class DataSourceUploadBrowseTest extends TestCase
             'column_order',
             'heat_rules',
             'heat_column_stats',
+            'heat_row_pa_ok',
         ]);
         $response->assertJsonPath('headers', ['a', 'b']);
         $response->assertJsonPath('totalRows', 2);
@@ -461,6 +464,54 @@ class DataSourceUploadBrowseTest extends TestCase
         $this->assertStringNotContainsString(',ALPHA,', $csv);
     }
 
+    public function test_can_append_data_row_to_csv(): void
+    {
+        $user = User::factory()->create();
+        $path = 'data-source-uploads/append-row-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($path, "YEAR,PLAYER,STAT\n2025,ALPHA,10\n");
+
+        $upload = DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Stats',
+            'original_filename' => 'stats.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => ['YEAR', 'PLAYER', 'STAT'],
+            'row_count' => 1,
+        ]);
+
+        $this->actingAs($user)->postJson(route('data-sources.uploads.rows.store', $upload), [
+            'cells' => ['2026', 'DELTA', '42'],
+        ])->assertOk()->assertJsonPath('row_count', 2);
+
+        $upload->refresh();
+        $this->assertSame(2, $upload->row_count);
+        $csv = Storage::disk('local')->get($path);
+        $this->assertStringContainsString('DELTA', $csv);
+        $this->assertStringContainsString('42', $csv);
+    }
+
+    public function test_append_row_requires_player_column(): void
+    {
+        $user = User::factory()->create();
+        $path = 'data-source-uploads/append-reject-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($path, "YEAR,PLAYER,STAT\n2025,ALPHA,10\n");
+
+        $upload = DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Stats',
+            'original_filename' => 'stats.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => ['YEAR', 'PLAYER', 'STAT'],
+            'row_count' => 1,
+        ]);
+
+        $this->actingAs($user)->postJson(route('data-sources.uploads.rows.store', $upload), [
+            'cells' => ['2026', '', '5'],
+        ])->assertUnprocessable();
+    }
+
     public function test_can_delete_data_row_by_ordinal(): void
     {
         $user = User::factory()->create();
@@ -554,5 +605,231 @@ class DataSourceUploadBrowseTest extends TestCase
         $this->actingAs($other)->deleteJson(route('data-sources.uploads.delete', $upload))->assertNotFound();
         $this->assertDatabaseHas('data_source_uploads', ['id' => $upload->id]);
         $this->assertTrue(Storage::disk('local')->exists($path));
+    }
+
+    public function test_group_column_values_returns_distinct_display_column_values(): void
+    {
+        $user = User::factory()->create();
+        $path = 'data-source-uploads/grp-val-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($path, "Player,Type,VAL\nA,Fastball,1\nA,Breaking,2\nB,Fastball,3\n");
+
+        $upload = DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Pitch types',
+            'original_filename' => 'p.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => ['Player', 'Type', 'VAL'],
+            'row_count' => 3,
+        ]);
+
+        $url = route('data-sources.uploads.group-values', $upload).'?'.http_build_query([
+            'group_column' => 1,
+        ]);
+
+        $this->actingAs($user)->getJson($url)
+            ->assertOk()
+            ->assertJsonPath('values', ['Breaking', 'Fastball']);
+    }
+
+    public function test_table_data_filters_rows_by_group_column_and_value(): void
+    {
+        $user = User::factory()->create();
+        $path = 'data-source-uploads/grp-filt-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($path, "Player,Type,VAL\nA,Fastball,1\nA,Breaking,2\nB,Fastball,3\n");
+
+        $upload = DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Pitch types',
+            'original_filename' => 'p.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => ['Player', 'Type', 'VAL'],
+            'row_count' => 3,
+        ]);
+
+        $url = route('data-sources.uploads.table-data', $upload).'?'.http_build_query([
+            'group_column' => 1,
+            'group_value' => 'Fastball',
+        ]);
+
+        $this->actingAs($user)->getJson($url)
+            ->assertOk()
+            ->assertJsonPath('totalRows', 2)
+            ->assertJsonPath('rows.0', ['A', 'Fastball', '1'])
+            ->assertJsonPath('rows.1', ['B', 'Fastball', '3'])
+            ->assertJsonPath('group.column', 1)
+            ->assertJsonPath('group.active', true);
+    }
+
+    public function test_table_data_group_filter_uses_subset_heat_column_stats(): void
+    {
+        $user = User::factory()->create();
+        $path = 'data-source-uploads/grp-heat-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($path, "Player,Kind,STAT\nA,FB,10\nB,BB,100\nC,FB,20\n");
+
+        $upload = DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Split heat',
+            'original_filename' => 's.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => ['Player', 'Kind', 'STAT'],
+            'row_count' => 3,
+        ]);
+
+        $this->actingAs($user)->patchJson(route('data-sources.uploads.settings', $upload), [
+            'heat_rules' => [
+                'STAT' => ['enabled' => true, 'higher_is_better' => true],
+            ],
+        ])->assertOk();
+
+        $upload->refresh();
+        $this->assertEqualsWithDelta(10.0, (float) $upload->heat_column_stats['STAT']['min'], 0.00001);
+        $this->assertEqualsWithDelta(100.0, (float) $upload->heat_column_stats['STAT']['max'], 0.00001);
+
+        $url = route('data-sources.uploads.table-data', $upload).'?'.http_build_query([
+            'group_column' => 1,
+            'group_value' => 'FB',
+        ]);
+
+        $this->actingAs($user)->getJson($url)
+            ->assertOk()
+            ->assertJsonPath('heat_column_stats.STAT.min', 10)
+            ->assertJsonPath('heat_column_stats.STAT.max', 20);
+    }
+
+    public function test_table_data_group_plus_player_filter_keeps_group_scoped_heat_stats(): void
+    {
+        $user = User::factory()->create();
+        $path = 'data-source-uploads/grp-heat-player-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($path, "Player,Kind,STAT\nA,FB,10\nB,BB,100\nC,FB,20\n");
+
+        $upload = DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Split heat + player',
+            'original_filename' => 's.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => ['Player', 'Kind', 'STAT'],
+            'row_count' => 3,
+        ]);
+
+        $this->actingAs($user)->patchJson(route('data-sources.uploads.settings', $upload), [
+            'heat_rules' => [
+                'STAT' => ['enabled' => true, 'higher_is_better' => true],
+            ],
+        ])->assertOk();
+
+        $url = route('data-sources.uploads.table-data', $upload).'?'.http_build_query([
+            'group_column' => 1,
+            'group_value' => 'FB',
+            'players' => ['A'],
+        ]);
+
+        $this->actingAs($user)->getJson($url)
+            ->assertOk()
+            ->assertJsonPath('totalRows', 1)
+            ->assertJsonPath('rows.0', ['A', 'FB', '10'])
+            ->assertJsonPath('heat_column_stats.STAT.min', 10)
+            ->assertJsonPath('heat_column_stats.STAT.max', 20);
+    }
+
+    public function test_heat_column_stats_use_only_rows_meeting_min_pa(): void
+    {
+        $user = User::factory()->create();
+        $path = 'data-source-uploads/heat-pa-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($path, "PLAYER,PA,STAT\nA,5,1\nB,100,10\nC,200,20\n");
+
+        $upload = DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'name' => 'PA heat',
+            'original_filename' => 'p.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => ['PLAYER', 'PA', 'STAT'],
+            'row_count' => 3,
+            'dataset_browse_settings' => [
+                'players' => [],
+                'column_thresholds' => [],
+                'group_column' => null,
+                'group_value' => null,
+                'heat_min_pa' => 50,
+            ],
+        ]);
+
+        $this->actingAs($user)->patchJson(route('data-sources.uploads.settings', $upload), [
+            'heat_rules' => [
+                'STAT' => ['enabled' => true, 'higher_is_better' => true],
+            ],
+        ])->assertOk();
+
+        $upload->refresh();
+        $this->assertEqualsWithDelta(10.0, (float) $upload->heat_column_stats['STAT']['min'], 0.00001);
+        $this->assertEqualsWithDelta(20.0, (float) $upload->heat_column_stats['STAT']['max'], 0.00001);
+
+        $this->actingAs($user)->getJson(route('data-sources.uploads.table-data', $upload))
+            ->assertOk()
+            ->assertJsonPath('heat_pa_qualifier.min', 50)
+            ->assertJsonPath('heat_pa_qualifier.column_index', 1)
+            ->assertJsonPath('heat_row_pa_ok.0', false)
+            ->assertJsonPath('heat_row_pa_ok.1', true)
+            ->assertJsonPath('heat_row_pa_ok.2', true);
+    }
+
+    public function test_table_data_heat_min_pa_query_recomputes_stats_without_save(): void
+    {
+        $user = User::factory()->create();
+        $path = 'data-source-uploads/heat-pa-q-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($path, "PLAYER,PA,STAT\nA,5,1\nB,100,10\nC,200,20\n");
+
+        $upload = DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'name' => 'PA heat q',
+            'original_filename' => 'p.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => ['PLAYER', 'PA', 'STAT'],
+            'row_count' => 3,
+        ]);
+
+        $this->actingAs($user)->patchJson(route('data-sources.uploads.settings', $upload), [
+            'heat_rules' => [
+                'STAT' => ['enabled' => true, 'higher_is_better' => true],
+            ],
+        ])->assertOk();
+
+        $upload->refresh();
+        $this->assertEqualsWithDelta(1.0, (float) $upload->heat_column_stats['STAT']['min'], 0.00001);
+
+        $url = route('data-sources.uploads.table-data', $upload).'?'.http_build_query([
+            'heat_min_pa' => 50,
+        ]);
+
+        $this->actingAs($user)->getJson($url)
+            ->assertOk()
+            ->assertJsonPath('heat_column_stats.STAT.min', 10)
+            ->assertJsonPath('heat_column_stats.STAT.max', 20);
+    }
+
+    public function test_table_data_heat_row_pa_ok_is_null_without_min_pa(): void
+    {
+        $user = User::factory()->create();
+        $path = 'data-source-uploads/hrpo-null-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($path, "PLAYER,PA,STAT\nA,100,10\n");
+
+        $upload = DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'name' => 'x',
+            'original_filename' => 'x.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => ['PLAYER', 'PA', 'STAT'],
+            'row_count' => 1,
+        ]);
+
+        $this->actingAs($user)->getJson(route('data-sources.uploads.table-data', $upload))
+            ->assertOk()
+            ->assertJsonPath('heat_row_pa_ok', null);
     }
 }

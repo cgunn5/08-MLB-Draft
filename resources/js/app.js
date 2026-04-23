@@ -163,7 +163,15 @@ document.addEventListener('alpine:init', () => {
 
     Alpine.data('dataSourceLibrary', (config) => ({
         tableDataBase: (config.tableDataBase ?? '').replace(/\/?$/, ''),
+        blankGroupTabLabel:
+            typeof config.blankGroupTabLabel === 'string' ? config.blankGroupTabLabel : '(blank)',
         uploadSummaries: Array.isArray(config.uploadSummaries) ? config.uploadSummaries : [],
+        readOnlyById:
+            config.readOnlyById &&
+            typeof config.readOnlyById === 'object' &&
+            !Array.isArray(config.readOnlyById)
+                ? config.readOnlyById
+                : {},
         activeId: config.initialActiveId ?? null,
         page: 1,
         headers: [],
@@ -189,9 +197,93 @@ document.addEventListener('alpine:init', () => {
         columnDragFrom: null,
         columnDragOver: null,
         heatMenuForIdx: null,
+        heatPaQualifier: { min: null, column_index: null },
+        /** @type {boolean[]|null} Server: per displayed row, true if PA meets min (only when min PA is set). */
+        heatRowPaOk: null,
         sortColumn: null,
         sortDirection: 'asc',
         thresholdDraft: [],
+        heatMinPaDraft: '',
+        groupByColumnRaw: '',
+        groupValues: [],
+        activeGroupValue: null,
+        _groupColumnSelectSyncing: false,
+        hsProfileFeedDraft: [],
+        _pendingBrowseThresholds: null,
+        _tableLoadSeq: 0,
+        newRowCells: [],
+        appendRowBusy: false,
+
+        init() {
+            queueMicrotask(async () => {
+                if (!this.activeId) {
+                    return;
+                }
+                this.applyBrowseSettingsFromSummary();
+                await this.loadPage(this.page);
+            });
+        },
+
+        /** Saved Min PA for the active dataset (from last persisted browse settings). */
+        browseHeatMinPa() {
+            const row = this.uploadSummaries.find((u) => Number(u.id) === Number(this.activeId));
+            const hmpa = row?.dataset_browse_settings?.heat_min_pa;
+            if (hmpa === undefined || hmpa === null || String(hmpa) === '') {
+                return null;
+            }
+            const n = Number(hmpa);
+
+            return !Number.isNaN(n) && n >= 0 ? n : null;
+        },
+
+        parsedGroupColumnIndex() {
+            if (this.groupByColumnRaw === '' || this.groupByColumnRaw === null || this.groupByColumnRaw === undefined) {
+                return null;
+            }
+            const n = parseInt(String(this.groupByColumnRaw), 10);
+
+            return Number.isNaN(n) ? null : n;
+        },
+
+        syncGroupColumnSelectOptions() {
+            const list = this.headers;
+            const sel =
+                document.getElementById('dataset_group_column') ?? this.$refs?.groupColumnSelect ?? null;
+            if (!sel || !Array.isArray(list)) {
+                return;
+            }
+            this._groupColumnSelectSyncing = true;
+            try {
+                const saved = String(this.groupByColumnRaw ?? '');
+                while (sel.options.length > 1) {
+                    sel.remove(1);
+                }
+                list.forEach((h, gIdx) => {
+                    const o = document.createElement('option');
+                    o.value = String(gIdx);
+                    o.textContent = h !== '' ? String(h) : '—';
+                    sel.appendChild(o);
+                });
+                if (saved !== '') {
+                    const n = parseInt(saved, 10);
+                    if (!Number.isNaN(n) && n >= 0 && n < list.length) {
+                        this.groupByColumnRaw = String(n);
+                        sel.value = String(n);
+                    } else {
+                        this.groupByColumnRaw = '';
+                        this.activeGroupValue = null;
+                        this.groupValues = [];
+                        sel.value = '';
+                    }
+                } else {
+                    sel.value = '';
+                }
+            } finally {
+                queueMicrotask(() => {
+                    this._groupColumnSelectSyncing = false;
+                });
+            }
+        },
 
         get datasetGridStyle() {
             const n = Array.isArray(this.headers) ? this.headers.length : 0;
@@ -227,6 +319,28 @@ document.addEventListener('alpine:init', () => {
             return `${this.tableDataBase}/${this.activeId}/rows/${ordinal}`;
         },
 
+        get activeUploadReadOnly() {
+            const id = this.activeId;
+            if (id === null || id === undefined || id === '') {
+                return false;
+            }
+            const key = String(id);
+            const map = this.readOnlyById;
+            if (map && typeof map === 'object' && Object.prototype.hasOwnProperty.call(map, key)) {
+                return map[key] === true;
+            }
+            const row = this.uploadSummaries.find((u) => Number(u.id) === Number(id));
+            if (!row) {
+                return false;
+            }
+
+            return row.dataset_read_only === true || row.upload_kind === 'career_pg_master';
+        },
+
+        scrollToAppendRow() {
+            document.getElementById('dataset-add-row')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        },
+
         activeUploadName() {
             const id = this.activeId;
             const row = this.uploadSummaries.find((u) => Number(u.id) === Number(id));
@@ -234,28 +348,177 @@ document.addEventListener('alpine:init', () => {
             return row?.name ?? '';
         },
 
-        get forHsRangerTraitsActive() {
+        syncHsProfileFeedDraft() {
             const row = this.uploadSummaries.find((u) => Number(u.id) === Number(this.activeId));
+            if (!row) {
+                this.hsProfileFeedDraft = [];
 
-            return row?.for_hs_ranger_traits === true;
+                return;
+            }
+            const slots = row.hs_profile_feed_slots;
+            this.hsProfileFeedDraft = Array.isArray(slots) ? [...slots] : [];
         },
 
-        async toggleForHsRangerTraits() {
+        applyBrowseSettingsFromSummary() {
+            const row = this.uploadSummaries.find((u) => Number(u.id) === Number(this.activeId));
+            const s = row?.dataset_browse_settings;
+            if (!s || typeof s !== 'object') {
+                this.selectedPlayers = [];
+                this._pendingBrowseThresholds = null;
+                this.groupByColumnRaw = '';
+                this.activeGroupValue = null;
+                this.heatMinPaDraft = '';
+
+                return;
+            }
+            this.selectedPlayers = Array.isArray(s.players) ? s.players.map((p) => String(p)) : [];
+            this._pendingBrowseThresholds = Array.isArray(s.column_thresholds) ? s.column_thresholds : null;
+            const hmpa = s.heat_min_pa;
+            this.heatMinPaDraft =
+                hmpa !== undefined && hmpa !== null && String(hmpa) !== '' && !Number.isNaN(Number(hmpa))
+                    ? String(hmpa)
+                    : '';
+            if (s.group_column !== undefined && s.group_column !== null && s.group_column !== '') {
+                const gc = parseInt(String(s.group_column), 10);
+                this.groupByColumnRaw = Number.isNaN(gc) ? '' : String(gc);
+            } else {
+                this.groupByColumnRaw = '';
+            }
+            if (Object.prototype.hasOwnProperty.call(s, 'group_value')) {
+                const gv = s.group_value;
+                this.activeGroupValue = gv === null || gv === undefined ? null : String(gv);
+            } else {
+                this.activeGroupValue = null;
+            }
+        },
+
+        applyDatasetBrowseToSummary(data) {
+            if (!Object.prototype.hasOwnProperty.call(data ?? {}, 'dataset_browse_settings')) {
+                return;
+            }
+            const s = data.dataset_browse_settings;
+            this.uploadSummaries = this.uploadSummaries.map((u) =>
+                Number(u.id) === Number(this.activeId) ? { ...u, dataset_browse_settings: s } : u,
+            );
+        },
+
+        applyHsProfileFeedAssignments(data) {
+            if (!data?.hs_profile_feed_assignments || !Array.isArray(data.hs_profile_feed_assignments)) {
+                return;
+            }
+            const slotMap = new Map(
+                data.hs_profile_feed_assignments.map((s) => [
+                    Number(s.id),
+                    Array.isArray(s.hs_profile_feed_slots) ? s.hs_profile_feed_slots : [],
+                ]),
+            );
+            this.uploadSummaries = this.uploadSummaries.map((u) => ({
+                ...u,
+                hs_profile_feed_slots: slotMap.has(Number(u.id)) ? slotMap.get(Number(u.id)) : [],
+            }));
+            this.syncHsProfileFeedDraft();
+        },
+
+        async saveDataset() {
             if (!this.activeId) {
                 return;
             }
-            const next = !this.forHsRangerTraitsActive;
             try {
-                await window.axios.patch(`${this.tableDataBase}/${this.activeId}/settings`, {
-                    for_hs_ranger_traits: next,
-                });
-                this.uploadSummaries = this.uploadSummaries.map((u) => ({
-                    ...u,
-                    for_hs_ranger_traits: Number(u.id) === Number(this.activeId) ? next : false,
-                }));
+                const th = this.buildColumnThresholdsPayload();
+                const gci = this.parsedGroupColumnIndex();
+                const rawPa = String(this.heatMinPaDraft ?? '').trim();
+                let heat_min_pa = null;
+                if (rawPa !== '') {
+                    const n = Number(rawPa);
+                    if (!Number.isNaN(n) && n >= 0) {
+                        heat_min_pa = n;
+                    }
+                }
+                const browse = {
+                    players: [...this.selectedPlayers],
+                    column_thresholds: th,
+                    group_column: gci,
+                    group_value:
+                        gci !== null && this.activeGroupValue !== null ? String(this.activeGroupValue) : null,
+                    heat_min_pa,
+                };
+                const payload = { dataset_browse_settings: browse };
+                if (!this.activeUploadReadOnly) {
+                    payload.hs_profile_feed_slots = this.hsProfileFeedDraft;
+                }
+                const { data } = await window.axios.patch(this.settingsUrl(), payload);
+                this.applyHsProfileFeedAssignments(data);
+                this.applyDatasetBrowseToSummary(data);
+                this.syncHsProfileFeedDraft();
+                this.loadError = '';
+                await this.loadPage(this.page);
             } catch {
-                this.loadError = 'Could not update HS Ranger Traits data source.';
+                this.loadError = 'Could not save dataset settings.';
             }
+        },
+
+        /**
+         * Recompute per-row heat eligibility from the current grid using Min PA draft (then saved qualifier).
+         * Runs after every table load so cell colors cannot drift from visible rows/headers.
+         */
+        reconcileHeatRowPaOkFromGrid() {
+            let min = null;
+            const raw = String(this.heatMinPaDraft ?? '').trim();
+            if (raw !== '') {
+                const n = Number(raw);
+                if (!Number.isNaN(n) && n >= 0) {
+                    min = n;
+                }
+            }
+            if (min === null) {
+                const qm = this.heatPaQualifier?.min;
+                if (qm !== undefined && qm !== null && String(qm) !== '') {
+                    const n = Number(qm);
+                    if (!Number.isNaN(n) && n >= 0) {
+                        min = n;
+                    }
+                }
+            }
+            if (min === null) {
+                min = this.browseHeatMinPa();
+            }
+            if (min === null) {
+                if (
+                    Array.isArray(this.heatRowPaOk) &&
+                    this.rows.length > 0 &&
+                    this.heatRowPaOk.length === this.rows.length
+                ) {
+                    return;
+                }
+                this.heatRowPaOk = null;
+
+                return;
+            }
+            const col = this.plateAppearancesColumnIndex();
+            if (!Array.isArray(this.rows)) {
+                return;
+            }
+            if (col === null) {
+                this.heatRowPaOk = this.rows.map(() => false);
+
+                return;
+            }
+            this.heatRowPaOk = this.rows.map((row) => {
+                const v = Number.parseFloat(String(row[col] ?? '').replace(/[,% ]/g, ''));
+                if (Number.isNaN(v)) {
+                    return false;
+                }
+
+                return v >= min;
+            });
+        },
+
+        async applyHeatPaCutoff() {
+            if (!this.activeId) {
+                return;
+            }
+            const p = this.page && this.page > 0 ? this.page : 1;
+            await this.loadPage(p);
         },
 
         toggleSortColumn(hIdx) {
@@ -355,6 +618,8 @@ document.addEventListener('alpine:init', () => {
         },
 
         async init() {
+            this.syncHsProfileFeedDraft();
+            this.applyBrowseSettingsFromSummary();
             if (!this.activeId) {
                 return;
             }
@@ -391,7 +656,7 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        selectPlayerFromPicker(name) {
+        async selectPlayerFromPicker(name) {
             const s = String(name ?? '').trim();
             if (s === '') {
                 return;
@@ -402,30 +667,118 @@ document.addEventListener('alpine:init', () => {
             }
             this.selectedPlayers = [...this.selectedPlayers, s];
             this.playerPickerQuery = '';
-            this.loadPage(1);
+            if (this.parsedGroupColumnIndex() !== null) {
+                await this.fetchGroupValues();
+                if (this.activeGroupValue !== null && !this.groupValues.includes(this.activeGroupValue)) {
+                    this.activeGroupValue = null;
+                }
+            }
+            await this.loadPage(1);
         },
 
-        removeSelectedPlayer(name) {
+        async removeSelectedPlayer(name) {
             this.selectedPlayers = this.selectedPlayers.filter((p) => p !== name);
-            this.loadPage(1);
+            if (this.parsedGroupColumnIndex() !== null) {
+                await this.fetchGroupValues();
+                if (this.activeGroupValue !== null && !this.groupValues.includes(this.activeGroupValue)) {
+                    this.activeGroupValue = null;
+                }
+            }
+            await this.loadPage(1);
         },
 
         async selectUpload(id) {
             const n = Number(id);
             const changed = this.activeId !== n;
             this.activeId = n;
+            this.syncHsProfileFeedDraft();
             if (changed) {
-                this.selectedPlayers = [];
+                this.headers = [];
+                this.rows = [];
+                this.rowOrdinals = [];
+                this.columnOrder = [];
+                this.heatRules = {};
+                this.heatColumnStats = {};
+                this.heatPaQualifier = { min: null, column_index: null };
+                this.heatRowPaOk = null;
                 this.playerPickerQuery = '';
                 this.playerPickerOpen = false;
                 this.sortColumn = null;
                 this.sortDirection = 'asc';
                 this.thresholdDraft = [];
+                this.groupByColumnRaw = '';
+                this.groupValues = [];
+                this.activeGroupValue = null;
                 this.page = 1;
                 this.cancelEditPlayer();
+                this.applyBrowseSettingsFromSummary();
+                this.newRowCells = [];
                 await this.loadPlayerNames();
             }
             await this.loadPage(this.page);
+        },
+
+        syncNewRowDraftLength() {
+            const n = Array.isArray(this.headers) ? this.headers.length : 0;
+            const next = [];
+            for (let i = 0; i < n; i++) {
+                next[i] = this.newRowCells[i] ?? '';
+            }
+            this.newRowCells = next;
+        },
+
+        buildFileOrderCellsFromDraft() {
+            const n = this.headers.length;
+            if (n === 0) {
+                return [];
+            }
+            const order =
+                Array.isArray(this.columnOrder) && this.columnOrder.length === n
+                    ? this.columnOrder
+                    : Array.from({ length: n }, (_, i) => i);
+            const fileCells = new Array(n).fill('');
+            for (let d = 0; d < n; d++) {
+                const f = order[d];
+                if (typeof f === 'number' && !Number.isNaN(f) && f >= 0 && f < n) {
+                    fileCells[f] = String(this.newRowCells[d] ?? '');
+                }
+            }
+
+            return fileCells;
+        },
+
+        async appendDatasetRow() {
+            if (!this.activeId || this.headers.length === 0 || this.appendRowBusy) {
+                return;
+            }
+            this.appendRowBusy = true;
+            this.loadError = '';
+            try {
+                const cells = this.buildFileOrderCellsFromDraft();
+                const { data } = await window.axios.post(
+                    `${this.tableDataBase}/${this.activeId}/rows`,
+                    { cells },
+                    { headers: { Accept: 'application/json' } },
+                );
+                for (let i = 0; i < this.newRowCells.length; i++) {
+                    this.newRowCells[i] = '';
+                }
+                const targetPage = typeof data.lastPage === 'number' ? data.lastPage : this.lastPage;
+                await this.loadPage(targetPage);
+            } catch (err) {
+                const status = err?.response?.status;
+                const body = err?.response?.data;
+                const errs = body?.errors;
+                if (status === 422 && errs && typeof errs === 'object') {
+                    const flat = Object.values(errs).flat();
+                    this.loadError = flat.length > 0 ? String(flat[0]) : body?.message || 'Could not add row.';
+                } else {
+                    this.loadError =
+                        typeof body?.message === 'string' ? body.message : 'Could not add row.';
+                }
+            } finally {
+                this.appendRowBusy = false;
+            }
         },
 
         cancelEditPlayer() {
@@ -608,6 +961,13 @@ document.addEventListener('alpine:init', () => {
             try {
                 await window.axios.patch(this.settingsUrl(), { column_order: order });
                 await this.loadPage(this.page);
+                if (this.parsedGroupColumnIndex() !== null) {
+                    await this.fetchGroupValues();
+                    if (this.activeGroupValue !== null && !this.groupValues.includes(this.activeGroupValue)) {
+                        this.activeGroupValue = null;
+                        await this.loadPage(this.page);
+                    }
+                }
             } catch {
                 this.loadError = 'Could not reorder columns.';
             }
@@ -619,10 +979,121 @@ document.addEventListener('alpine:init', () => {
             return o === undefined || o === null ? null : o;
         },
 
-        datasetCellStyle(headerName, raw) {
+        /**
+         * Threshold for PA gating: API (`heat_pa_qualifier`) plus the input draft so coloring works even if the response omits `min`.
+         */
+        get resolvedHeatMinPa() {
+            const q = this.heatPaQualifier;
+            if (q?.min !== undefined && q?.min !== null && String(q.min) !== '') {
+                const n = Number(q.min);
+                if (!Number.isNaN(n) && n >= 0) {
+                    return n;
+                }
+            }
+            const raw = String(this.heatMinPaDraft ?? '').trim();
+            if (raw !== '') {
+                const n = Number(raw);
+                if (!Number.isNaN(n) && n >= 0) {
+                    return n;
+                }
+            }
+            const saved = this.browseHeatMinPa();
+            if (saved !== null) {
+                return saved;
+            }
+
+            return null;
+        },
+
+        /**
+         * Same idea as {@see App\Support\DataSourceCsvHeaders::plateAppearancesColumnIndex} — must match row indices in `this.headers`.
+         */
+        plateAppearancesColumnIndex() {
+            const list = this.headers;
+            if (!Array.isArray(list)) {
+                return null;
+            }
+            for (let i = 0; i < list.length; i++) {
+                let norm = String(list[i] ?? '')
+                    .replace(/^\ufeff/, '')
+                    .replace(/[\u00a0\u2007\u202f\u3000]/g, ' ')
+                    .trim()
+                    .toLowerCase();
+                norm = norm.replace(/\s+/g, ' ').trim();
+                const slug = norm.replace(/%/g, 'pct').replace(/[^a-z0-9]+/gi, '');
+                if (
+                    norm === 'pa' ||
+                    norm === 'pas' ||
+                    norm === 'plate appearances' ||
+                    norm === 'plate appearance' ||
+                    norm.includes('plate appearance') ||
+                    slug === 'pa' ||
+                    slug === 'pas'
+                ) {
+                    return i;
+                }
+                const tokens = norm.split(/[^a-z0-9%]+/i).filter(Boolean);
+                for (const tok of tokens) {
+                    const t = tok.replace(/%/g, 'pct').toLowerCase();
+                    if (t === 'pa' || t === 'pas') {
+                        return i;
+                    }
+                }
+            }
+            for (let j = 0; j < list.length; j++) {
+                const letters = String(list[j] ?? '')
+                    .replace(/[^a-z]/gi, '')
+                    .toLowerCase();
+                if (letters === 'pa' || letters === 'pas') {
+                    return j;
+                }
+            }
+
+            return null;
+        },
+
+        rowMeetsHeatPaQualifier(row) {
+            const min = this.resolvedHeatMinPa;
+            if (min === null) {
+                return true;
+            }
+            const colIdx = this.plateAppearancesColumnIndex();
+            if (colIdx === undefined || colIdx === null) {
+                return false;
+            }
+            const paRaw = row[colIdx];
+            const pa = Number.parseFloat(String(paRaw ?? '').replace(/[,% ]/g, ''));
+            if (Number.isNaN(pa)) {
+                return false;
+            }
+
+            return pa >= min;
+        },
+
+        datasetCellStyle(headerName, raw, row, rIdx) {
+            if (
+                Array.isArray(this.heatRowPaOk) &&
+                rIdx !== undefined &&
+                rIdx !== null &&
+                Number.isFinite(Number(rIdx)) &&
+                Number(rIdx) >= 0 &&
+                Number(rIdx) < this.heatRowPaOk.length &&
+                this.heatRowPaOk[Number(rIdx)] === false
+            ) {
+                return null;
+            }
+            void this.resolvedHeatMinPa;
             const rule = this.heatRules[headerName];
             const stats = this.heatColumnStats[headerName];
             if (!rule?.enabled || !stats || stats.min === undefined || stats.max === undefined) {
+                return null;
+            }
+            if (
+                this.heatRowPaOk === null &&
+                row !== undefined &&
+                row !== null &&
+                !this.rowMeetsHeatPaQualifier(row)
+            ) {
                 return null;
             }
             const v = Number.parseFloat(String(raw).replace(/[,% ]/g, ''));
@@ -686,6 +1157,9 @@ document.addEventListener('alpine:init', () => {
             if (!this.activeId) {
                 return;
             }
+            this._tableLoadSeq = (this._tableLoadSeq ?? 0) + 1;
+            const loadSeq = this._tableLoadSeq;
+            const uploadIdForRequest = this.activeId;
             this.loading = true;
             this.loadError = '';
             this.page = p;
@@ -698,14 +1172,43 @@ document.addEventListener('alpine:init', () => {
                     params.sort_column = this.sortColumn;
                     params.sort_direction = this.sortDirection;
                 }
-                const th = this.buildColumnThresholdsPayload();
-                if (th.length > 0) {
-                    params.column_thresholds = JSON.stringify(th);
+                let thList;
+                if (Array.isArray(this.headers) && this.headers.length > 0) {
+                    thList = this.buildColumnThresholdsPayload();
+                } else if (this._pendingBrowseThresholds !== null && Array.isArray(this._pendingBrowseThresholds)) {
+                    thList = this._pendingBrowseThresholds;
+                } else {
+                    thList = [];
+                }
+                if (thList.length > 0) {
+                    params.column_thresholds = JSON.stringify(thList);
+                }
+                const groupCol = this.parsedGroupColumnIndex();
+                if (groupCol !== null && this.activeGroupValue !== null) {
+                    params.group_column = groupCol;
+                    params.group_value =
+                        this.activeGroupValue === '' ? '__EMPTY__' : String(this.activeGroupValue);
+                }
+                const paDraft = String(this.heatMinPaDraft ?? '').trim();
+                let paParam = null;
+                if (paDraft !== '') {
+                    const paN = Number(paDraft);
+                    if (!Number.isNaN(paN) && paN >= 0) {
+                        paParam = paN;
+                    }
+                } else {
+                    paParam = this.browseHeatMinPa();
+                }
+                if (paParam !== null) {
+                    params.heat_min_pa = paParam;
                 }
                 const { data } = await window.axios.get(`${this.tableDataBase}/${this.activeId}/table-data`, {
                     params,
                     headers: { Accept: 'application/json' },
                 });
+                if (loadSeq !== this._tableLoadSeq || this.activeId !== uploadIdForRequest) {
+                    return;
+                }
                 this.headers = data.headers ?? [];
                 this.syncThresholdDraftLength();
                 this.rows = data.rows ?? [];
@@ -721,6 +1224,26 @@ document.addEventListener('alpine:init', () => {
                     !Array.isArray(data.heat_column_stats)
                         ? { ...data.heat_column_stats }
                         : {};
+                const hpq = data.heat_pa_qualifier;
+                if (hpq && typeof hpq === 'object' && !Array.isArray(hpq)) {
+                    const c = hpq.column_index;
+                    this.heatPaQualifier = {
+                        min: hpq.min !== undefined && hpq.min !== null ? Number(hpq.min) : null,
+                        column_index:
+                            c !== undefined && c !== null && String(c) !== '' && !Number.isNaN(Number(c))
+                                ? Number(c)
+                                : null,
+                    };
+                } else {
+                    this.heatPaQualifier = { min: null, column_index: null };
+                }
+                const hrpo = data.heat_row_pa_ok;
+                if (Array.isArray(hrpo) && hrpo.length > 0) {
+                    this.heatRowPaOk = hrpo.map((v) => v === true || v === 1 || v === '1');
+                } else {
+                    this.heatRowPaOk = null;
+                }
+                this.reconcileHeatRowPaOkFromGrid();
                 this.page = data.page ?? 1;
                 this.lastPage = data.lastPage ?? 1;
                 this.from = data.from ?? 0;
@@ -734,7 +1257,41 @@ document.addEventListener('alpine:init', () => {
                 } else {
                     this.sortColumn = null;
                 }
+                if (this._pendingBrowseThresholds !== null && Array.isArray(this._pendingBrowseThresholds)) {
+                    const list = this._pendingBrowseThresholds;
+                    this._pendingBrowseThresholds = null;
+                    for (const item of list) {
+                        if (!item || typeof item !== 'object') {
+                            continue;
+                        }
+                        const col = Number.parseInt(String(item.col), 10);
+                        if (Number.isNaN(col) || col < 0 || col >= this.thresholdDraft.length) {
+                            continue;
+                        }
+                        const minV = item.min;
+                        const maxV = item.max;
+                        const min =
+                            minV !== undefined &&
+                            minV !== null &&
+                            String(minV) !== '' &&
+                            !Number.isNaN(Number(minV))
+                                ? String(minV)
+                                : '';
+                        const max =
+                            maxV !== undefined &&
+                            maxV !== null &&
+                            String(maxV) !== '' &&
+                            !Number.isNaN(Number(maxV))
+                                ? String(maxV)
+                                : '';
+                        this.thresholdDraft[col] = { min, max };
+                    }
+                }
+                this.syncNewRowDraftLength();
             } catch (err) {
+                if (loadSeq !== this._tableLoadSeq || this.activeId !== uploadIdForRequest) {
+                    return;
+                }
                 const status = err?.response?.status;
                 this.loadError =
                     status === 404
@@ -747,11 +1304,76 @@ document.addEventListener('alpine:init', () => {
                 this.columnOrder = [];
                 this.heatRules = {};
                 this.heatColumnStats = {};
+                this.heatPaQualifier = { min: null, column_index: null };
+                this.heatRowPaOk = null;
                 this.heatMenuForIdx = null;
                 this.sortColumn = null;
             } finally {
-                this.loading = false;
+                if (loadSeq === this._tableLoadSeq) {
+                    this.loading = false;
+                }
             }
+            if (loadSeq !== this._tableLoadSeq || this.activeId !== uploadIdForRequest) {
+                return;
+            }
+            await this.$nextTick();
+            this.syncGroupColumnSelectOptions();
+            if (this.parsedGroupColumnIndex() !== null) {
+                await this.fetchGroupValues();
+            }
+        },
+
+        async onGroupByColumnChanged(ev) {
+            if (this._groupColumnSelectSyncing) {
+                return;
+            }
+            const raw = ev?.target?.value;
+            const fromSelect = raw === undefined || raw === null ? null : String(raw);
+            if (fromSelect !== null && fromSelect === this.groupByColumnRaw) {
+                return;
+            }
+            if (fromSelect !== null) {
+                this.groupByColumnRaw = fromSelect;
+            }
+            await this.$nextTick();
+            this.activeGroupValue = null;
+            this.groupValues = [];
+            if (this.parsedGroupColumnIndex() === null) {
+                await this.loadPage(1);
+
+                return;
+            }
+            await this.fetchGroupValues();
+            await this.loadPage(1);
+        },
+
+        async fetchGroupValues() {
+            const gci = this.parsedGroupColumnIndex();
+            if (!this.activeId || gci === null) {
+                this.groupValues = [];
+
+                return;
+            }
+            try {
+                const params = { group_column: gci };
+                if (this.selectedPlayers.length > 0) {
+                    params.players = this.selectedPlayers;
+                }
+                const { data } = await window.axios.get(`${this.tableDataBase}/${this.activeId}/group-values`, {
+                    params,
+                    headers: { Accept: 'application/json' },
+                });
+                this.groupValues = Array.isArray(data.values)
+                    ? data.values.map((v) => (v === null || v === undefined ? '' : String(v)))
+                    : [];
+            } catch {
+                this.groupValues = [];
+            }
+        },
+
+        selectGroupTab(value) {
+            this.activeGroupValue = value === null || value === undefined ? null : String(value);
+            this.loadPage(1);
         },
     }));
 

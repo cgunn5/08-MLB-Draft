@@ -32,13 +32,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/hs', [HsDashboardController::class, 'index'])->name('hs.index');
     Route::get('/hs/players/{player}', [HsPlayerController::class, 'show'])->name('hs.players.show');
     Route::get('/notes', [NoteInputController::class, 'index'])->name('notes.index');
+    Route::patch('/notes', [NoteInputController::class, 'updateAll'])->name('notes.update-all');
     Route::patch('/notes/section', [NoteInputController::class, 'updateSection'])->name('notes.update-section');
     Route::delete('/notes/section', [NoteInputController::class, 'destroySection'])->name('notes.destroy-section');
     Route::get('/data-sources', [DataSourceController::class, 'index'])->name('data-sources.index');
     Route::post('/data-sources', [DataSourceController::class, 'store'])->name('data-sources.store');
     Route::get('/data-sources/uploads/{dataSourceUpload}/player-names', [DataSourceController::class, 'playerNames'])->name('data-sources.uploads.player-names');
     Route::get('/data-sources/uploads/{dataSourceUpload}/table-data', [DataSourceController::class, 'tableData'])->name('data-sources.uploads.table-data');
+    Route::get('/data-sources/uploads/{dataSourceUpload}/group-values', [DataSourceController::class, 'groupColumnValues'])->name('data-sources.uploads.group-values');
     Route::patch('/data-sources/uploads/{dataSourceUpload}/settings', [DataSourceController::class, 'updateSettings'])->name('data-sources.uploads.settings');
+    Route::post('/data-sources/uploads/{dataSourceUpload}/rows', [DataSourceController::class, 'storeRow'])->name('data-sources.uploads.rows.store');
     Route::patch('/data-sources/uploads/{dataSourceUpload}/rows/{ordinal}', [DataSourceController::class, 'updateRow'])->name('data-sources.uploads.rows.update')->whereNumber('ordinal');
     Route::delete('/data-sources/uploads/{dataSourceUpload}/rows/{ordinal}', [DataSourceController::class, 'destroyRow'])->name('data-sources.uploads.rows.destroy')->whereNumber('ordinal');
     Route::delete('/data-sources/uploads/{dataSourceUpload}', [DataSourceController::class, 'destroyUpload'])->name('data-sources.uploads.delete');

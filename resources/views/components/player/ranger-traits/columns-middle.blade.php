@@ -1,4 +1,4 @@
-<x-player.ranger-trait-block dense :tight-stack="true" :title="__('Approach & Miss')" :note="$player->note_approach_miss">
+<x-player.ranger-trait-block dense :tight-stack="true" :title="__('Approach / Miss')" :note="$player->note_approach_miss">
         <div class="min-w-0 overflow-x-auto">
             <div class="ranger-traits-table-clip">
             <table

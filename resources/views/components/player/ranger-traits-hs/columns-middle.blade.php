@@ -7,9 +7,9 @@
     $cim = $_ch['impact'] ?? [];
     $cibb = $_ch['impact_batted_ball'] ?? [];
 @endphp
-<div class="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 sm:gap-2 md:gap-2.5">
+<div class="flex min-h-0 min-w-0 flex-1 flex-col gap-2.5 sm:gap-3 md:gap-4">
 <div class="min-w-0 shrink-0">
-<x-player.ranger-trait-block dense :title="__('Approach & Miss')" :note="$player->note_approach_miss">
+<x-player.ranger-trait-block dense tightStack :wider-table-stack="true" :title="__('Approach / Miss')" :note="$player->note_approach_miss">
     <div class="min-w-0 overflow-x-auto">
         <div class="ranger-traits-table-clip">
         <table
@@ -55,7 +55,13 @@
 </div>
 
 <div class="min-w-0 shrink-0">
-<x-player.ranger-trait-block dense :title="__('Impact / Damage')" :note="$player->note_engine">
+<x-player.ranger-trait-block
+    dense
+    tightStack
+    :wider-table-stack="true"
+    :title="__('Impact / Damage')"
+    :note="$player->note_engine"
+>
     <div class="min-w-0 overflow-x-auto">
         <div class="ranger-traits-table-clip">
         <table

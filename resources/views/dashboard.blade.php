@@ -25,7 +25,7 @@
                     <p class="mt-2 text-sm text-gray-600">{{ __('HS DASHBOARD') }}</p>
                 </a>
                 <a href="{{ route('notes.index') }}" class="block p-6 bg-white shadow-sm sm:rounded-lg border border-gray-100 hover:border-gray-300 transition">
-                    <h3 class="font-semibold text-gray-900">{{ __('NOTE INPUT') }}</h3>
+                    <h3 class="font-semibold text-gray-900">{{ __('Notes/Grades') }}</h3>
                     <p class="mt-2 text-sm text-gray-600">{{ __('SKILL-BASED NOTES') }}</p>
                 </a>
                 <a href="{{ route('data-sources.index') }}" class="block p-6 bg-white shadow-sm sm:rounded-lg border border-gray-100 hover:border-gray-300 transition">

@@ -1,11 +1,16 @@
 @php
     $cl = $rangerSheet['circuit_lonestar'] ?? [];
+    $ct = $rangerSheet['circuit_tusa'] ?? [];
     $cp = $rangerSheet['circuit_pg'] ?? [];
-    $ccl = ($rangerSheet['cell_heat'] ?? [])['circuit_lonestar'] ?? [];
+    $heat = $rangerSheet['cell_heat'] ?? [];
+    $ccl = $heat['circuit_lonestar'] ?? [];
+    $cct = $heat['circuit_tusa'] ?? [];
+    $cpHeat = $heat['circuit_pg'] ?? [];
 @endphp
 <x-player.ranger-trait-block
-    class="flex min-h-0 min-w-0 flex-1 flex-col"
     dense
+    tightStack
+    :wider-table-stack="true"
     :title="__('Circuit Stats')"
     :note="$player->note_performance"
 >
@@ -57,7 +62,6 @@
                     <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">
                         {{ __('TUSA') }}
                     </th>
-                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">G</th>
                     <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">PA</th>
                     <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">AVG</th>
                     <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">OBP</th>
@@ -71,14 +75,13 @@
                         scope="row"
                         class="border border-gray-800 bg-gray-200 px-0.5 py-[0.204rem] font-[700] text-gray-900 sm:px-1 sm:py-[0.396rem]"
                     >
-                        —
+                        {{ $ct['year'] ?? '—' }}
                     </th>
-                    <td class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">—</td>
-                    <td class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">—</td>
-                    <td class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">—</td>
-                    <td class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">—</td>
-                    <td class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">—</td>
-                    <td class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">—</td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cct['pa'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ct['pa'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cct['avg'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ct['avg'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cct['obp'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ct['obp'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cct['slg'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ct['slg'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cct['ops'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ct['ops'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
                 </tr>
             </tbody>
         </table>
@@ -93,16 +96,21 @@
             <thead>
                 <tr class="bg-[#44546A] text-white">
                     <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">PG</th>
-                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">G</th>
                     <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">PA</th>
+                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">OPS</th>
                     <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">AVG</th>
                     <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">OBP</th>
                     <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">SLG</th>
-                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">OPS</th>
+                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">ISO</th>
+                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">BB%</th>
+                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">K%</th>
                 </tr>
             </thead>
             <tbody class="bg-white text-black">
-                @forelse ($cp as $pgRow)
+                @forelse ($cp as $idx => $pgRow)
+                    @php
+                        $rowHeat = is_array($cpHeat) && isset($cpHeat[$idx]) && is_array($cpHeat[$idx]) ? $cpHeat[$idx] : [];
+                    @endphp
                     <tr>
                         <th
                             scope="row"
@@ -110,12 +118,14 @@
                         >
                             {{ $pgRow['year'] ?? '—' }}
                         </th>
-                        <td class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['g'] ?? '—' }}</td>
-                        <td class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['pa'] ?? '—' }}</td>
-                        <td class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['avg'] ?? '—' }}</td>
-                        <td class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['obp'] ?? '—' }}</td>
-                        <td class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['slg'] ?? '—' }}</td>
-                        <td class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['ops'] ?? '—' }}</td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['pa'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['pa'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['ops'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['ops'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['avg'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['avg'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['obp'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['obp'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['slg'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['slg'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['iso'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['iso'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['bb_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['bb_pct'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['k_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['k_pct'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
                     </tr>
                 @empty
                     <tr>
@@ -125,7 +135,7 @@
                         >
                             —
                         </th>
-                        @for ($i = 0; $i < 6; $i++)
+                        @for ($i = 0; $i < 8; $i++)
                             <td class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">—</td>
                         @endfor
                     </tr>

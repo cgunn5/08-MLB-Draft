@@ -5,10 +5,13 @@
     'fillHeight' => false,
     'dense' => false,
     'tightStack' => false,
+    /** When set with tightStack, increases gaps between stacked tables (~15%). HS dashboard only. */
+    'widerTableStack' => false,
 ])
 
 @php
     $tightStack = $dense && filter_var($tightStack, FILTER_VALIDATE_BOOLEAN);
+    $widerTableStack = $tightStack && filter_var($widerTableStack, FILTER_VALIDATE_BOOLEAN);
     $titleClass = $comfortable
         ? 'text-xs sm:text-sm md:text-base'
         : ($dense
@@ -36,7 +39,7 @@
     if ($fillHeight) {
         if ($dense) {
             $slotWrapClass = $tightStack
-                ? 'flex min-h-0 flex-1 flex-col justify-between gap-y-1.5 pt-1.5 sm:gap-y-2 sm:pt-2 md:gap-y-2.5 md:pt-2.5 lg:gap-y-2.5'
+                ? 'flex min-h-0 flex-1 flex-col justify-between gap-y-1.5 pt-2 sm:gap-y-2 sm:pt-2.5 md:gap-y-2.5 md:pt-3 lg:gap-y-2.5'
                 : 'flex min-h-0 flex-1 flex-col justify-between gap-y-3 pt-3 sm:gap-y-4 sm:pt-4 md:gap-y-5 md:pt-5 lg:gap-y-5';
         } else {
             $slotWrapClass =
@@ -45,7 +48,9 @@
     } elseif ($dense) {
         $slotWrapClass = $tightStack
             /* flex + gap: reliable spacing between stacked tables (space-y can collapse with overflow-x-auto wrappers). */
-            ? 'flex min-w-0 flex-col gap-2 pt-1.5 sm:gap-2 sm:pt-2 md:gap-2.5 md:pt-2.5'
+            ? ($widerTableStack
+                ? 'flex min-w-0 flex-col gap-2.5 pt-2.5 sm:gap-2.5 sm:pt-3 md:gap-3 md:pt-3.5'
+                : 'flex min-w-0 flex-col gap-2 pt-2 sm:gap-2 sm:pt-2.5 md:gap-2.5 md:pt-3')
             : 'min-w-0 space-y-3 pt-[calc(0.75rem*0.85)] sm:space-y-4 sm:pt-[calc(1rem*0.85)] md:space-y-5 md:pt-[calc(1.25rem*0.85)]';
     } else {
         $slotWrapClass = 'min-w-0 space-y-4 pt-4 sm:space-y-5 sm:pt-5 md:space-y-6 md:pt-6';
@@ -53,8 +58,9 @@
     $sectionExtra = $fillHeight ? ' h-full min-h-0 flex-1' : '';
     /* HS dense: bottom padding ≈ pt + title-row mb; stepped ×0.9 again. */
     if ($dense && $tightStack) {
-        $sectionPad =
-            ' gap-1.5 px-1.5 pt-2 pb-2 sm:gap-2 sm:px-2 sm:pt-2.5 sm:pb-2.5 md:gap-2 md:pt-3 md:pb-2.5';
+        $sectionPad = $widerTableStack
+            ? ' gap-2.5 px-1.5 pt-2 pb-2 sm:gap-3 sm:px-2 sm:pt-2.5 sm:pb-2.5 md:gap-3.5 md:pt-3 md:pb-2.5'
+            : ' gap-2 px-1.5 pt-2 pb-2 sm:gap-2.5 sm:px-2 sm:pt-2.5 sm:pb-2.5 md:gap-3 md:pt-3 md:pb-2.5';
     } elseif ($dense) {
         $sectionPad =
             ' gap-2 px-1.5 pt-3 pb-[0.8365275rem] sm:gap-2.5 sm:px-2 sm:pt-4 sm:pb-[1.11537rem] md:gap-3 md:pt-5 md:pb-[1.25479125rem]';
@@ -75,9 +81,11 @@
     <div
         @class([
             'flex min-w-0 shrink-0 items-center',
-            'mb-1 sm:mb-1.5 md:mb-2' => $tightStack,
+            'mb-1.5 sm:mb-2 md:mb-2.5' => $tightStack && ! $widerTableStack,
+            'mb-2 sm:mb-2.5 md:mb-3' => $widerTableStack,
             'mb-2.5 sm:mb-3.5 md:mb-4' => $dense && ! $tightStack,
-            'gap-2 sm:gap-2.5 md:gap-3' => $dense,
+            'gap-2 sm:gap-2.5 md:gap-3' => $dense && ! $widerTableStack,
+            'gap-2.5 sm:gap-3 md:gap-4' => $widerTableStack,
             'gap-1.5 sm:gap-2' => ! $dense,
         ])
     >
@@ -91,8 +99,8 @@
         ></div>
         <h3
             @class([
-                'shrink-0 text-center font-[700] leading-none text-red-600',
-                'px-0.5 tracking-wide' => $dense,
+                'notes-grades-section-heading max-w-full shrink-0 text-center leading-none uppercase tracking-wide',
+                'px-0.5' => $dense,
                 $titleClass,
             ])
         >
@@ -109,7 +117,7 @@
     </div>
 
     <div class="{{ $noteWrapClass }}">
-        <p class="max-w-full break-words">{{ $note ? $note : '#N/A' }}</p>
+        <p class="ranger-trait-take-text max-w-full break-words">{{ $note ? $note : '#N/A' }}</p>
     </div>
 
     @if (! $slot->isEmpty())

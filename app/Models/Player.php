@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Support\NoteGradeInputAppearance;
+use App\Support\PlayerListRankCellHeat;
+use App\Support\PlayerNoteFieldKeys;
 use Database\Factories\PlayerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -15,9 +18,13 @@ use Illuminate\Database\Eloquent\Model;
     'player_pool',
     'school',
     'position',
+    'bats',
+    'throws',
+    'age',
     'aggregate_rank',
     'aggregate_score',
     'source_ranks',
+    'personal_rank',
     'grade_role',
     'grade_perf',
     'grade_approach',
@@ -45,6 +52,7 @@ class Player extends Model
         return [
             'source_ranks' => 'array',
             'aggregate_score' => 'float',
+            'age' => 'float',
         ];
     }
 
@@ -133,6 +141,64 @@ class Player extends Model
     }
 
     /**
+     * Profile header (omit-center layout): school · position · B · T · AGE.
+     *
+     * @param  array{bats?: string, throws?: string, age?: string}|null  $overallDemographics  From HS Stats — Overall row when present.
+     */
+    public function profileHeaderBioLine(?array $overallDemographics = null): string
+    {
+        $school = filled($this->school) ? (string) $this->school : '—';
+        $pos = filled($this->position) ? (string) $this->position : '—';
+        if ($overallDemographics !== null) {
+            $b = trim((string) ($overallDemographics['bats'] ?? '—')) ?: '—';
+            $t = trim((string) ($overallDemographics['throws'] ?? '—')) ?: '—';
+            $age = trim((string) ($overallDemographics['age'] ?? '—')) ?: '—';
+        } else {
+            $b = filled($this->bats) ? (string) $this->bats : '—';
+            $t = filled($this->throws) ? (string) $this->throws : '—';
+            $age = $this->age !== null
+                ? rtrim(rtrim(number_format((float) $this->age, 2, '.', ''), '0'), '.')
+                : '—';
+        }
+
+        return implode(' · ', [
+            $school,
+            $pos,
+            'B '.$b,
+            'T '.$t,
+            'AGE '.$age,
+        ]);
+    }
+
+    /**
+     * Inline style for aggregate rank cell heat (matches player list board).
+     */
+    public function aggregateRankBoardHeatStyle(): ?string
+    {
+        return PlayerListRankCellHeat::inlineStyle(
+            $this->aggregate_rank !== null ? (int) $this->aggregate_rank : null,
+        );
+    }
+
+    public function modelDraftListRankBoardHeatStyle(): ?string
+    {
+        return PlayerListRankCellHeat::inlineStyleForModelDraftRank($this->modelDraftListRank());
+    }
+
+    /**
+     * Model draft list rank from {@see $source_ranks} (same key as the player list “mdl” column).
+     */
+    public function modelDraftListRank(): ?int
+    {
+        $r = $this->source_ranks;
+        if (! is_array($r) || ! array_key_exists('model', $r) || $r['model'] === null || $r['model'] === '') {
+            return null;
+        }
+
+        return (int) $r['model'];
+    }
+
+    /**
      * Cell text for the profile grades table (list data fills ROLE when grade is empty).
      */
     public function gradeCellDisplay(string $attribute): string
@@ -148,6 +214,29 @@ class Player extends Model
         }
 
         return '#N/A';
+    }
+
+    /**
+     * Inline style for profile grade summary value cells (matches notes page grade input coloring).
+     */
+    public function gradeCellSummaryStyle(string $attribute): string
+    {
+        $bounds = PlayerNoteFieldKeys::gradeBoundsForNoteField('master_take');
+        $min = $bounds['min'];
+        $max = $bounds['max'];
+        $raw = $this->{$attribute};
+
+        if (! filled($raw)) {
+            return NoteGradeInputAppearance::summaryCellStyle(null, $min, $max);
+        }
+
+        if (! is_numeric($raw)) {
+            return NoteGradeInputAppearance::summaryCellStyle(null, $min, $max);
+        }
+
+        $int = (int) round((float) $raw);
+
+        return NoteGradeInputAppearance::summaryCellStyle($int, $min, $max);
     }
 
     /**

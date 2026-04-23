@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Player;
 use App\Models\User;
+use App\Support\PlayerNoteFieldKeys;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -20,6 +21,18 @@ class PlayerNotesTest extends TestCase
             'player_id' => $player->id,
             'field' => 'master_take',
             'value' => 'Take',
+        ])->assertRedirect(route('login'));
+    }
+
+    public function test_guest_cannot_bulk_update_notes(): void
+    {
+        $player = Player::factory()->create(['player_pool' => 'ncaa']);
+        $values = $this->noteValuesPayload($player, ['master_take' => 'X']);
+
+        $this->patch(route('notes.update-all'), [
+            'player_pool' => 'ncaa',
+            'player_id' => $player->id,
+            'values' => $values,
         ])->assertRedirect(route('login'));
     }
 
@@ -105,14 +118,45 @@ class PlayerNotesTest extends TestCase
             ->assertRedirect(route('notes.index'));
     }
 
-    public function test_notes_index_redirects_when_edit_query_is_invalid(): void
+    public function test_bulk_update_saves_all_sections_and_grades(): void
     {
         $user = User::factory()->create();
-        $player = Player::factory()->create(['player_pool' => 'ncaa']);
+        $player = Player::factory()->create([
+            'player_pool' => 'hs',
+            'master_take' => null,
+            'note_performance' => 'Old perf',
+            'grade_perf' => null,
+            'grade_role' => null,
+        ]);
+
+        $allowed = PlayerNoteFieldKeys::forPool('hs');
+        $values = [];
+        foreach ($allowed as $field) {
+            $values[$field] = $player->{$field} ?? '';
+        }
+        $values['master_take'] = 'New take';
+        $values['note_performance'] = 'New perf';
+
+        $grades = [];
+        foreach ($allowed as $field) {
+            $grades[$field] = $field === 'master_take' ? 5 : 3;
+        }
 
         $this->actingAs($user)
-            ->get(route('notes.index', ['player' => $player->id, 'edit' => 'not_a_field']))
+            ->patch(route('notes.update-all'), [
+                'player_pool' => 'hs',
+                'player_id' => $player->id,
+                'values' => $values,
+                'grades' => $grades,
+            ])
+            ->assertSessionHasNoErrors()
             ->assertRedirect(route('notes.index', ['player' => $player->id]));
+
+        $player->refresh();
+        $this->assertSame('New take', $player->master_take);
+        $this->assertSame('New perf', $player->note_performance);
+        $this->assertSame('5', $player->grade_role);
+        $this->assertSame('3', $player->grade_perf);
     }
 
     public function test_rejects_section_update_when_player_id_does_not_match_pool(): void
@@ -166,5 +210,93 @@ class PlayerNotesTest extends TestCase
         $player->refresh();
         $this->assertNull($player->master_take);
         $this->assertSame('P', $player->note_performance);
+    }
+
+    public function test_section_update_can_set_matching_profile_grade(): void
+    {
+        $user = User::factory()->create();
+        $player = Player::factory()->create([
+            'player_pool' => 'ncaa',
+            'note_performance' => 'Solid',
+            'grade_perf' => null,
+        ]);
+
+        $this->actingAs($user)->patch(route('notes.update-section'), [
+            'player_pool' => 'ncaa',
+            'player_id' => $player->id,
+            'field' => 'note_performance',
+            'value' => 'Solid',
+            'grade' => 4,
+        ])->assertSessionHasNoErrors();
+
+        $player->refresh();
+        $this->assertSame('4', $player->grade_perf);
+    }
+
+    public function test_master_take_grade_saves_to_grade_role(): void
+    {
+        $user = User::factory()->create();
+        $player = Player::factory()->create([
+            'player_pool' => 'hs',
+            'master_take' => 'Corner bat',
+            'grade_role' => null,
+        ]);
+
+        $this->actingAs($user)->patch(route('notes.update-section'), [
+            'player_pool' => 'hs',
+            'player_id' => $player->id,
+            'field' => 'master_take',
+            'value' => 'Corner bat',
+            'grade' => 6,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('6', $player->fresh()->grade_role);
+    }
+
+    public function test_rejects_grade_below_take_scale_for_master_take(): void
+    {
+        $user = User::factory()->create();
+        $player = Player::factory()->create(['player_pool' => 'ncaa', 'master_take' => 'X']);
+
+        $this->actingAs($user)
+            ->patch(route('notes.update-section'), [
+                'player_pool' => 'ncaa',
+                'player_id' => $player->id,
+                'field' => 'master_take',
+                'value' => 'X',
+                'grade' => 1,
+            ])
+            ->assertSessionHasErrors('grade');
+    }
+
+    public function test_rejects_grade_above_take_scale_for_trait_note(): void
+    {
+        $user = User::factory()->create();
+        $player = Player::factory()->create(['player_pool' => 'ncaa', 'note_swing' => 'Short']);
+
+        $this->actingAs($user)
+            ->patch(route('notes.update-section'), [
+                'player_pool' => 'ncaa',
+                'player_id' => $player->id,
+                'field' => 'note_swing',
+                'value' => 'Short',
+                'grade' => 8,
+            ])
+            ->assertSessionHasErrors('grade');
+    }
+
+    /**
+     * @param  array<string, string|null>  $overrides
+     * @return array<string, string|null>
+     */
+    private function noteValuesPayload(Player $player, array $overrides = []): array
+    {
+        $allowed = PlayerNoteFieldKeys::forPool($player->player_pool);
+        $values = [];
+        foreach ($allowed as $field) {
+            $values[$field] = $player->{$field} ?? '';
+        }
+
+        return array_merge($values, $overrides);
     }
 }

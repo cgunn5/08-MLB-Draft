@@ -14,6 +14,17 @@ class PlayerNoteSectionRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if (! $this->isMethod('PATCH')) {
+            return;
+        }
+
+        if ($this->input('grade') === '' || $this->input('grade') === null) {
+            $this->merge(['grade' => null]);
+        }
+    }
+
     /**
      * @return array<string, array<int, mixed>>
      */
@@ -30,6 +41,9 @@ class PlayerNoteSectionRequest extends FormRequest
 
         if ($this->isMethod('PATCH')) {
             $rules['value'] = ['nullable', 'string'];
+            $field = $this->string('field')->toString();
+            $bounds = PlayerNoteFieldKeys::gradeBoundsForNoteField($field);
+            $rules['grade'] = ['nullable', 'integer', 'min:'.$bounds['min'], 'max:'.$bounds['max']];
         }
 
         return $rules;

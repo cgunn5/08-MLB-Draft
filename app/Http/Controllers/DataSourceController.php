@@ -2,25 +2,38 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AppendDataSourceRowRequest;
 use App\Http\Requests\DataSourceRowUpdateRequest;
 use App\Http\Requests\StoreDataSourceUploadRequest;
 use App\Http\Requests\UpdateDataSourceUploadSettingsRequest;
 use App\Models\DataSourceUpload;
+use App\Support\CareerPgMasterUploadService;
+use App\Support\CareerPgStatsAggregator;
 use App\Support\DataSourceCsvHeaders;
+use App\Support\DataSourceHeatColumnStats;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class DataSourceController extends Controller
 {
+    private const GROUP_VALUE_EMPTY_SENTINEL = '__EMPTY__';
+
     public function index(): View
     {
+        $user = auth()->user();
+        if ($user !== null) {
+            CareerPgMasterUploadService::syncForUser($user);
+        }
+
         $uploads = DataSourceUpload::query()
             ->where('user_id', auth()->id())
-            ->latest()
+            ->orderByRaw('CASE WHEN upload_kind = ? THEN 0 ELSE 1 END', [DataSourceUpload::UPLOAD_KIND_CAREER_PG_MASTER])
+            ->orderByDesc('id')
             ->get();
 
         $initialActiveId = null;
@@ -64,6 +77,7 @@ class DataSourceController extends Controller
 
         DataSourceUpload::query()->create([
             'user_id' => $request->user()->id,
+            'upload_kind' => DataSourceUpload::UPLOAD_KIND_FILE,
             'name' => $request->validated('name'),
             'original_filename' => $file->getClientOriginalName(),
             'disk' => 'local',
@@ -90,9 +104,11 @@ class DataSourceController extends Controller
     {
         abort_unless($dataSourceUpload->user_id === $request->user()->id, 404);
 
-        $disk = Storage::disk($dataSourceUpload->disk);
-        if ($dataSourceUpload->path !== '' && $disk->exists($dataSourceUpload->path)) {
-            $disk->delete($dataSourceUpload->path);
+        if (! $dataSourceUpload->isCareerPgMaster()) {
+            $disk = Storage::disk($dataSourceUpload->disk);
+            if ($dataSourceUpload->path !== '' && $disk->exists($dataSourceUpload->path)) {
+                $disk->delete($dataSourceUpload->path);
+            }
         }
 
         $dataSourceUpload->delete();
@@ -112,6 +128,31 @@ class DataSourceController extends Controller
     public function playerNames(Request $request, DataSourceUpload $dataSourceUpload): JsonResponse
     {
         abort_unless($dataSourceUpload->user_id === $request->user()->id, 404);
+
+        if ($dataSourceUpload->isCareerPgMaster()) {
+            $mat = $this->materializeCareerPgData($dataSourceUpload);
+            if ($mat === null) {
+                return response()->json(['names' => []]);
+            }
+            $headers = $mat['headers'];
+            $playerIdx = DataSourceCsvHeaders::playerColumnIndex($headers);
+            /** @var array<string, string> $byLower */
+            $byLower = [];
+            foreach ($mat['rows'] as $row) {
+                $raw = isset($row[$playerIdx]) ? trim((string) $row[$playerIdx]) : '';
+                if ($raw === '') {
+                    continue;
+                }
+                $key = strtolower($raw);
+                if (! isset($byLower[$key])) {
+                    $byLower[$key] = $raw;
+                }
+            }
+            $names = array_values($byLower);
+            natcasesort($names);
+
+            return response()->json(['names' => array_values($names)]);
+        }
 
         $headers = $dataSourceUpload->header_row;
         $playerIdx = DataSourceCsvHeaders::playerColumnIndex($headers);
@@ -155,6 +196,10 @@ class DataSourceController extends Controller
     public function tableData(Request $request, DataSourceUpload $dataSourceUpload): JsonResponse
     {
         abort_unless($dataSourceUpload->user_id === $request->user()->id, 404);
+
+        if ($dataSourceUpload->isCareerPgMaster()) {
+            return $this->careerPgMasterTableData($request, $dataSourceUpload);
+        }
 
         $perPage = 50;
         $headers = $dataSourceUpload->header_row;
@@ -202,9 +247,34 @@ class DataSourceController extends Controller
 
         $sortActive = $sortColumnIndex !== null;
 
-        $needsFullMaterialize = $sortActive || $thresholdActive;
+        $groupColRaw = $request->query('group_column');
+        $groupColumnIndex = null;
+        if ($groupColRaw !== null && $groupColRaw !== '' && is_numeric($groupColRaw)) {
+            $gci = (int) $groupColRaw;
+            if ($gci >= 0 && $gci < count($headers)) {
+                $groupColumnIndex = $gci;
+            }
+        }
+        $groupValueRaw = $request->query('group_value');
+        $groupFilterActive = $groupColumnIndex !== null && $groupValueRaw !== null;
+        $groupValueMatch = null;
+        if ($groupFilterActive) {
+            $groupValueMatch = $groupValueRaw === self::GROUP_VALUE_EMPTY_SENTINEL ? '' : (string) $groupValueRaw;
+        }
 
-        $tableFilterActive = $playerFilterActive || $thresholdActive;
+        $needsFullMaterialize = $sortActive || $thresholdActive || $groupFilterActive;
+
+        $tableFilterActive = $playerFilterActive || $thresholdActive || $groupFilterActive;
+
+        $heatRulesForResponse = $dataSourceUpload->heat_rules;
+        if (! is_array($heatRulesForResponse)) {
+            $heatRulesForResponse = [];
+        }
+
+        $browse = is_array($dataSourceUpload->dataset_browse_settings) ? $dataSourceUpload->dataset_browse_settings : null;
+        $effectiveHeatMinPa = $this->effectiveHeatMinPaForTable($request, $browse);
+        $liveHeatMinQuery = $this->heatMinPaQueryOrNull($request);
+        $heatMinForSubset = $groupFilterActive ? $effectiveHeatMinPa : null;
 
         if (! $playerFilterActive && ! $needsFullMaterialize) {
             $totalRows = $dataSourceUpload->row_count;
@@ -219,6 +289,12 @@ class DataSourceController extends Controller
             );
             [$headers, $rows] = $this->reorderPlayerFirst($headers, $rows, $playerIdx);
             [$headers, $rows] = $this->applyColumnOrderPermutation($headers, $rows, $order);
+            if ($liveHeatMinQuery !== null && $this->heatRulesAreEnabled($dataSourceUpload)) {
+                $computed = $this->computeHeatColumnStatsForUpload($dataSourceUpload, $liveHeatMinQuery);
+                $heatColumnStatsOut = $computed === [] ? (object) [] : $computed;
+            } else {
+                $heatColumnStatsOut = $dataSourceUpload->heat_column_stats ?? (object) [];
+            }
         } elseif ($playerFilterActive && ! $needsFullMaterialize) {
             [$totalRows, $rows, $page, $lastPage, $ordinals] = $this->readCsvFilteredPage(
                 $absolutePath,
@@ -231,8 +307,33 @@ class DataSourceController extends Controller
             );
             [$headers, $rows] = $this->reorderPlayerFirst($headers, $rows, $playerIdx);
             [$headers, $rows] = $this->applyColumnOrderPermutation($headers, $rows, $order);
+            if ($liveHeatMinQuery !== null && $this->heatRulesAreEnabled($dataSourceUpload)) {
+                $computed = $this->computeHeatColumnStatsForUpload($dataSourceUpload, $liveHeatMinQuery);
+                $heatColumnStatsOut = $computed === [] ? (object) [] : $computed;
+            } else {
+                $heatColumnStatsOut = $dataSourceUpload->heat_column_stats ?? (object) [];
+            }
         } else {
-            if (! $playerFilterActive) {
+            $rawRowsForGroupScopedHeatStats = null;
+            if ($playerFilterActive && $groupFilterActive) {
+                [$rawAll, $rawAllOrdinals] = $this->collectCsvRowsWithOrdinals(
+                    $absolutePath,
+                    count($headers),
+                    null,
+                    [],
+                    false
+                );
+                $rawRowsForGroupScopedHeatStats = $rawAll;
+                $rawRows = [];
+                $rawOrdinals = [];
+                foreach ($rawAll as $i => $row) {
+                    $cell = (string) ($row[$playerIdx] ?? '');
+                    if ($this->csvRowMatchesPlayerTerms($cell, $filterTerms, $useExactPlayerMatch)) {
+                        $rawRows[] = $row;
+                        $rawOrdinals[] = $rawAllOrdinals[$i];
+                    }
+                }
+            } elseif (! $playerFilterActive) {
                 [$rawRows, $rawOrdinals] = $this->collectCsvRowsWithOrdinals(
                     $absolutePath,
                     count($headers),
@@ -250,7 +351,7 @@ class DataSourceController extends Controller
                 );
             }
             $page = (int) $request->query('page', 1);
-            [$headers, $rows, $ordinals, $page, $lastPage, $totalRows] = $this->finalizePagedDisplayRows(
+            [$headers, $rows, $ordinals, $page, $lastPage, $totalRows, $subsetHeatStats] = $this->finalizePagedDisplayRows(
                 $headers,
                 $rawRows,
                 $rawOrdinals,
@@ -260,12 +361,27 @@ class DataSourceController extends Controller
                 $sortColumnIndex,
                 $sortAscending,
                 $page,
-                $perPage
+                $perPage,
+                $groupFilterActive ? $heatRulesForResponse : null,
+                $groupFilterActive ? $groupColumnIndex : null,
+                $groupFilterActive ? $groupValueMatch : null,
+                $heatMinForSubset,
+                $rawRowsForGroupScopedHeatStats
             );
+            if ($subsetHeatStats !== null) {
+                $heatColumnStatsOut = $subsetHeatStats;
+            } elseif ($liveHeatMinQuery !== null && $this->heatRulesAreEnabled($dataSourceUpload)) {
+                $computed = $this->computeHeatColumnStatsForUpload($dataSourceUpload, $liveHeatMinQuery);
+                $heatColumnStatsOut = $computed === [] ? (object) [] : $computed;
+            } else {
+                $heatColumnStatsOut = $dataSourceUpload->heat_column_stats ?? (object) [];
+            }
         }
 
         $from = $totalRows === 0 ? 0 : (($page - 1) * $perPage) + 1;
         $to = min($page * $perPage, $totalRows);
+
+        $heatRowPaOk = $this->heatRowPaOkFlags($effectiveHeatMinPa, $headers, $rows);
 
         return response()->json([
             'headers' => $headers,
@@ -285,8 +401,398 @@ class DataSourceController extends Controller
                 'direction' => $sortAscending ? 'asc' : 'desc',
             ] : null,
             'heat_rules' => $dataSourceUpload->heat_rules ?? (object) [],
-            'heat_column_stats' => $dataSourceUpload->heat_column_stats ?? (object) [],
+            'heat_column_stats' => $heatColumnStatsOut ?? (object) [],
+            'heat_pa_qualifier' => $this->heatPaQualifierForDisplay($headers, $effectiveHeatMinPa),
+            'heat_row_pa_ok' => $heatRowPaOk,
+            'group' => $groupColumnIndex !== null ? [
+                'column' => $groupColumnIndex,
+                'active' => $groupFilterActive,
+            ] : null,
         ]);
+    }
+
+    public function groupColumnValues(Request $request, DataSourceUpload $dataSourceUpload): JsonResponse
+    {
+        abort_unless($dataSourceUpload->user_id === $request->user()->id, 404);
+
+        if ($dataSourceUpload->isCareerPgMaster()) {
+            return $this->careerPgMasterGroupColumnValues($request, $dataSourceUpload);
+        }
+
+        $fileHeaders = $dataSourceUpload->header_row;
+        $playerIdx = DataSourceCsvHeaders::playerColumnIndex($fileHeaders);
+        $groupColRaw = $request->query('group_column');
+        if ($groupColRaw === null || $groupColRaw === '' || ! is_numeric($groupColRaw)) {
+            return response()->json(['values' => []]);
+        }
+        $groupColumnIndex = (int) $groupColRaw;
+        if ($groupColumnIndex < 0 || $groupColumnIndex >= count($fileHeaders)) {
+            return response()->json(['values' => []]);
+        }
+
+        $playersQuery = $request->query('players');
+        /** @var list<string> $playerTerms */
+        $playerTerms = [];
+        if (is_array($playersQuery)) {
+            foreach ($playersQuery as $p) {
+                $s = trim((string) $p);
+                if ($s !== '') {
+                    $playerTerms[] = $s;
+                }
+            }
+            $playerTerms = array_values(array_unique($playerTerms));
+        } elseif ($playersQuery !== null && (string) $playersQuery !== '') {
+            $playerTerms = [trim((string) $playersQuery)];
+        }
+
+        $useExactPlayerMatch = $playerTerms !== [];
+        $filterTerms = $useExactPlayerMatch ? $playerTerms : [];
+        $playerFilterActive = $filterTerms !== [];
+
+        $absolutePath = Storage::disk($dataSourceUpload->disk)->path($dataSourceUpload->path);
+        if (! is_file($absolutePath)) {
+            abort(404);
+        }
+
+        $order = $this->normalizeColumnOrder($dataSourceUpload->column_order, count($fileHeaders));
+
+        if (! $playerFilterActive) {
+            [$rawRows, $rawOrdinals] = $this->collectCsvRowsWithOrdinals(
+                $absolutePath,
+                count($fileHeaders),
+                null,
+                [],
+                false
+            );
+        } else {
+            [$rawRows, $rawOrdinals] = $this->collectCsvRowsWithOrdinals(
+                $absolutePath,
+                count($fileHeaders),
+                $playerIdx,
+                $filterTerms,
+                $useExactPlayerMatch
+            );
+        }
+
+        [$dispHeaders, $dispRows] = $this->reorderPlayerFirst($fileHeaders, $rawRows, $playerIdx);
+        [$dispHeaders, $dispRows] = $this->applyColumnOrderPermutation($dispHeaders, $dispRows, $order);
+
+        if ($groupColumnIndex < 0 || $groupColumnIndex >= count($dispHeaders)) {
+            return response()->json(['values' => []]);
+        }
+
+        /** @var array<string, true> $seen */
+        $seen = [];
+        foreach ($dispRows as $row) {
+            $cell = trim((string) ($row[$groupColumnIndex] ?? ''));
+            $seen[$cell] = true;
+        }
+        $values = array_keys($seen);
+        usort($values, function (string $a, string $b): int {
+            if ($a === '' && $b !== '') {
+                return 1;
+            }
+            if ($a !== '' && $b === '') {
+                return -1;
+            }
+
+            return strnatcasecmp($a, $b);
+        });
+
+        return response()->json(['values' => array_values($values)]);
+    }
+
+    /**
+     * @return array{headers: list<string>, rows: list<list<string>>, row_count: int, player_column_index: int}|null
+     */
+    private function materializeCareerPgData(DataSourceUpload $career): ?array
+    {
+        $source = CareerPgMasterUploadService::resolveSourceForCareerMaster($career);
+        if ($source === null) {
+            return null;
+        }
+
+        return CareerPgStatsAggregator::fromSourceUpload($source);
+    }
+
+    private function careerPgMasterTableData(Request $request, DataSourceUpload $dataSourceUpload): JsonResponse
+    {
+        $perPage = 50;
+        $materialized = $this->materializeCareerPgData($dataSourceUpload);
+
+        $legacyFilter = trim((string) $request->query('filter', ''));
+        $playersQuery = $request->query('players');
+        /** @var list<string> $playerTerms */
+        $playerTerms = [];
+        if (is_array($playersQuery)) {
+            foreach ($playersQuery as $p) {
+                $s = trim((string) $p);
+                if ($s !== '') {
+                    $playerTerms[] = $s;
+                }
+            }
+            $playerTerms = array_values(array_unique($playerTerms));
+        } elseif ($playersQuery !== null && (string) $playersQuery !== '') {
+            $playerTerms = [trim((string) $playersQuery)];
+        }
+
+        if ($materialized === null) {
+            /** @var list<string> $headers */
+            $headers = array_map(static fn ($h) => is_string($h) ? $h : '', $dataSourceUpload->header_row ?? []);
+            $pIdx = DataSourceCsvHeaders::playerColumnIndex($headers);
+            $ord = $this->normalizeColumnOrder($dataSourceUpload->column_order, count($headers));
+            $dummyRow = [array_fill(0, count($headers), '')];
+            [$dispH] = $this->reorderPlayerFirst($headers, $dummyRow, $pIdx);
+            [$dispH] = $this->applyColumnOrderPermutation($dispH, $dummyRow, $ord);
+            $browse = is_array($dataSourceUpload->dataset_browse_settings) ? $dataSourceUpload->dataset_browse_settings : null;
+            $effectiveHeatMinPa = $this->effectiveHeatMinPaForTable($request, $browse);
+
+            return response()->json([
+                'headers' => $dispH,
+                'rows' => [],
+                'row_ordinals' => [],
+                'page' => 1,
+                'perPage' => $perPage,
+                'totalRows' => 0,
+                'lastPage' => 1,
+                'from' => 0,
+                'to' => 0,
+                'original_filename' => $dataSourceUpload->original_filename,
+                'filter_active' => false,
+                'column_order' => $ord,
+                'sort' => null,
+                'heat_rules' => $dataSourceUpload->heat_rules ?? (object) [],
+                'heat_column_stats' => $dataSourceUpload->heat_column_stats ?? (object) [],
+                'heat_pa_qualifier' => $this->heatPaQualifierForDisplay($dispH, $effectiveHeatMinPa),
+                'heat_row_pa_ok' => null,
+                'group' => null,
+            ]);
+        }
+
+        $fileHeaders = $materialized['headers'];
+        $playerIdx = DataSourceCsvHeaders::playerColumnIndex($fileHeaders);
+        $useExactPlayerMatch = $playerTerms !== [];
+        $filterTerms = $useExactPlayerMatch ? $playerTerms : ($legacyFilter !== '' ? [$legacyFilter] : []);
+        $playerFilterActive = $filterTerms !== [];
+
+        $order = $this->normalizeColumnOrder($dataSourceUpload->column_order, count($fileHeaders));
+
+        $thresholdRules = $this->parseColumnThresholds($request, count($fileHeaders));
+
+        $sortColRaw = $request->query('sort_column');
+        $sortDirRaw = strtolower((string) $request->query('sort_direction', 'asc'));
+        $sortAscending = $sortDirRaw !== 'desc';
+        $sortColumnIndex = null;
+        if ($sortColRaw !== null && $sortColRaw !== '' && is_numeric($sortColRaw)) {
+            $sortColumnIndex = (int) $sortColRaw;
+        }
+        if ($sortColumnIndex !== null && ($sortColumnIndex < 0 || $sortColumnIndex >= count($fileHeaders))) {
+            $sortColumnIndex = null;
+        }
+
+        $sortActive = $sortColumnIndex !== null;
+
+        $groupColRaw = $request->query('group_column');
+        $groupColumnIndex = null;
+        if ($groupColRaw !== null && $groupColRaw !== '' && is_numeric($groupColRaw)) {
+            $gci = (int) $groupColRaw;
+            if ($gci >= 0 && $gci < count($fileHeaders)) {
+                $groupColumnIndex = $gci;
+            }
+        }
+        $groupValueRaw = $request->query('group_value');
+        $groupFilterActive = $groupColumnIndex !== null && $groupValueRaw !== null;
+        $groupValueMatch = null;
+        if ($groupFilterActive) {
+            $groupValueMatch = $groupValueRaw === self::GROUP_VALUE_EMPTY_SENTINEL ? '' : (string) $groupValueRaw;
+        }
+
+        $tableFilterActive = $playerFilterActive || $thresholdRules !== [] || $groupFilterActive;
+
+        $heatRulesForResponse = $dataSourceUpload->heat_rules;
+        if (! is_array($heatRulesForResponse)) {
+            $heatRulesForResponse = [];
+        }
+
+        $browse = is_array($dataSourceUpload->dataset_browse_settings) ? $dataSourceUpload->dataset_browse_settings : null;
+        $effectiveHeatMinPa = $this->effectiveHeatMinPaForTable($request, $browse);
+        $liveHeatMinQuery = $this->heatMinPaQueryOrNull($request);
+        $heatMinForSubset = $groupFilterActive ? $effectiveHeatMinPa : null;
+
+        $colCount = count($fileHeaders);
+        $rawRowsForGroupScopedHeatStats = null;
+        if ($playerFilterActive && $groupFilterActive) {
+            $rawRowsForGroupScopedHeatStats = [];
+            foreach ($materialized['rows'] as $row) {
+                $normalized = [];
+                for ($i = 0; $i < $colCount; $i++) {
+                    $normalized[] = isset($row[$i]) ? (string) $row[$i] : '';
+                }
+                $rawRowsForGroupScopedHeatStats[] = $normalized;
+            }
+        }
+
+        $rawRows = [];
+        $rawOrdinals = [];
+        $ordinalCounter = 0;
+        foreach ($materialized['rows'] as $row) {
+            if ($filterTerms !== []) {
+                $cell = (string) ($row[$playerIdx] ?? '');
+                if (! $this->csvRowMatchesPlayerTerms($cell, $filterTerms, $useExactPlayerMatch)) {
+                    continue;
+                }
+            }
+            $currentOrdinal = $ordinalCounter;
+            $ordinalCounter++;
+            $normalized = [];
+            for ($i = 0; $i < $colCount; $i++) {
+                $normalized[] = isset($row[$i]) ? (string) $row[$i] : '';
+            }
+            $rawRows[] = $normalized;
+            $rawOrdinals[] = $currentOrdinal;
+        }
+
+        $page = (int) $request->query('page', 1);
+        [$headers, $rows, $ordinals, $page, $lastPage, $totalRows, $subsetHeatStats] = $this->finalizePagedDisplayRows(
+            $fileHeaders,
+            $rawRows,
+            $rawOrdinals,
+            $playerIdx,
+            $order,
+            $thresholdRules,
+            $sortColumnIndex,
+            $sortAscending,
+            $page,
+            $perPage,
+            $groupFilterActive ? $heatRulesForResponse : null,
+            $groupFilterActive ? $groupColumnIndex : null,
+            $groupFilterActive ? $groupValueMatch : null,
+            $heatMinForSubset,
+            $rawRowsForGroupScopedHeatStats
+        );
+        if ($subsetHeatStats !== null) {
+            $heatColumnStatsOut = $subsetHeatStats;
+        } elseif ($liveHeatMinQuery !== null && $this->heatRulesAreEnabled($dataSourceUpload)) {
+            $computed = $this->computeHeatColumnStatsForUpload($dataSourceUpload, $liveHeatMinQuery);
+            $heatColumnStatsOut = $computed === [] ? (object) [] : $computed;
+        } else {
+            $heatColumnStatsOut = $dataSourceUpload->heat_column_stats ?? (object) [];
+        }
+
+        $from = $totalRows === 0 ? 0 : (($page - 1) * $perPage) + 1;
+        $to = min($page * $perPage, $totalRows);
+
+        $heatRowPaOk = $this->heatRowPaOkFlags($effectiveHeatMinPa, $headers, $rows);
+
+        return response()->json([
+            'headers' => $headers,
+            'rows' => $rows,
+            'row_ordinals' => $ordinals,
+            'page' => $page,
+            'perPage' => $perPage,
+            'totalRows' => $totalRows,
+            'lastPage' => $lastPage,
+            'from' => $from,
+            'to' => $to,
+            'original_filename' => $dataSourceUpload->original_filename,
+            'filter_active' => $tableFilterActive,
+            'column_order' => $order,
+            'sort' => $sortActive ? [
+                'column' => $sortColumnIndex,
+                'direction' => $sortAscending ? 'asc' : 'desc',
+            ] : null,
+            'heat_rules' => $dataSourceUpload->heat_rules ?? (object) [],
+            'heat_column_stats' => $heatColumnStatsOut ?? (object) [],
+            'heat_pa_qualifier' => $this->heatPaQualifierForDisplay($headers, $effectiveHeatMinPa),
+            'heat_row_pa_ok' => $heatRowPaOk,
+            'group' => $groupColumnIndex !== null ? [
+                'column' => $groupColumnIndex,
+                'active' => $groupFilterActive,
+            ] : null,
+        ]);
+    }
+
+    private function careerPgMasterGroupColumnValues(Request $request, DataSourceUpload $dataSourceUpload): JsonResponse
+    {
+        $materialized = $this->materializeCareerPgData($dataSourceUpload);
+        if ($materialized === null) {
+            return response()->json(['values' => []]);
+        }
+
+        $fileHeaders = $materialized['headers'];
+        $playerIdx = DataSourceCsvHeaders::playerColumnIndex($fileHeaders);
+        $groupColRaw = $request->query('group_column');
+        if ($groupColRaw === null || $groupColRaw === '' || ! is_numeric($groupColRaw)) {
+            return response()->json(['values' => []]);
+        }
+        $groupColumnIndex = (int) $groupColRaw;
+        if ($groupColumnIndex < 0 || $groupColumnIndex >= count($fileHeaders)) {
+            return response()->json(['values' => []]);
+        }
+
+        $playersQuery = $request->query('players');
+        /** @var list<string> $playerTerms */
+        $playerTerms = [];
+        if (is_array($playersQuery)) {
+            foreach ($playersQuery as $p) {
+                $s = trim((string) $p);
+                if ($s !== '') {
+                    $playerTerms[] = $s;
+                }
+            }
+            $playerTerms = array_values(array_unique($playerTerms));
+        } elseif ($playersQuery !== null && (string) $playersQuery !== '') {
+            $playerTerms = [trim((string) $playersQuery)];
+        }
+
+        $useExactPlayerMatch = $playerTerms !== [];
+        $filterTerms = $useExactPlayerMatch ? $playerTerms : [];
+        $playerFilterActive = $filterTerms !== [];
+
+        $order = $this->normalizeColumnOrder($dataSourceUpload->column_order, count($fileHeaders));
+
+        $rawRows = [];
+        foreach ($materialized['rows'] as $row) {
+            if ($playerFilterActive) {
+                $cell = (string) ($row[$playerIdx] ?? '');
+                if (! $this->csvRowMatchesPlayerTerms($cell, $filterTerms, $useExactPlayerMatch)) {
+                    continue;
+                }
+            }
+            $colCount = count($fileHeaders);
+            $normalized = [];
+            for ($i = 0; $i < $colCount; $i++) {
+                $normalized[] = isset($row[$i]) ? (string) $row[$i] : '';
+            }
+            $rawRows[] = $normalized;
+        }
+
+        [$dispHeaders, $dispRows] = $this->reorderPlayerFirst($fileHeaders, $rawRows, $playerIdx);
+        [$dispHeaders, $dispRows] = $this->applyColumnOrderPermutation($dispHeaders, $dispRows, $order);
+
+        if ($groupColumnIndex < 0 || $groupColumnIndex >= count($dispHeaders)) {
+            return response()->json(['values' => []]);
+        }
+
+        /** @var array<string, true> $seen */
+        $seen = [];
+        foreach ($dispRows as $row) {
+            $cell = trim((string) ($row[$groupColumnIndex] ?? ''));
+            $seen[$cell] = true;
+        }
+        $values = array_keys($seen);
+        usort($values, function (string $a, string $b): int {
+            if ($a === '' && $b !== '') {
+                return 1;
+            }
+            if ($a !== '' && $b === '') {
+                return -1;
+            }
+
+            return strnatcasecmp($a, $b);
+        });
+
+        return response()->json(['values' => array_values($values)]);
     }
 
     public function updateSettings(UpdateDataSourceUploadSettingsRequest $request, DataSourceUpload $dataSourceUpload): JsonResponse
@@ -313,31 +819,141 @@ class DataSourceController extends Controller
             $dataSourceUpload->heat_rules = $normalized === [] ? null : $normalized;
         }
 
-        if ($request->has('for_hs_ranger_traits')) {
-            $on = $request->boolean('for_hs_ranger_traits');
-            $dataSourceUpload->for_hs_ranger_traits = $on;
-            if ($on) {
-                DataSourceUpload::query()
+        if ($request->has('dataset_browse_settings')) {
+            /** @var array<string, mixed> $rawBrowse */
+            $rawBrowse = $request->input('dataset_browse_settings', []);
+            $normalizedBrowse = $this->normalizeDatasetBrowseSettings($rawBrowse, count($dataSourceUpload->header_row));
+            $dataSourceUpload->dataset_browse_settings = $normalizedBrowse;
+        }
+
+        if ($request->has('hs_profile_feed_slots') && ! $dataSourceUpload->isCareerPgMaster()) {
+            /** @var list<mixed> $rawSlots */
+            $rawSlots = $request->input('hs_profile_feed_slots', []);
+            $slots = [];
+            foreach ($rawSlots as $s) {
+                if (is_string($s) && $s !== '') {
+                    $slots[] = $s;
+                }
+            }
+            $slots = array_values(array_unique($slots));
+            $dataSourceUpload->hs_profile_feed_slots = $slots === [] ? null : $slots;
+
+            if ($slots !== []) {
+                $others = DataSourceUpload::query()
                     ->where('user_id', $dataSourceUpload->user_id)
                     ->whereKeyNot($dataSourceUpload->id)
-                    ->update(['for_hs_ranger_traits' => false]);
+                    ->get();
+                foreach ($others as $other) {
+                    $cur = $other->hs_profile_feed_slots;
+                    if (! is_array($cur) || $cur === []) {
+                        continue;
+                    }
+                    $next = array_values(array_diff($cur, $slots));
+                    $other->hs_profile_feed_slots = $next === [] ? null : $next;
+                    $other->save();
+                }
             }
+        }
+
+        if ($dataSourceUpload->isCareerPgMaster()) {
+            $dataSourceUpload->hs_profile_feed_slots = null;
         }
 
         $dataSourceUpload->save();
 
-        if ($request->has('heat_rules')) {
+        if ($request->has('heat_rules')
+            || ($request->has('dataset_browse_settings') && $this->heatRulesAreEnabled($dataSourceUpload))) {
             $this->recomputeHeatColumnStats($dataSourceUpload);
         }
 
+        $response = ['ok' => true];
+
+        if ($request->has('dataset_browse_settings')) {
+            $response['dataset_browse_settings'] = $dataSourceUpload->dataset_browse_settings;
+        }
+
+        if ($request->has('hs_profile_feed_slots')) {
+            $allForSlots = DataSourceUpload::query()
+                ->where('user_id', $dataSourceUpload->user_id)
+                ->orderBy('id')
+                ->get(['id', 'hs_profile_feed_slots', 'upload_kind', 'career_pg_source_upload_id']);
+
+            $response['hs_profile_feed_assignments'] = $allForSlots
+                ->map(static function (DataSourceUpload $u) use ($allForSlots): array {
+                    return [
+                        'id' => (int) $u->id,
+                        'hs_profile_feed_slots' => $u->resolvedHsProfileFeedSlotsForUi($allForSlots),
+                    ];
+                })
+                ->values()
+                ->all();
+        }
+
+        return response()->json($response);
+    }
+
+    public function storeRow(AppendDataSourceRowRequest $request, DataSourceUpload $dataSourceUpload): JsonResponse
+    {
+        if ($dataSourceUpload->isCareerPgMaster()) {
+            throw ValidationException::withMessages([
+                'cells' => [__('This dataset is read-only.')],
+            ]);
+        }
+
+        $absolutePath = Storage::disk($dataSourceUpload->disk)->path($dataSourceUpload->path);
+        if (! is_file($absolutePath)) {
+            abort(404);
+        }
+
+        $expectedN = count($dataSourceUpload->header_row);
+        if ($expectedN === 0) {
+            throw ValidationException::withMessages([
+                'cells' => [__('This dataset has no columns.')],
+            ]);
+        }
+
+        /** @var list<mixed> $rawCells */
+        $rawCells = $request->input('cells', []);
+        $fileRow = [];
+        for ($i = 0; $i < $expectedN; $i++) {
+            $v = $rawCells[$i] ?? null;
+            $fileRow[] = $v === null || $v === '' ? '' : (string) $v;
+        }
+
+        [$diskHeader, $rows] = $this->readFullCsvData($absolutePath);
+        if (count($diskHeader) !== $expectedN) {
+            throw ValidationException::withMessages([
+                'cells' => [__('CSV column count does not match this dataset.')],
+            ]);
+        }
+
+        $rows[] = $fileRow;
+        $this->writeFullCsv($absolutePath, $diskHeader, $rows);
+
+        $stats = $this->csvUploadStats($absolutePath);
+        $dataSourceUpload->row_count = $stats['row_count'];
+        $dataSourceUpload->save();
+        $this->recomputeHeatColumnStats($dataSourceUpload);
+        CareerPgMasterUploadService::syncForUser($request->user());
+
+        $perPage = 50;
+        $lastPage = max(1, (int) ceil(max(1, $dataSourceUpload->row_count) / $perPage));
+
         return response()->json([
             'ok' => true,
-            'for_hs_ranger_traits' => (bool) $dataSourceUpload->for_hs_ranger_traits,
+            'row_count' => $dataSourceUpload->row_count,
+            'lastPage' => $lastPage,
         ]);
     }
 
     public function updateRow(DataSourceRowUpdateRequest $request, DataSourceUpload $dataSourceUpload, int $ordinal): JsonResponse
     {
+        if ($dataSourceUpload->isCareerPgMaster()) {
+            throw ValidationException::withMessages([
+                'player' => [__('This dataset is read-only.')],
+            ]);
+        }
+
         $absolutePath = Storage::disk($dataSourceUpload->disk)->path($dataSourceUpload->path);
         if (! is_file($absolutePath)) {
             abort(404);
@@ -345,6 +961,7 @@ class DataSourceController extends Controller
 
         $playerIdx = DataSourceCsvHeaders::playerColumnIndex($dataSourceUpload->header_row);
         $this->updateCsvPlayerByOrdinal($absolutePath, $playerIdx, $ordinal, $request->validated('player'));
+        CareerPgMasterUploadService::syncForUser($request->user());
 
         return response()->json(['ok' => true]);
     }
@@ -352,6 +969,12 @@ class DataSourceController extends Controller
     public function destroyRow(Request $request, DataSourceUpload $dataSourceUpload, int $ordinal): JsonResponse
     {
         abort_unless($dataSourceUpload->user_id === $request->user()->id, 404);
+
+        if ($dataSourceUpload->isCareerPgMaster()) {
+            throw ValidationException::withMessages([
+                'ordinal' => [__('This dataset is read-only.')],
+            ]);
+        }
 
         $absolutePath = Storage::disk($dataSourceUpload->disk)->path($dataSourceUpload->path);
         if (! is_file($absolutePath)) {
@@ -363,6 +986,7 @@ class DataSourceController extends Controller
         $dataSourceUpload->row_count = $stats['row_count'];
         $dataSourceUpload->save();
         $this->recomputeHeatColumnStats($dataSourceUpload);
+        CareerPgMasterUploadService::syncForUser($request->user());
 
         return response()->json(['ok' => true, 'row_count' => $dataSourceUpload->row_count]);
     }
@@ -455,14 +1079,26 @@ class DataSourceController extends Controller
         return [$newHeaders, $newRows];
     }
 
-    private function recomputeHeatColumnStats(DataSourceUpload $upload): void
+    /**
+     * @return array<string, array{min: float, max: float, median: float}>
+     */
+    private function computeHeatColumnStatsForUpload(DataSourceUpload $upload, ?float $heatMinPa): array
     {
         $rules = $upload->heat_rules;
         if (! is_array($rules) || $rules === []) {
-            $upload->heat_column_stats = null;
-            $upload->save();
+            return [];
+        }
 
-            return;
+        /** @var list<string> $headerRow */
+        $headerRow = array_map(static fn ($h) => is_string($h) ? $h : '', $upload->header_row ?? []);
+        $careerGridRows = null;
+        if ($upload->isCareerPgMaster()) {
+            $mat = $this->materializeCareerPgData($upload);
+            if ($mat === null || $mat['rows'] === []) {
+                return [];
+            }
+            $headerRow = $mat['headers'];
+            $careerGridRows = $mat['rows'];
         }
 
         $indexes = [];
@@ -470,7 +1106,7 @@ class DataSourceController extends Controller
             if (! is_array($rule) || ! ($rule['enabled'] ?? false)) {
                 continue;
             }
-            foreach ($upload->header_row as $i => $h) {
+            foreach ($headerRow as $i => $h) {
                 if ((string) $h === (string) $name) {
                     $indexes[(string) $name] = (int) $i;
 
@@ -480,39 +1116,75 @@ class DataSourceController extends Controller
         }
 
         if ($indexes === []) {
-            $upload->heat_column_stats = null;
-            $upload->save();
-
-            return;
+            return [];
         }
 
-        $path = Storage::disk($upload->disk)->path($upload->path);
-        $handle = fopen($path, 'r');
-        if ($handle === false) {
-            return;
+        $paCol = null;
+        $paMinActive = null;
+        if ($heatMinPa !== null) {
+            $paCol = DataSourceCsvHeaders::plateAppearancesColumnIndex($headerRow);
+            if ($paCol !== null) {
+                $paMinActive = $heatMinPa;
+            }
         }
 
-        fgetcsv($handle);
         /** @var array<string, list<float>> $valueLists */
         $valueLists = [];
         foreach (array_keys($indexes) as $name) {
             $valueLists[$name] = [];
         }
 
-        while (($row = fgetcsv($handle)) !== false) {
-            if ($this->isBlankCsvRow($row)) {
-                continue;
-            }
-            foreach ($indexes as $name => $idx) {
-                $raw = (string) ($row[$idx] ?? '');
-                $val = $this->parseNumericForHeat($raw);
-                if ($val === null) {
-                    continue;
+        if ($careerGridRows !== null) {
+            foreach ($careerGridRows as $row) {
+                if ($paMinActive !== null) {
+                    $paRaw = (string) ($row[$paCol] ?? '');
+                    $paVal = $this->parseNumericForHeat($paRaw);
+                    if ($paVal === null || $paVal < $paMinActive) {
+                        continue;
+                    }
                 }
-                $valueLists[$name][] = (float) $val;
+                foreach ($indexes as $name => $idx) {
+                    $raw = (string) ($row[$idx] ?? '');
+                    $val = $this->parseNumericForHeat($raw);
+                    if ($val === null) {
+                        continue;
+                    }
+                    $valueLists[$name][] = (float) $val;
+                }
+            }
+        } else {
+            $path = Storage::disk($upload->disk)->path($upload->path);
+            $handle = fopen($path, 'r');
+            if ($handle === false) {
+                return [];
+            }
+
+            try {
+                fgetcsv($handle);
+                while (($row = fgetcsv($handle)) !== false) {
+                    if ($this->isBlankCsvRow($row)) {
+                        continue;
+                    }
+                    if ($paMinActive !== null) {
+                        $paRaw = (string) ($row[$paCol] ?? '');
+                        $paVal = $this->parseNumericForHeat($paRaw);
+                        if ($paVal === null || $paVal < $paMinActive) {
+                            continue;
+                        }
+                    }
+                    foreach ($indexes as $name => $idx) {
+                        $raw = (string) ($row[$idx] ?? '');
+                        $val = $this->parseNumericForHeat($raw);
+                        if ($val === null) {
+                            continue;
+                        }
+                        $valueLists[$name][] = (float) $val;
+                    }
+                }
+            } finally {
+                fclose($handle);
             }
         }
-        fclose($handle);
 
         $stats = [];
         foreach ($indexes as $name => $_) {
@@ -540,8 +1212,133 @@ class DataSourceController extends Controller
             ];
         }
 
+        return $stats;
+    }
+
+    private function recomputeHeatColumnStats(DataSourceUpload $upload): void
+    {
+        $rules = $upload->heat_rules;
+        if (! is_array($rules) || $rules === []) {
+            $upload->heat_column_stats = null;
+            $upload->save();
+
+            return;
+        }
+
+        $paMin = $this->heatMinPaFromBrowse(is_array($upload->dataset_browse_settings) ? $upload->dataset_browse_settings : null);
+        $stats = $this->computeHeatColumnStatsForUpload($upload, $paMin);
         $upload->heat_column_stats = $stats === [] ? null : $stats;
         $upload->save();
+    }
+
+    private function heatMinPaQueryOrNull(Request $request): ?float
+    {
+        if (! $request->has('heat_min_pa')) {
+            return null;
+        }
+        $v = $request->query('heat_min_pa');
+        if ($v === null || $v === '' || ! is_numeric($v)) {
+            return null;
+        }
+        $f = (float) $v;
+
+        return $f >= 0 ? $f : null;
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $browse
+     */
+    private function heatMinPaFromBrowse(?array $browse): ?float
+    {
+        if (! is_array($browse) || ! array_key_exists('heat_min_pa', $browse)) {
+            return null;
+        }
+        $v = $browse['heat_min_pa'];
+        if ($v === null || $v === '' || ! is_numeric($v)) {
+            return null;
+        }
+        $f = (float) $v;
+
+        return $f >= 0 ? $f : null;
+    }
+
+    /**
+     * Query param (draft) overrides saved browse for one request.
+     *
+     * @param  array<string, mixed>|null  $browse
+     */
+    private function effectiveHeatMinPaForTable(Request $request, ?array $browse): ?float
+    {
+        $q = $this->heatMinPaQueryOrNull($request);
+        if ($q !== null) {
+            return $q;
+        }
+
+        return $this->heatMinPaFromBrowse($browse);
+    }
+
+    /**
+     * @return array{min: float|null, column_index: int|null}
+     */
+    private function heatPaQualifierForDisplay(array $dispHeaders, ?float $minPa): array
+    {
+        if ($minPa === null) {
+            return ['min' => null, 'column_index' => null];
+        }
+        $idx = DataSourceCsvHeaders::plateAppearancesColumnIndex($dispHeaders);
+        if ($idx === null) {
+            return ['min' => null, 'column_index' => null];
+        }
+
+        return ['min' => $minPa, 'column_index' => $idx];
+    }
+
+    /**
+     * One flag per displayed row: whether heat shading may apply for that row (PA meets minimum).
+     * Null when no PA minimum is active — client should not use this array to gate.
+     *
+     * @param  list<string>  $dispHeaders
+     * @param  list<list<string>>  $pageRows
+     * @return list<bool>|null
+     */
+    private function heatRowPaOkFlags(?float $minPa, array $dispHeaders, array $pageRows): ?array
+    {
+        if ($minPa === null) {
+            return null;
+        }
+
+        $paIdx = DataSourceCsvHeaders::plateAppearancesColumnIndex($dispHeaders);
+        $out = [];
+        if ($paIdx === null) {
+            foreach ($pageRows as $_) {
+                $out[] = false;
+            }
+
+            return $out;
+        }
+
+        foreach ($pageRows as $row) {
+            $raw = (string) ($row[$paIdx] ?? '');
+            $val = $this->parseNumericForHeat($raw);
+            $out[] = $val !== null && $val >= $minPa;
+        }
+
+        return $out;
+    }
+
+    private function heatRulesAreEnabled(DataSourceUpload $upload): bool
+    {
+        $rules = $upload->heat_rules;
+        if (! is_array($rules) || $rules === []) {
+            return false;
+        }
+        foreach ($rules as $rule) {
+            if (is_array($rule) && ($rule['enabled'] ?? false)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function parseNumericForHeat(string $raw): ?float
@@ -858,8 +1655,10 @@ class DataSourceController extends Controller
             return 1;
         }
 
-        $na = is_numeric($ta) ? (float) $ta : null;
-        $nb = is_numeric($tb) ? (float) $tb : null;
+        $cleanA = str_replace([',', '%', ' '], '', $ta);
+        $cleanB = str_replace([',', '%', ' '], '', $tb);
+        $na = ($cleanA !== '' && is_numeric($cleanA)) ? (float) $cleanA : null;
+        $nb = ($cleanB !== '' && is_numeric($cleanB)) ? (float) $cleanB : null;
         if ($na !== null && $nb !== null) {
             return $na <=> $nb;
         }
@@ -868,12 +1667,51 @@ class DataSourceController extends Controller
     }
 
     /**
+     * @param  list<list<string>>  $dispRows
+     * @param  list<array{col: int, min: float|null, max: float|null}>  $thresholdRules
+     * @return list<list<string>>
+     */
+    private function filterRowsByGroupAndThresholds(
+        array $dispHeaders,
+        array $dispRows,
+        ?int $groupDisplayColumn,
+        ?string $groupDisplayValue,
+        array $thresholdRules,
+    ): array {
+        if ($groupDisplayColumn !== null && $groupDisplayValue !== null
+            && $groupDisplayColumn >= 0 && $groupDisplayColumn < count($dispHeaders)) {
+            $filteredRows = [];
+            foreach ($dispRows as $row) {
+                $cell = trim((string) ($row[$groupDisplayColumn] ?? ''));
+                if (strcasecmp($cell, $groupDisplayValue) === 0) {
+                    $filteredRows[] = $row;
+                }
+            }
+            $dispRows = $filteredRows;
+        }
+
+        if ($thresholdRules !== []) {
+            $filteredRows = [];
+            foreach ($dispRows as $row) {
+                if ($this->rowPassesColumnThresholds($row, $thresholdRules)) {
+                    $filteredRows[] = $row;
+                }
+            }
+            $dispRows = $filteredRows;
+        }
+
+        return $dispRows;
+    }
+
+    /**
      * @param  list<array{col: int, min: float|null, max: float|null}>  $thresholdRules
      * @param  list<string>  $fileHeaders
      * @param  list<list<string>>  $rawRows
      * @param  list<int>  $rawOrdinals
      * @param  list<int>  $columnOrder
-     * @return array{0: list<string>, 1: list<list<string>>, 2: list<int>, 3: int, 4: int, 5: int}
+     * @param  array<string, mixed>|null  $heatRulesForSubset
+     * @param  list<list<string>>|null  $rawRowsForGroupScopedHeatStats  Full file rows (no player filter) for heat min/max when group + player filters are both active
+     * @return array{0: list<string>, 1: list<list<string>>, 2: list<int>, 3: int, 4: int, 5: int, 6: array<string, array{min: float, max: float, median: float}>|null}
      */
     private function finalizePagedDisplayRows(
         array $fileHeaders,
@@ -885,12 +1723,32 @@ class DataSourceController extends Controller
         ?int $sortColumnIndex,
         bool $sortAscending,
         int $page,
-        int $perPage
+        int $perPage,
+        ?array $heatRulesForSubset = null,
+        ?int $groupDisplayColumn = null,
+        ?string $groupDisplayValue = null,
+        ?float $heatMinPaForSubset = null,
+        ?array $rawRowsForGroupScopedHeatStats = null,
     ): array {
         [$dispHeaders, $dispRows] = $this->reorderPlayerFirst($fileHeaders, $rawRows, $playerIdx);
         [$dispHeaders, $dispRows] = $this->applyColumnOrderPermutation($dispHeaders, $dispRows, $columnOrder);
 
         $ordinals = $rawOrdinals;
+
+        if ($groupDisplayColumn !== null && $groupDisplayValue !== null
+            && $groupDisplayColumn >= 0 && $groupDisplayColumn < count($dispHeaders)) {
+            $filteredRows = [];
+            $filteredOrdinals = [];
+            foreach ($dispRows as $i => $row) {
+                $cell = trim((string) ($row[$groupDisplayColumn] ?? ''));
+                if (strcasecmp($cell, $groupDisplayValue) === 0) {
+                    $filteredRows[] = $row;
+                    $filteredOrdinals[] = $ordinals[$i];
+                }
+            }
+            $dispRows = $filteredRows;
+            $ordinals = $filteredOrdinals;
+        }
 
         if ($thresholdRules !== []) {
             $filteredRows = [];
@@ -903,6 +1761,31 @@ class DataSourceController extends Controller
             }
             $dispRows = $filteredRows;
             $ordinals = $filteredOrdinals;
+        }
+
+        $subsetHeatStats = null;
+        if (is_array($heatRulesForSubset) && $heatRulesForSubset !== []) {
+            $paIdx = null;
+            $paMin = $heatMinPaForSubset;
+            if ($paMin !== null) {
+                $paIdx = DataSourceCsvHeaders::plateAppearancesColumnIndex($dispHeaders);
+                if ($paIdx === null) {
+                    $paMin = null;
+                }
+            }
+            $rowsForHeatStats = $dispRows;
+            if (is_array($rawRowsForGroupScopedHeatStats) && $rawRowsForGroupScopedHeatStats !== []) {
+                [$heatHeaders, $heatRowsWide] = $this->reorderPlayerFirst($fileHeaders, $rawRowsForGroupScopedHeatStats, $playerIdx);
+                [$heatHeaders, $heatRowsWide] = $this->applyColumnOrderPermutation($heatHeaders, $heatRowsWide, $columnOrder);
+                $rowsForHeatStats = $this->filterRowsByGroupAndThresholds(
+                    $heatHeaders,
+                    $heatRowsWide,
+                    $groupDisplayColumn,
+                    $groupDisplayValue,
+                    $thresholdRules,
+                );
+            }
+            $subsetHeatStats = DataSourceHeatColumnStats::compute($dispHeaders, $rowsForHeatStats, $heatRulesForSubset, $paIdx, $paMin);
         }
 
         $totalRows = count($dispRows);
@@ -935,12 +1818,118 @@ class DataSourceController extends Controller
         $pageRows = array_slice($dispRows, $offset, $perPage);
         $pageOrdinals = array_slice($ordinalsAligned, $offset, $perPage);
 
-        return [$dispHeaders, $pageRows, $pageOrdinals, $page, $lastPage, $totalRows];
+        return [$dispHeaders, $pageRows, $pageOrdinals, $page, $lastPage, $totalRows, $subsetHeatStats];
     }
 
     /**
      * @return list<array{col: int, min: float|null, max: float|null}>
      */
+    /**
+     * @param  array<string, mixed>  $raw
+     * @return array{players: list<string>, column_thresholds: list<array{col: int, min?: float, max?: float}>, group_column: int|null, group_value: string|null}|null
+     */
+    private function normalizeDatasetBrowseSettings(array $raw, int $columnCount): ?array
+    {
+        if ($columnCount <= 0) {
+            return null;
+        }
+
+        $players = [];
+        if (isset($raw['players']) && is_array($raw['players'])) {
+            foreach ($raw['players'] as $p) {
+                $s = trim((string) $p);
+                if ($s !== '') {
+                    $players[] = $s;
+                }
+            }
+            $players = array_values(array_unique($players));
+        }
+
+        $thresholds = [];
+        if (isset($raw['column_thresholds']) && is_array($raw['column_thresholds'])) {
+            foreach ($raw['column_thresholds'] as $item) {
+                if (! is_array($item)) {
+                    continue;
+                }
+                $col = $item['col'] ?? $item['column'] ?? null;
+                if (! is_numeric($col)) {
+                    continue;
+                }
+                $col = (int) $col;
+                if ($col < 0 || $col >= $columnCount) {
+                    continue;
+                }
+                $minF = null;
+                $maxF = null;
+                $minRaw = $item['min'] ?? null;
+                $maxRaw = $item['max'] ?? null;
+                if ($minRaw !== null && $minRaw !== '' && is_numeric($minRaw)) {
+                    $minF = (float) $minRaw;
+                }
+                if ($maxRaw !== null && $maxRaw !== '' && is_numeric($maxRaw)) {
+                    $maxF = (float) $maxRaw;
+                }
+                if ($minF === null && $maxF === null) {
+                    continue;
+                }
+                if ($minF !== null && $maxF !== null && $minF > $maxF) {
+                    [$minF, $maxF] = [$maxF, $minF];
+                }
+                $entry = ['col' => $col];
+                if ($minF !== null) {
+                    $entry['min'] = $minF;
+                }
+                if ($maxF !== null) {
+                    $entry['max'] = $maxF;
+                }
+                $thresholds[] = $entry;
+            }
+        }
+
+        $groupColumn = null;
+        if (isset($raw['group_column']) && $raw['group_column'] !== null && $raw['group_column'] !== '') {
+            $g = (int) $raw['group_column'];
+            if ($g >= 0 && $g < $columnCount) {
+                $groupColumn = $g;
+            }
+        }
+
+        $groupValue = null;
+        if ($groupColumn !== null && array_key_exists('group_value', $raw)) {
+            $gv = $raw['group_value'];
+            $groupValue = $gv === null ? null : (string) $gv;
+        }
+
+        $heatMinPa = null;
+        if (array_key_exists('heat_min_pa', $raw)) {
+            $hm = $raw['heat_min_pa'];
+            if ($hm !== null && $hm !== '' && is_numeric($hm)) {
+                $v = (float) $hm;
+                if ($v >= 0) {
+                    $heatMinPa = $v;
+                }
+            }
+        }
+
+        $empty =
+            $players === []
+            && $thresholds === []
+            && $groupColumn === null
+            && $heatMinPa === null;
+
+        if ($empty) {
+            return null;
+        }
+
+        return [
+            'players' => $players,
+            'column_thresholds' => $thresholds,
+            'group_column' => $groupColumn,
+            'group_value' => $groupValue,
+            'heat_min_pa' => $heatMinPa,
+        ];
+    }
+
     private function parseColumnThresholds(Request $request, int $columnCount): array
     {
         if ($columnCount <= 0) {

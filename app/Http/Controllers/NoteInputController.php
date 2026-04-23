@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\PlayerNotesBulkUpdateRequest;
 use App\Http\Requests\PlayerNoteSectionRequest;
 use App\Models\Player;
 use App\Support\PlayerNoteFieldKeys;
@@ -20,13 +21,6 @@ class NoteInputController extends Controller
             $selectedPlayer = Player::query()->find($request->query('player'));
             if ($selectedPlayer === null) {
                 return redirect()->route('notes.index');
-            }
-        }
-
-        if ($selectedPlayer !== null && $request->filled('edit')) {
-            $allowed = PlayerNoteFieldKeys::forPool($selectedPlayer->player_pool);
-            if (! in_array($request->query('edit'), $allowed, true)) {
-                return redirect()->route('notes.index', ['player' => $selectedPlayer->id]);
             }
         }
 
@@ -60,13 +54,46 @@ class NoteInputController extends Controller
         ]);
     }
 
+    public function updateAll(PlayerNotesBulkUpdateRequest $request): RedirectResponse
+    {
+        $data = $request->validated();
+        $player = Player::query()->findOrFail($data['player_id']);
+        $allowed = PlayerNoteFieldKeys::forPool($player->player_pool);
+
+        $updates = [];
+        foreach ($allowed as $field) {
+            $raw = $data['values'][$field] ?? null;
+            $updates[$field] = ($raw === null || $raw === '') ? null : $raw;
+
+            $gradeAttr = PlayerNoteFieldKeys::gradeAttributeForNoteField($field, $player->player_pool);
+            if ($gradeAttr !== null && array_key_exists('grades', $data) && array_key_exists($field, $data['grades'])) {
+                $g = $data['grades'][$field];
+                $updates[$gradeAttr] = $g === null ? null : (string) $g;
+            }
+        }
+
+        $player->update($updates);
+
+        return redirect()
+            ->route('notes.index', ['player' => $player->id])
+            ->with('status', __('Notes saved.'));
+    }
+
     public function updateSection(PlayerNoteSectionRequest $request): RedirectResponse
     {
         $data = $request->validated();
         $player = Player::query()->findOrFail($data['player_id']);
         $raw = $data['value'] ?? null;
         $value = ($raw === null || $raw === '') ? null : $raw;
-        $player->update([$data['field'] => $value]);
+
+        $updates = [$data['field'] => $value];
+        $gradeAttr = PlayerNoteFieldKeys::gradeAttributeForNoteField($data['field'], $player->player_pool);
+        if ($gradeAttr !== null && array_key_exists('grade', $data)) {
+            $g = $data['grade'];
+            $updates[$gradeAttr] = $g === null ? null : (string) $g;
+        }
+
+        $player->update($updates);
 
         return redirect()
             ->route('notes.index', ['player' => $player->id])

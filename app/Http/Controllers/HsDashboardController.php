@@ -21,6 +21,8 @@ class HsDashboardController extends Controller
             'player' => $placeholder,
             'hsPlayers' => $hsPlayers,
             'rangerSheet' => $rangerSheet,
+            'hsCompHeatScope' => null,
+            'hsProfileRouteQuery' => [],
         ]);
     }
 }

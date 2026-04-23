@@ -135,20 +135,32 @@
                 @php
                     $dataSourceLibraryConfig = [
                         'initialActiveId' => $initialActiveId,
+                        'blankGroupTabLabel' => __('(blank)'),
                         'tableDataBase' => '/data-sources/uploads',
-                        'uploadSummaries' => $uploads->map(fn ($u) => [
-                            'id' => $u->id,
-                            'name' => $u->name,
-                            'for_hs_ranger_traits' => (bool) $u->for_hs_ranger_traits,
-                        ])->values()->all(),
+                        'readOnlyById' => $uploads->mapWithKeys(static fn (\App\Models\DataSourceUpload $u): array => [
+                            (string) $u->id => $u->isCareerPgMaster(),
+                        ])->all(),
+                        'uploadSummaries' => $uploads->map(static function ($u) use ($uploads) {
+                            $browse = $u->dataset_browse_settings;
+
+                            return [
+                                'id' => $u->id,
+                                'name' => $u->name,
+                                'upload_kind' => $u->upload_kind ?? \App\Models\DataSourceUpload::UPLOAD_KIND_FILE,
+                                'dataset_read_only' => $u->isCareerPgMaster(),
+                                'career_pg_source_upload_id' => $u->career_pg_source_upload_id,
+                                'hs_profile_feed_slots' => $u->resolvedHsProfileFeedSlotsForUi($uploads),
+                                'dataset_browse_settings' => is_array($browse) ? $browse : null,
+                            ];
+                        })->values()->all(),
                     ];
                 @endphp
                 <div
                     class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
                     x-data="dataSourceLibrary(@js($dataSourceLibraryConfig))"
                 >
-                    <div class="border-b border-gray-200 px-4 pt-3 pb-0 sm:px-6">
-                        <div class="flex flex-wrap items-end justify-between gap-2 pb-px">
+                    <div class="border-b border-gray-200 px-4 pt-3 pb-3 sm:px-6">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
                             <nav class="-mb-px flex min-w-0 flex-1 gap-1 overflow-x-auto" aria-label="{{ __('Saved CSV datasets') }}">
                                 @foreach ($uploads as $u)
                                     <button
@@ -163,19 +175,28 @@
                                     </button>
                                 @endforeach
                             </nav>
-                            <div class="mb-px flex shrink-0 flex-col items-end gap-1.5">
-                                <label class="flex max-w-[12rem] cursor-pointer items-center gap-1.5 text-right text-[10px] font-semibold uppercase leading-tight tracking-wide text-gray-600">
-                                    <input
-                                        type="checkbox"
-                                        class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
-                                        :checked="forHsRangerTraitsActive"
-                                        @change="toggleForHsRangerTraits()"
-                                    />
-                                    <span>{{ __('Feed HS Ranger Traits sheet') }}</span>
-                                </label>
+                            <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
                                 <button
                                     type="button"
-                                    class="shrink-0 rounded border border-red-200 bg-red-50 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-red-800 hover:bg-red-100"
+                                    class="rounded border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-900 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                    x-bind:disabled="loading || !activeId || activeUploadReadOnly || headers.length === 0"
+                                    @click="scrollToAppendRow()"
+                                    title="{{ __('Scroll to the form below to add a new row to this CSV') }}"
+                                >
+                                    {{ __('Append row') }}
+                                </button>
+                                <button
+                                    type="button"
+                                    class="rounded border border-indigo-200 bg-indigo-50 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-900 hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                    x-bind:disabled="loading || !activeId"
+                                    @click="saveDataset()"
+                                >
+                                    {{ __('Save dataset') }}
+                                </button>
+                                <button
+                                    type="button"
+                                    class="rounded border border-red-200 bg-red-50 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-red-800 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                    x-bind:disabled="activeUploadReadOnly"
                                     @click="deleteActiveUpload()"
                                 >
                                     {{ __('Delete dataset') }}
@@ -184,7 +205,25 @@
                         </div>
                     </div>
 
-                    <div class="space-y-3 p-4 sm:p-6">
+                    <div
+                        class="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-100 bg-emerald-50/50 px-4 py-2 sm:px-6"
+                        x-show="activeId && !activeUploadReadOnly"
+                        x-cloak
+                    >
+                        <p class="text-[11px] font-medium normal-case text-gray-700">
+                            {{ __('Append new rows below, or use the Append row button above after the table loads.') }}
+                        </p>
+                        <button
+                            type="button"
+                            class="shrink-0 rounded border border-emerald-300 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-900 shadow-sm hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            x-bind:disabled="loading || headers.length === 0"
+                            @click="scrollToAppendRow()"
+                        >
+                            {{ __('Jump to append form') }}
+                        </button>
+                    </div>
+
+                    <div class="space-y-6 p-4 sm:p-6">
                         <template x-if="loading">
                             <p class="text-xs text-gray-500 uppercase tracking-wide">{{ __('LOADING…') }}</p>
                         </template>
@@ -192,134 +231,301 @@
                             <div class="rounded-md bg-red-50 p-3 text-sm text-red-800 border border-red-100" x-text="loadError"></div>
                         </template>
 
-                        <div x-show="!loading && !loadError" x-cloak class="space-y-3">
-                            <div class="max-w-xl" @click.outside="playerPickerOpen = false">
-                                <x-input-label for="dataset_player_filter" :value="__('FILTER BY PLAYER')" class="!text-xs" />
-                                <p class="mt-0.5 text-[11px] text-gray-500 normal-case">
-                                    {{ __('Pick one name, then search again to add more — the table shows every selected player’s rows.') }}
-                                </p>
-                                <div class="relative mt-1">
-                                    <div
-                                        class="flex min-h-[2.5rem] flex-wrap items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm shadow-sm focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/25"
-                                    >
-                                        <template x-for="name in selectedPlayers" :key="name">
-                                            <span
-                                                class="inline-flex max-w-full items-center gap-0.5 rounded-md bg-indigo-50 pl-2 pr-0.5 py-0.5 text-xs font-medium text-indigo-900 ring-1 ring-inset ring-indigo-200/80"
-                                            >
-                                                <span class="min-w-0 truncate" x-text="name"></span>
-                                                <button
-                                                    type="button"
-                                                    class="shrink-0 rounded p-0.5 text-indigo-700 hover:bg-indigo-100/80 focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
-                                                    :aria-label="'{{ __('Remove') }} ' + name"
-                                                    @click="removeSelectedPlayer(name)"
-                                                >
-                                                    <svg class="h-3.5 w-3.5" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-                                                        <path stroke-linecap="round" d="M3 3l6 6M9 3L3 9" />
-                                                    </svg>
-                                                </button>
-                                            </span>
-                                        </template>
-                                        <input
-                                            id="dataset_player_filter"
-                                            type="search"
-                                            class="min-w-[10rem] flex-1 border-0 bg-transparent py-0.5 text-sm normal-case text-gray-900 placeholder:text-gray-400 focus:ring-0"
-                                            placeholder="{{ __('Type to search players…') }}"
-                                            x-model="playerPickerQuery"
-                                            autocomplete="off"
-                                            role="combobox"
-                                            :aria-expanded="playerPickerOpen"
-                                            aria-haspopup="listbox"
-                                            @focus="playerPickerOpen = true"
-                                            @input="playerPickerOpen = true"
-                                            @keydown.escape.prevent="playerPickerOpen = false"
-                                        />
+                        <div x-show="!loading && !loadError" x-cloak class="space-y-6">
+                            {{-- Flex (not arbitrary grid) so side-by-side layout always compiles; sm: = 640px+ --}}
+                            <div class="flex w-full flex-col gap-4 sm:flex-row sm:items-stretch sm:gap-5 lg:gap-6 xl:gap-8">
+                                {{-- Left: HS profile tables only --}}
+                                <div class="min-w-0 w-full flex-1 rounded-lg border border-gray-200 bg-gray-50/70 p-3 shadow-sm sm:p-4 sm:h-full">
+                                    <div class="flex min-w-0 w-full flex-row items-start gap-x-2 sm:gap-x-4 md:gap-x-6 lg:gap-x-8">
+                                        @foreach (\App\Support\HsRangerTraitsSheetLayout::hsProfileFeedUiGroups() as $group)
+                                            <div class="flex min-w-0 flex-1 flex-col gap-2.5">
+                                                <p class="border-b border-gray-200/90 pb-1.5 !text-xs !font-semibold !text-gray-800 !normal-case">
+                                                    {{ $group['section'] }}
+                                                </p>
+                                                <div class="flex flex-col gap-2">
+                                                    @foreach ($group['tables'] as $t)
+                                                        <label class="flex cursor-pointer items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                                            <input
+                                                                type="checkbox"
+                                                                class="shrink-0 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 disabled:opacity-50"
+                                                                value="{{ $t['key'] }}"
+                                                                x-model="hsProfileFeedDraft"
+                                                                x-bind:disabled="activeUploadReadOnly"
+                                                            />
+                                                            <span class="leading-tight">{{ $t['label'] }}</span>
+                                                        </label>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        @endforeach
                                     </div>
-                                    <div
-                                        x-cloak
-                                        x-show="playerPickerOpen && filteredPlayerPickerOptions.length > 0"
-                                        x-transition
-                                        class="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5"
-                                    >
-                                        <ul
-                                            role="listbox"
-                                            class="max-h-[min(50vh,16rem)] overflow-y-auto overscroll-contain text-sm normal-case text-gray-900"
+                                </div>
+
+                                {{-- Right: Filter Players, Set Thresholds, and Group By in one pane --}}
+                                <div
+                                    class="relative z-30 flex min-h-0 w-full min-w-0 flex-col rounded-lg border border-gray-200 bg-white p-3 shadow-sm sm:h-full sm:w-96 sm:flex-shrink-0 lg:w-[28rem]"
+                                    @click.outside="playerPickerOpen = false"
+                                >
+                                    <div class="relative shrink-0">
+                                            <x-input-label for="dataset_player_filter" :value="__('Filter Players')" class="!text-xs !font-semibold !text-gray-800" />
+                                            <div class="relative mt-2">
+                                                <div
+                                                    class="flex min-h-[2.5rem] flex-wrap items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm shadow-sm focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/25"
+                                                >
+                                                    <template x-for="name in selectedPlayers" :key="name">
+                                                        <span
+                                                            class="inline-flex max-w-full items-center gap-0.5 rounded-md bg-indigo-50 pl-2 pr-0.5 py-0.5 text-xs font-medium text-indigo-900 ring-1 ring-inset ring-indigo-200/80"
+                                                        >
+                                                            <span class="min-w-0 truncate" x-text="name"></span>
+                                                            <button
+                                                                type="button"
+                                                                class="shrink-0 rounded p-0.5 text-indigo-700 hover:bg-indigo-100/80 focus:outline-none focus-visible:ring-1 focus-visible:ring-indigo-500"
+                                                                :aria-label="'{{ __('Remove') }} ' + name"
+                                                                @click="removeSelectedPlayer(name)"
+                                                            >
+                                                                <svg class="h-3.5 w-3.5" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                                                                    <path stroke-linecap="round" d="M3 3l6 6M9 3L3 9" />
+                                                                </svg>
+                                                            </button>
+                                                        </span>
+                                                    </template>
+                                                    <input
+                                                        id="dataset_player_filter"
+                                                        type="search"
+                                                        class="min-w-[10rem] flex-1 border-0 bg-transparent py-0.5 text-sm normal-case text-gray-900 placeholder:text-gray-400 focus:ring-0"
+                                                        placeholder="{{ __('Type to search players…') }}"
+                                                        x-model="playerPickerQuery"
+                                                        autocomplete="off"
+                                                        role="combobox"
+                                                        :aria-expanded="playerPickerOpen"
+                                                        aria-haspopup="listbox"
+                                                        @focus="playerPickerOpen = true"
+                                                        @input="playerPickerOpen = true"
+                                                        @keydown.escape.prevent="playerPickerOpen = false"
+                                                    />
+                                                </div>
+                                                <div
+                                                    x-cloak
+                                                    x-show="playerPickerOpen && filteredPlayerPickerOptions.length > 0"
+                                                    x-transition
+                                                    class="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5"
+                                                >
+                                                    <ul
+                                                        role="listbox"
+                                                        class="max-h-[min(50vh,16rem)] overflow-y-auto overscroll-contain text-sm normal-case text-gray-900"
+                                                    >
+                                                        <template x-for="opt in filteredPlayerPickerOptions" :key="opt">
+                                                            <li role="option">
+                                                                <button
+                                                                    type="button"
+                                                                    class="flex w-full px-3 py-1.5 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+                                                                    @click="selectPlayerFromPicker(opt)"
+                                                                    x-text="opt"
+                                                                ></button>
+                                                            </li>
+                                                        </template>
+                                                    </ul>
+                                                </div>
+                                                <p
+                                                    x-cloak
+                                                    x-show="playerPickerOpen && playerPickerQuery.trim() !== '' && filteredPlayerPickerOptions.length === 0"
+                                                    class="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border border-gray-100 bg-white px-3 py-2 text-sm text-gray-500 shadow-sm"
+                                                >
+                                                    {{ __('No matching players.') }}
+                                                </p>
+                                            </div>
+                                    </div>
+
+                                    <div class="relative z-10 mt-4 shrink-0 border-t border-gray-200 pt-4">
+                                        <x-input-label class="!text-xs !font-semibold !text-gray-800" :value="__('Min PA for column colors')" />
+                                        <p class="mt-1 text-[10px] font-medium normal-case leading-snug text-gray-500">
+                                            {{ __('Enter a minimum PA, then click Apply. Rows below that PA stay unshaded on heat columns. Leave blank and apply to color everyone.') }}
+                                        </p>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            class="mt-1.5 w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm normal-case text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
+                                            x-model="heatMinPaDraft"
+                                            autocomplete="off"
+                                            placeholder="—"
+                                        />
+                                        <button
+                                            type="button"
+                                            class="mt-2 w-full rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-indigo-900 shadow-sm hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                            x-bind:disabled="loading || !activeId"
+                                            @click="applyHeatPaCutoff()"
                                         >
-                                            <template x-for="opt in filteredPlayerPickerOptions" :key="opt">
-                                                <li role="option">
+                                            {{ __('Apply PA cutoff to colors') }}
+                                        </button>
+                                    </div>
+
+                                    <div class="relative z-10 mt-4 flex min-h-0 min-w-0 flex-1 flex-col border-t border-gray-200 pt-4">
+                                        <details class="flex min-h-0 flex-1 flex-col rounded-md border border-gray-100 bg-gray-50/50 px-2 py-1.5 sm:px-3 sm:py-2 [&[open]]:min-h-0 [&[open]]:flex-1">
+                                            <summary class="shrink-0 cursor-pointer list-none select-none text-xs font-semibold text-gray-800 [&::-webkit-details-marker]:hidden">
+                                                {{ __('Set Thresholds') }}
+                                            </summary>
+                                            <div class="mt-3 flex min-h-0 flex-1 flex-col gap-2">
+                                                <div class="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                                                    <template x-for="(h, thIdx) in headers" :key="'ct-'+thIdx">
+                                                        <div
+                                                            x-show="thIdx > 0"
+                                                            class="grid grid-cols-1 items-end gap-2 rounded-md border border-gray-100 bg-white/90 px-2 py-1.5 sm:grid-cols-[1fr_minmax(0,7rem)_minmax(0,7rem)]"
+                                                        >
+                                                            <div class="min-w-0">
+                                                                <span
+                                                                    class="block truncate text-[10px] font-semibold uppercase tracking-wide text-gray-700"
+                                                                    x-text="h !== '' ? h : '—'"
+                                                                ></span>
+                                                            </div>
+                                                            <div>
+                                                                <label class="block text-[9px] font-medium uppercase tracking-wide text-gray-500">{{ __('Min') }}</label>
+                                                                <input
+                                                                    type="number"
+                                                                    step="any"
+                                                                    class="mt-0.5 w-full rounded border border-gray-300 px-1.5 py-1 text-xs normal-case text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
+                                                                    x-model="thresholdDraft[thIdx].min"
+                                                                    @input.debounce.400ms="onThresholdInputsChanged()"
+                                                                    autocomplete="off"
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label class="block text-[9px] font-medium uppercase tracking-wide text-gray-500">{{ __('Max') }}</label>
+                                                                <input
+                                                                    type="number"
+                                                                    step="any"
+                                                                    class="mt-0.5 w-full rounded border border-gray-300 px-1.5 py-1 text-xs normal-case text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
+                                                                    x-model="thresholdDraft[thIdx].max"
+                                                                    @input.debounce.400ms="onThresholdInputsChanged()"
+                                                                    autocomplete="off"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                                <div class="flex shrink-0 flex-wrap gap-2">
                                                     <button
                                                         type="button"
-                                                        class="flex w-full px-3 py-1.5 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
-                                                        @click="selectPlayerFromPicker(opt)"
-                                                        x-text="opt"
-                                                    ></button>
-                                                </li>
-                                            </template>
-                                        </ul>
+                                                        class="rounded border border-gray-300 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-700 hover:bg-gray-50"
+                                                        @click="clearColumnThresholds()"
+                                                    >
+                                                        {{ __('Clear thresholds') }}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </details>
                                     </div>
-                                    <p
-                                        x-cloak
-                                        x-show="playerPickerOpen && playerPickerQuery.trim() !== '' && filteredPlayerPickerOptions.length === 0"
-                                        class="absolute left-0 right-0 top-full z-30 mt-1 rounded-md border border-gray-100 bg-white px-3 py-2 text-sm text-gray-500 shadow-sm"
-                                    >
-                                        {{ __('No matching players.') }}
-                                    </p>
+
+                                    <div class="mt-4 shrink-0 border-t border-gray-200 pt-4">
+                                        <x-input-label for="dataset_group_column" :value="__('Group By')" class="!text-xs !font-semibold !text-gray-800" />
+                                        <div x-show="headers.length > 0" x-cloak class="mt-2 space-y-2">
+                                            {{-- Browsers only allow <option>/<optgroup> inside <select>; <template x-for> is invalid and breaks the control. Options are synced in JS. --}}
+                                            <select
+                                                id="dataset_group_column"
+                                                x-ref="groupColumnSelect"
+                                                x-model="groupByColumnRaw"
+                                                @change="onGroupByColumnChanged($event)"
+                                                class="block w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm normal-case text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
+                                            >
+                                                <option value="">{{ __('No grouping') }}</option>
+                                            </select>
+                                            <div
+                                                x-show="groupByColumnRaw !== '' && groupValues.length > 0"
+                                                x-cloak
+                                                class="rounded-md border border-gray-200 bg-gray-50/80 px-1 pt-1 pb-0"
+                                            >
+                                                <nav
+                                                    role="tablist"
+                                                    class="-mb-px flex flex-wrap gap-1 overflow-x-auto overflow-y-visible normal-case text-gray-900"
+                                                    aria-label="{{ __('Group values') }}"
+                                                >
+                                                    <a
+                                                        role="tab"
+                                                        href="#"
+                                                        class="dataset-group-tab-item shrink-0 whitespace-nowrap border-b-2 border-solid border-transparent bg-transparent px-2.5 py-1.5 text-left font-semibold tracking-wide transition hover:border-gray-300"
+                                                        :class="activeGroupValue === null ? '!border-indigo-600' : ''"
+                                                        :data-active="activeGroupValue === null ? 'true' : 'false'"
+                                                        :aria-selected="activeGroupValue === null ? 'true' : 'false'"
+                                                        @click.prevent="selectGroupTab(null)"
+                                                        @keydown.enter.prevent="selectGroupTab(null)"
+                                                        @keydown.space.prevent="selectGroupTab(null)"
+                                                    >
+                                                        <span class="dataset-group-tab-label">{{ __('All') }}</span>
+                                                    </a>
+                                                    <template x-for="(gv, gvIdx) in groupValues" :key="'gv-'+gvIdx+'-'+(gv === '' ? 'e' : gv)">
+                                                        <a
+                                                            role="tab"
+                                                            href="#"
+                                                            class="dataset-group-tab-item shrink-0 whitespace-nowrap border-b-2 border-solid border-transparent bg-transparent px-2.5 py-1.5 text-left font-semibold tracking-wide transition hover:border-gray-300"
+                                                            :class="activeGroupValue === gv ? '!border-indigo-600' : ''"
+                                                            :data-active="activeGroupValue === gv ? 'true' : 'false'"
+                                                            :aria-selected="activeGroupValue === gv ? 'true' : 'false'"
+                                                            @click.prevent="selectGroupTab(gv)"
+                                                            @keydown.enter.prevent="selectGroupTab(gv)"
+                                                            @keydown.space.prevent="selectGroupTab(gv)"
+                                                        >
+                                                            <span
+                                                                class="dataset-group-tab-label"
+                                                                x-text="gv === '' ? blankGroupTabLabel : gv"
+                                                            ></span>
+                                                        </a>
+                                                    </template>
+                                                </nav>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            <details class="max-w-3xl rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2 sm:px-4">
-                                <summary class="cursor-pointer select-none text-xs font-semibold uppercase tracking-wide text-gray-700">
-                                    {{ __('Column thresholds (numeric)') }}
-                                </summary>
-                                <p class="mt-2 text-[11px] leading-snug text-gray-600 normal-case">
-                                    {{ __('Set optional minimum and/or maximum for any column. Rows must satisfy every rule. Non-numeric cells are hidden when that column has a threshold.') }}
+                            <div
+                                id="dataset-add-row"
+                                x-show="activeId && !activeUploadReadOnly"
+                                x-cloak
+                                class="rounded-lg border border-emerald-100 bg-emerald-50/40 p-3 shadow-sm ring-1 ring-emerald-100/80"
+                            >
+                                <h4 class="text-xs font-semibold uppercase tracking-wide text-gray-800">
+                                    {{ __('Add row') }}
+                                </h4>
+                                <p class="mt-1 text-[11px] font-normal normal-case leading-snug text-gray-500">
+                                    {{ __('Enter values for each column as they appear in the table. The player column cannot be empty.') }}
                                 </p>
-                                <div class="mt-3 max-h-[40vh] space-y-2 overflow-y-auto pr-1">
-                                    <template x-for="(h, thIdx) in headers" :key="'ct-'+thIdx">
-                                        <div
-                                            x-show="thIdx > 0"
-                                            class="grid grid-cols-1 items-end gap-2 rounded-md border border-gray-100 bg-white/90 px-2 py-1.5 sm:grid-cols-[1fr_minmax(0,7rem)_minmax(0,7rem)]"
-                                        >
-                                            <div class="min-w-0">
+                                <p
+                                    x-show="headers.length === 0"
+                                    class="mt-2 text-[11px] font-normal normal-case text-amber-800"
+                                >
+                                    {{ __('Columns are still loading. If this persists, reload the page.') }}
+                                </p>
+                                <div class="mt-2 max-w-full overflow-x-auto pb-1" x-show="headers.length > 0" x-cloak>
+                                    <div class="flex min-w-min gap-2">
+                                        <template x-for="(h, addIdx) in headers" :key="'add-col-' + addIdx">
+                                            <label class="flex w-[7.5rem] shrink-0 flex-col gap-0.5">
                                                 <span
-                                                    class="block truncate text-[10px] font-semibold uppercase tracking-wide text-gray-700"
+                                                    class="truncate text-[10px] font-semibold uppercase tracking-wide text-gray-600"
+                                                    :title="String(h ?? '')"
                                                     x-text="h !== '' ? h : '—'"
                                                 ></span>
-                                            </div>
-                                            <div>
-                                                <label class="block text-[9px] font-medium uppercase tracking-wide text-gray-500">{{ __('Min') }}</label>
                                                 <input
-                                                    type="number"
-                                                    step="any"
-                                                    class="mt-0.5 w-full rounded border border-gray-300 px-1.5 py-1 text-xs normal-case text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
-                                                    x-model="thresholdDraft[thIdx].min"
-                                                    @input.debounce.400ms="onThresholdInputsChanged()"
+                                                    type="text"
+                                                    class="w-full rounded border border-gray-300 px-1.5 py-1 text-[11px] !normal-case text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                                                    :aria-label="String(h ?? '')"
+                                                    x-model="newRowCells[addIdx]"
                                                     autocomplete="off"
                                                 />
-                                            </div>
-                                            <div>
-                                                <label class="block text-[9px] font-medium uppercase tracking-wide text-gray-500">{{ __('Max') }}</label>
-                                                <input
-                                                    type="number"
-                                                    step="any"
-                                                    class="mt-0.5 w-full rounded border border-gray-300 px-1.5 py-1 text-xs normal-case text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
-                                                    x-model="thresholdDraft[thIdx].max"
-                                                    @input.debounce.400ms="onThresholdInputsChanged()"
-                                                    autocomplete="off"
-                                                />
-                                            </div>
-                                        </div>
-                                    </template>
+                                            </label>
+                                        </template>
+                                    </div>
                                 </div>
-                                <div class="mt-2 flex flex-wrap gap-2">
+                                <div class="mt-3 flex flex-wrap items-center gap-2">
                                     <button
                                         type="button"
-                                        class="rounded border border-gray-300 bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-700 hover:bg-gray-50"
-                                        @click="clearColumnThresholds()"
+                                        class="inline-flex items-center rounded-md border border-emerald-300 bg-emerald-100 px-3 py-1.5 text-xs font-semibold text-emerald-950 shadow-sm hover:bg-emerald-200/90 disabled:cursor-not-allowed disabled:opacity-50"
+                                        x-bind:disabled="appendRowBusy || loading || headers.length === 0"
+                                        @click="appendDatasetRow()"
                                     >
-                                        {{ __('Clear thresholds') }}
+                                        {{ __('Append to CSV') }}
                                     </button>
                                 </div>
-                            </details>
+                            </div>
 
                             {{-- Grid rows share column tracks; first column sticky for horizontal scroll. --}}
                             <div class="rounded-lg border border-gray-200 bg-gray-50/50">
@@ -477,7 +683,7 @@
                                                                 ? 'sticky left-0 z-10 justify-start bg-white pl-4 pr-1.5 shadow-[4px_0_14px_-6px_rgba(0,0,0,0.12)] group-hover:bg-gray-50'
                                                                 : 'justify-center px-0.5 text-center',
                                                         ]"
-                                                        :style="datasetCellStyle(h, row[cIdx])"
+                                                        :style="datasetCellStyle(h, row[cIdx], row, rIdx)"
                                                     >
                                                         <template x-if="cIdx === 0">
                                                             <div class="flex w-full min-w-0 items-center">
@@ -493,28 +699,32 @@
                                                                 <template x-if="rowOrdinalAt(rIdx) !== null && editingOrdinal !== rowOrdinalAt(rIdx)">
                                                                     <div class="flex max-w-full min-w-0 items-center justify-start gap-px">
                                                                         <span class="min-w-0 shrink truncate font-medium text-gray-900" :title="String(row[0] ?? '')" x-text="row[0] !== undefined && row[0] !== null && String(row[0]) !== '' ? row[0] : '—'"></span>
-                                                                        <button
-                                                                            type="button"
-                                                                            class="shrink-0 rounded p-0.5 text-gray-500 hover:bg-gray-200 hover:text-gray-900"
-                                                                            title="{{ __('Edit player') }}"
-                                                                            aria-label="{{ __('Edit player') }}"
-                                                                            @click="startEditPlayer(rowOrdinalAt(rIdx), row[0])"
-                                                                        >
-                                                                            <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                                                            </svg>
-                                                                        </button>
-                                                                        <button
-                                                                            type="button"
-                                                                            class="shrink-0 rounded p-0.5 text-red-500 hover:bg-red-50 hover:text-red-700"
-                                                                            title="{{ __('Remove row from CSV') }}"
-                                                                            aria-label="{{ __('Remove row from CSV') }}"
-                                                                            @click="removePlayer(rowOrdinalAt(rIdx))"
-                                                                        >
-                                                                            <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                                                            </svg>
-                                                                        </button>
+                                                                        <template x-if="!activeUploadReadOnly">
+                                                                            <button
+                                                                                type="button"
+                                                                                class="shrink-0 rounded p-0.5 text-gray-500 hover:bg-gray-200 hover:text-gray-900"
+                                                                                title="{{ __('Edit player') }}"
+                                                                                aria-label="{{ __('Edit player') }}"
+                                                                                @click="startEditPlayer(rowOrdinalAt(rIdx), row[0])"
+                                                                            >
+                                                                                <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                                                                </svg>
+                                                                            </button>
+                                                                        </template>
+                                                                        <template x-if="!activeUploadReadOnly">
+                                                                            <button
+                                                                                type="button"
+                                                                                class="shrink-0 rounded p-0.5 text-red-500 hover:bg-red-50 hover:text-red-700"
+                                                                                title="{{ __('Remove row from CSV') }}"
+                                                                                aria-label="{{ __('Remove row from CSV') }}"
+                                                                                @click="removePlayer(rowOrdinalAt(rIdx))"
+                                                                            >
+                                                                                <svg class="h-3.5 w-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                                                </svg>
+                                                                            </button>
+                                                                        </template>
                                                                     </div>
                                                                 </template>
                                                                 <template x-if="rowOrdinalAt(rIdx) === null">

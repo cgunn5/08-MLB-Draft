@@ -19,7 +19,7 @@
             players: {{ \Illuminate\Support\Js::from($notesComboboxPlayers) }},
             selectedId: {{ $selectedIdJson }},
             selectedLabel: {{ $selectedLabelJson }},
-            placeholderSelect: {{ \Illuminate\Support\Js::from(__('Select player…')) }},
+            placeholderSelect: {{ \Illuminate\Support\Js::from(__('SELECT PLAYER…')) }},
             placeholderFilter: {{ \Illuminate\Support\Js::from(__('Type to filter…')) }},
         })"
         @click.outside="close()"
@@ -38,8 +38,13 @@
                     :aria-expanded="open"
                     aria-haspopup="listbox"
                     aria-controls="notes-player-combobox-listbox"
-                    class="col-start-1 row-start-1 w-full min-h-[2.75rem] min-w-0 max-w-full rounded-md border border-[rgb(203_213_225)] bg-white py-2 pl-3 pr-10 text-left text-sm font-medium normal-case text-gray-900 shadow-sm placeholder:text-gray-400 hover:border-slate-400/90 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
-                    :class="open ? 'cursor-text' : 'cursor-pointer'"
+                    class="col-start-1 row-start-1 w-full min-h-[2.75rem] min-w-0 max-w-full rounded-md border border-[rgb(203_213_225)] bg-white py-2 pl-10 pr-10 text-center text-sm normal-case shadow-sm placeholder:text-gray-400 hover:border-slate-400/90 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                    :class="{
+                        'cursor-text': open,
+                        'cursor-pointer': !open,
+                        'rangers-wordmark-text text-sm': !open && selectedId != null,
+                        'font-medium text-gray-900': open || selectedId == null,
+                    }"
                     :value="open ? query : (selectedId != null ? selectedLabel : '')"
                     :placeholder="open ? placeholderFilter : (selectedId != null ? '' : placeholderSelect)"
                     @focus="onComboboxFocus()"
@@ -81,8 +86,8 @@
                     <li role="option" :aria-selected="p.id === selectedId">
                         <button
                             type="button"
-                            class="flex w-full px-3 py-1.5 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
-                            :class="p.id === selectedId ? 'bg-indigo-50 font-semibold text-indigo-900' : 'font-normal'"
+                            class="rangers-wordmark-text flex w-full justify-center px-3 py-1.5 text-center hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+                            :class="p.id === selectedId ? 'bg-indigo-50 font-semibold' : 'font-normal'"
                             @click="choose(p)"
                             x-text="p.label"
                         ></button>

@@ -36,7 +36,7 @@
                         {{ __('HS') }}
                     </x-nav-link>
                     <x-nav-link :href="route('notes.index')" :active="request()->routeIs('notes.*')">
-                        {{ __('NOTES') }}
+                        {{ __('Notes/Grades') }}
                     </x-nav-link>
                     <x-nav-link :href="route('data-sources.index')" :active="request()->routeIs('data-sources.*')">
                         {{ __('DATA') }}
@@ -114,7 +114,7 @@
                 {{ __('HS') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('notes.index')" :active="request()->routeIs('notes.*')">
-                {{ __('NOTES') }}
+                {{ __('Notes/Grades') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('data-sources.index')" :active="request()->routeIs('data-sources.*')">
                 {{ __('DATA') }}

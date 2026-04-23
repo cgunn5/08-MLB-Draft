@@ -5,9 +5,15 @@
     $cadj = $_ch['adjust_pitch'] ?? [];
     $cops = $_ch['adjust_ops_split'] ?? [];
 @endphp
-<div class="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 sm:gap-2 md:gap-2.5">
+<div class="flex min-h-0 min-w-0 flex-col gap-2 sm:gap-2.5 md:gap-3">
 <div class="min-w-0 shrink-0">
-<x-player.ranger-trait-block dense :title="__('Adjustability')" :note="$player->note_pitch_coverage">
+<x-player.ranger-trait-block
+    dense
+    tightStack
+    :wider-table-stack="true"
+    :title="__('Adjustability')"
+    :note="$player->note_pitch_coverage"
+>
     <div class="min-w-0 overflow-x-auto">
         <div class="ranger-traits-table-clip">
         <table
@@ -17,12 +23,14 @@
                 <tr class="bg-[#44546A] text-white">
                     <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]"></th>
                     <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">P</th>
-                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">xwOBAcon</th>
+                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">BIPx</th>
+                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">OPS</th>
+                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">ISO</th>
                     <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">EV95</th>
-                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">SwM</th>
-                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">IZSwM</th>
-                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">OwDec</th>
-                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">BB%</th>
+                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">GB%</th>
+                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">SwM%</th>
+                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">IZSwM%</th>
+                    <th class="border border-gray-800 px-0.5 py-[0.102rem] font-[700] sm:py-[0.198rem]">CH%</th>
                 </tr>
             </thead>
             <tbody class="bg-white text-black">
@@ -35,12 +43,14 @@
                             {{ $pr['pitch'] ?? '—' }}
                         </th>
                         <x-player.ranger-traits-hs.heat-td :heat="$cadj[$idx]['p'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pr['p'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                        <x-player.ranger-traits-hs.heat-td :heat="$cadj[$idx]['xwobacon'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pr['xwobacon'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$cadj[$idx]['bipx'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pr['bipx'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$cadj[$idx]['ops'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ \App\Support\HsRangerTraitsDisplay::formatThreeDecimals($pr['ops'] ?? null) }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$cadj[$idx]['iso'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ \App\Support\HsRangerTraitsDisplay::formatThreeDecimals($pr['iso'] ?? null) }}</x-player.ranger-traits-hs.heat-td>
                         <x-player.ranger-traits-hs.heat-td :heat="$cadj[$idx]['ev95'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pr['ev95'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$cadj[$idx]['gb_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pr['gb_pct'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
                         <x-player.ranger-traits-hs.heat-td :heat="$cadj[$idx]['swm'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pr['swm'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
                         <x-player.ranger-traits-hs.heat-td :heat="$cadj[$idx]['izswm'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pr['izswm'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                        <x-player.ranger-traits-hs.heat-td :heat="$cadj[$idx]['owdec'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pr['owdec'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                        <x-player.ranger-traits-hs.heat-td :heat="$cadj[$idx]['bb_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pr['bb_pct'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$cadj[$idx]['ch_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pr['ch_pct'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
                     </tr>
                 @empty
                     <tr>
@@ -50,7 +60,7 @@
                         >
                             —
                         </th>
-                        @for ($i = 0; $i < 7; $i++)
+                        @for ($i = 0; $i < 9; $i++)
                             <td class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">—</td>
                         @endfor
                     </tr>
@@ -83,10 +93,10 @@
             </thead>
             <tbody class="bg-white text-black">
                 <tr>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cops['pa_vs_r'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ops['pa_vs_r'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cops['ops_vs_r'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ops['ops_vs_r'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cops['pa_vs_l'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ops['pa_vs_l'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cops['ops_vs_l'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ops['ops_vs_l'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cops['pa_vs_r'] ?? null" class="border border-gray-800 px-0.5 py-[0.204rem] sm:py-[0.396rem]">{{ $ops['pa_vs_r'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cops['ops_vs_r'] ?? null" class="border border-gray-800 px-0.5 py-[0.204rem] sm:py-[0.396rem]">{{ \App\Support\HsRangerTraitsDisplay::formatThreeDecimals($ops['ops_vs_r'] ?? null) }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cops['pa_vs_l'] ?? null" class="border border-gray-800 px-0.5 py-[0.204rem] sm:py-[0.396rem]">{{ $ops['pa_vs_l'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cops['ops_vs_l'] ?? null" class="border border-gray-800 px-0.5 py-[0.204rem] sm:py-[0.396rem]">{{ \App\Support\HsRangerTraitsDisplay::formatThreeDecimals($ops['ops_vs_l'] ?? null) }}</x-player.ranger-traits-hs.heat-td>
                 </tr>
             </tbody>
         </table>
@@ -96,6 +106,6 @@
 </div>
 
 <div class="min-w-0 shrink-0">
-<x-player.ranger-trait-block dense :title="__('Swing')" :note="$player->note_swing" />
+<x-player.ranger-trait-block dense tightStack :wider-table-stack="true" :title="__('Swing')" :note="$player->note_swing" />
 </div>
 </div>

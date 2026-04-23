@@ -3,26 +3,9 @@
 <section
     {{ $attributes->merge([
         'class' => 'flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden',
-        'aria-labelledby' => 'ranger-traits-heading',
+        'aria-label' => __('Ranger Traits'),
     ]) }}
 >
-    <div class="mb-4 flex shrink-0 items-center gap-2.5 sm:mb-5 sm:gap-3 md:mb-6 md:gap-4">
-        <div
-            class="h-px min-w-[1.25rem] flex-1 bg-gray-900 sm:h-0.5 sm:min-w-[1.5rem] md:min-w-[2rem]"
-            aria-hidden="true"
-        ></div>
-        <h2
-            id="ranger-traits-heading"
-            class="shrink-0 px-0.5 text-center font-[700] leading-none tracking-wide text-gray-900 text-[0.85rem] sm:text-[0.95rem] md:text-[1.05rem]"
-        >
-            {{ __('Ranger Traits') }}
-        </h2>
-        <div
-            class="h-px min-w-[1.25rem] flex-1 bg-gray-900 sm:h-0.5 sm:min-w-[1.5rem] md:min-w-[2rem]"
-            aria-hidden="true"
-        ></div>
-    </div>
-
     {{-- Three vertical bands; flex-1 + column scroll matches HS layout inside the NCAA profile pane. --}}
     <div
         class="grid min-h-0 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] grid-rows-1 items-stretch gap-1.5 overflow-x-hidden sm:gap-2 md:gap-3 lg:gap-4 2xl:gap-5"

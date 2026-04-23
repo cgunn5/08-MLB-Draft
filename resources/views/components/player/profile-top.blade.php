@@ -3,18 +3,20 @@
     'ncaaPlayers' => null,
     'profilePlayerList' => null,
     'profileRouteName' => 'ncaa.players.show',
+    'profileRouteQuery' => [],
     'gradeDefinitions' => null,
     'comboboxSrLabel' => null,
     'comfortable' => false,
     'compactProfile' => false,
     'omitCenterColumn' => false,
+    'rangerSheet' => null,
 ])
 
 @php
     $compactProfile = filter_var($compactProfile, FILTER_VALIDATE_BOOLEAN);
     $omitCenterColumn = filter_var($omitCenterColumn ?? false, FILTER_VALIDATE_BOOLEAN);
     $hsGradesRadarRowGrid = $omitCenterColumn && ! $compactProfile;
-    /* HS omit: same 3-col + gaps as ranger-traits-hs so middle column matches Approach/Miss & Impact/Damage. */
+    /* HS omit: same 3-col + gaps as ranger-traits-hs so middle column matches Approach / Miss & Impact/Damage. */
     $profileTopGridColsClass = $omitCenterColumn
         ? 'grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]'
         : 'grid-cols-3';
@@ -27,28 +29,43 @@
     $playerList = $profilePlayerList ?? $legacyList ?? collect();
     $isProfilePlaceholder = ! $player->exists;
     $comboboxSelectedLabel = $isProfilePlaceholder
-        ? __('Select player…')
+        ? __('SELECT PLAYER…')
         : strtoupper($player->last_name).', '.strtoupper($player->first_name);
     $comboboxSelectedIdJson = \Illuminate\Support\Js::from($player->getKey());
     $comboboxSelectedLabelJson = \Illuminate\Support\Js::from($comboboxSelectedLabel);
     $gradeDefsForGrid = $gradeDefinitions ?? \App\Models\Player::gradeRowDefinitions();
     $gradeRowCount = count($gradeDefsForGrid);
     $listSummary = $player->listSummaryLine();
-    $listSummaryLinesForSelect = $player->listSummaryLinesForSelect();
+    $rangerSheet = is_array($rangerSheet) ? $rangerSheet : [];
+    $overallDemographics = $rangerSheet['overall_demographics'] ?? null;
+    $overallDemographics = is_array($overallDemographics) ? $overallDemographics : null;
+    $aggregateRankBoardHeatStyle = (! $compactProfile && $omitCenterColumn)
+        ? $player->aggregateRankBoardHeatStyle()
+        : null;
+    $modelDraftListRankBoardHeatStyle = (! $compactProfile && $omitCenterColumn)
+        ? $player->modelDraftListRankBoardHeatStyle()
+        : null;
+    $profileRouteQuery = is_array($profileRouteQuery) ? $profileRouteQuery : [];
     $comboboxPlayers = $playerList
         ->map(
-            fn ($p) => [
-                'id' => $p->id,
-                'label' => strtoupper($p->last_name).', '.strtoupper($p->first_name),
-                'url' => route($profileRouteName, $p),
-            ],
+            function ($p) use ($profileRouteName, $profileRouteQuery) {
+                $url = route($profileRouteName, $p);
+                if ($profileRouteQuery !== []) {
+                    $url .= '?'.http_build_query($profileRouteQuery);
+                }
+
+                return [
+                    'id' => $p->id,
+                    'label' => strtoupper($p->last_name).', '.strtoupper($p->first_name),
+                    'url' => $url,
+                ];
+            },
         )
         ->values()
         ->all();
     $comboboxAccessibleLabel = $comboboxSrLabel ?? __('NCAA / JUCO player');
 
     if ($compactProfile) {
-        $mtText = 'text-[0.32rem] sm:text-[0.35rem] leading-none';
         $summaryText =
             'line-clamp-1 max-h-[1.1em] text-[0.3rem] sm:text-[0.32rem] leading-none';
         $comboBtn =
@@ -60,7 +77,6 @@
             'w-[2.9375rem] text-[0.14rem] sm:w-[3.125rem] sm:text-[0.15rem] md:w-[3.3125rem] md:text-[0.16rem]';
         $logoClass = 'max-h-[1.442rem] max-w-[1.24rem] sm:max-h-[1.594rem] sm:max-w-[1.366rem]';
     } elseif ($comfortable) {
-        $mtText = 'text-[0.6875rem] sm:text-[0.8125rem] md:text-[0.875rem]';
         $summaryText = 'text-[0.625rem] sm:text-[0.75rem] md:text-[0.8125rem]';
         $comboBtn =
             'text-sm sm:text-base md:text-lg 2xl:text-xl bg-[length:0.65rem] sm:bg-[length:0.72rem]';
@@ -73,7 +89,6 @@
         $logoClass =
             'max-h-[4.326rem] max-w-[3.795rem] sm:max-h-[5.541rem] sm:max-w-[4.782rem] md:max-h-[6.603rem] md:max-w-[5.693rem] lg:max-h-[7.362rem] lg:max-w-[6.3rem] 2xl:max-h-[9.33rem] 2xl:max-w-[8.577rem]';
     } else {
-        $mtText = 'text-[0.5rem] sm:text-[0.53125rem] md:text-[0.5625rem]';
         $summaryText = 'text-[0.5rem] sm:text-[0.53125rem] md:text-[0.5625rem]';
         $comboBtn =
             'text-xs sm:text-sm md:text-base 2xl:text-lg bg-[length:0.55rem]';
@@ -93,8 +108,9 @@
         'class' =>
             'w-full min-w-0 '.
             ($compactProfile
-                ? 'profile-top-compact-shell'
-                : 'flex h-full min-h-0 flex-col'),
+                ? 'profile-top-compact-shell profile-top--compact'
+                : 'flex h-full min-h-0 flex-col').
+            ($comfortable && ! $compactProfile ? ' profile-top--comfortable' : ''),
     ]) }}
 >
     {{-- Three equal columns; overflow-hidden on each track prevents bleed/overlap into neighbors. --}}
@@ -108,19 +124,20 @@
         ])
     >
         @if ($omitCenterColumn)
-            {{-- HS: same 3×1fr + gaps as ranger-traits-hs — select column width matches Approach/Miss & Impact/Damage --}}
+            {{-- HS: same 3×1fr + gaps as ranger-traits-hs — select column width matches Approach / Miss & Impact/Damage --}}
             <aside
                 @class([
-                    'flex min-h-0 min-w-0 h-full items-center justify-center self-stretch bg-[#f2f6f9]',
+                    'profile-master-take-aside flex min-h-0 min-w-0 h-full items-center justify-center self-stretch bg-[#f2f6f9]',
                     'app-outline-soft' => true,
-                    'px-1 py-px sm:px-1 sm:py-0.5 md:px-1.5 md:py-1' => ! $compactProfile,
+                    'px-1 py-px sm:px-1 sm:py-0.5 md:px-1.5 md:py-1' => ! $compactProfile && ! $comfortable,
+                    'px-1.5 py-0.5 sm:px-2 sm:py-1 md:px-2.5 md:py-1' => ! $compactProfile && $comfortable,
                     'px-px py-0' => $compactProfile,
                     'min-h-[2.7rem] sm:min-h-[3.15rem] md:min-h-0' => ! $compactProfile,
                     'min-h-0 max-h-full' => $compactProfile,
                 ])
             >
                 <p
-                    class="max-w-full break-words text-center font-sans font-[700] leading-tight text-gray-700 {{ $mtText }}"
+                    class="profile-master-take-text max-w-full break-words text-center font-sans font-[700] text-gray-700"
                 >
                     {{ filled($player->master_take) ? $player->master_take : '#N/A' }}
                 </p>
@@ -155,13 +172,13 @@
                                 <button
                                     id="profile-player-combobox-trigger"
                                     type="button"
-                                    class="flex w-full min-w-0 max-w-full cursor-pointer items-center justify-center gap-0.5 rounded-sm border-0 bg-white bg-[right_0.3rem_center] bg-no-repeat py-0 pl-0.5 text-center font-sans font-[700] leading-none tracking-wide text-red-600 shadow-none ring-0 sm:bg-[right_0.35rem_center] sm:pl-1 {{ $comboBtn }}"
-                                    style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke-width=%222%22 stroke=%22%23dc2626%22%3E%3Cpath stroke-linecap=%22round%22 stroke-linejoin=%22round%22 d=%22M19.5 8.25l-7.5 7.5-7.5-7.5%22/%3E%3C/svg%3E')"
+                                    class="flex w-full min-w-0 max-w-full cursor-pointer items-center justify-center gap-0.5 rounded-sm border-0 bg-white bg-[right_0.3rem_center] bg-no-repeat py-0 pl-0.5 text-center font-sans leading-none tracking-wide shadow-none ring-0 sm:bg-[right_0.35rem_center] sm:pl-1 {{ $comboBtn }}"
+                                    style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke-width=%222%22 stroke=%22%230c2340%22%3E%3Cpath stroke-linecap=%22round%22 stroke-linejoin=%22round%22 d=%22M19.5 8.25l-7.5 7.5-7.5-7.5%22/%3E%3C/svg%3E')"
                                     @click="toggle()"
                                     :aria-expanded="open"
                                     aria-haspopup="listbox"
                                 >
-                                    <span class="min-w-0 truncate" x-text="selectedLabel"></span>
+                                    <span class="rangers-wordmark-text min-w-0 truncate" x-text="selectedLabel"></span>
                                 </button>
                                 <div
                                     x-cloak
@@ -190,7 +207,7 @@
                                             <li role="option" :aria-selected="p.id === selectedId">
                                                 <button
                                                     type="button"
-                                                    class="flex w-full px-2 py-0.5 text-left hover:bg-red-50 focus:bg-red-50 focus:outline-none"
+                                                    class="rangers-wordmark-text flex w-full px-2 py-0.5 text-left hover:bg-red-50 focus:bg-red-50 focus:outline-none"
                                                     :class="p.id === selectedId ? 'bg-red-50/80 font-[700]' : 'font-normal'"
                                                     @click="choose(p)"
                                                     x-text="p.label"
@@ -209,25 +226,48 @@
                             </div>
                         @else
                             <h1
-                                class="flex min-w-0 max-w-full shrink-0 items-center justify-center text-center font-sans font-[700] leading-tight tracking-wide text-red-600 {{ $fallbackName }}"
+                                class="rangers-wordmark-text flex min-w-0 max-w-full shrink-0 items-center justify-center text-center font-sans leading-tight tracking-wide {{ $fallbackName }}"
                             >
                                 {{ $comboboxSelectedLabel }}
                             </h1>
                         @endif
-                        @if (! $compactProfile && (filled($listSummaryLinesForSelect['school_position']) || filled($listSummaryLinesForSelect['rank_agg'])))
+                        @if (! $compactProfile)
                             <div
-                                class="flex max-w-full shrink-0 flex-col items-center gap-0.5 px-0.5 text-center font-sans font-[700] leading-snug text-gray-700 {{ $summaryText }}"
+                                class="flex max-w-full shrink-0 flex-col items-center gap-1 px-0.5 text-center font-sans font-[700] leading-snug text-gray-700 {{ $summaryText }}"
                             >
-                                @if (filled($listSummaryLinesForSelect['school_position']))
-                                    <p class="max-w-full break-words">
-                                        {{ $listSummaryLinesForSelect['school_position'] }}
-                                    </p>
-                                @endif
-                                @if (filled($listSummaryLinesForSelect['rank_agg']))
-                                    <p class="max-w-full break-words">
-                                        {{ $listSummaryLinesForSelect['rank_agg'] }}
-                                    </p>
-                                @endif
+                                <p class="max-w-full break-words">
+                                    {{ $player->profileHeaderBioLine($overallDemographics) }}
+                                </p>
+                                <div
+                                    class="flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-0.5 sm:gap-x-3"
+                                >
+                                    <span class="inline-flex items-center gap-x-1 tabular-nums">
+                                        <span>RK</span>
+                                        <span
+                                            class="box-border inline-flex min-h-[1.125rem] min-w-[1.25rem] items-center justify-center rounded-sm px-0.5 py-px font-[700]"
+                                            @if ($aggregateRankBoardHeatStyle !== null)
+                                                style="{{ $aggregateRankBoardHeatStyle }}"
+                                            @endif
+                                        >{{ $player->aggregate_rank ?? '—' }}</span>
+                                    </span>
+                                    <span class="text-gray-300" aria-hidden="true">·</span>
+                                    <span class="inline-flex items-center gap-x-1 tabular-nums">
+                                        <span>MDL</span>
+                                        <span
+                                            class="box-border inline-flex min-h-[1.125rem] min-w-[1.25rem] items-center justify-center rounded-sm px-0.5 py-px font-[700]"
+                                            @if ($modelDraftListRankBoardHeatStyle !== null)
+                                                style="{{ $modelDraftListRankBoardHeatStyle }}"
+                                            @endif
+                                        >{{ ($player->modelDraftListRank()) ?? '—' }}</span>
+                                    </span>
+                                    <span class="text-gray-300" aria-hidden="true">·</span>
+                                    <span
+                                        class="rounded-md border border-dashed border-gray-300 bg-gray-50/90 px-2 py-0.5 tabular-nums text-gray-800"
+                                        title="{{ __('Personal rank') }}"
+                                    >
+                                        CG {{ $player->personal_rank ?? '—' }}
+                                    </span>
+                                </div>
                             </div>
                         @endif
                 </div>
@@ -237,15 +277,16 @@
             <div class="relative z-0 flex min-h-0 min-w-0 flex-col overflow-hidden">
                 <aside
                     @class([
-                        'flex w-full min-w-0 max-w-full flex-1 items-center justify-center self-stretch bg-[#f2f6f9] app-outline-soft',
-                        'px-1 py-px sm:px-1 sm:py-0.5 md:px-1.5 md:py-1' => ! $compactProfile,
+                        'profile-master-take-aside flex w-full min-w-0 max-w-full flex-1 items-center justify-center self-stretch bg-[#f2f6f9] app-outline-soft',
+                        'px-1 py-px sm:px-1 sm:py-0.5 md:px-1.5 md:py-1' => ! $compactProfile && ! $comfortable,
+                        'px-1.5 py-0.5 sm:px-2 sm:py-1 md:px-2.5 md:py-1' => ! $compactProfile && $comfortable,
                         'px-px py-0' => $compactProfile,
                         'min-h-[2.7rem] sm:min-h-[3.15rem] md:min-h-0' => ! $compactProfile,
                         'min-h-0 max-h-full py-0' => $compactProfile,
                     ])
                 >
                     <p
-                        class="max-w-full break-words text-center font-sans font-[700] leading-tight text-gray-700 {{ $mtText }}"
+                        class="profile-master-take-text max-w-full break-words text-center font-sans font-[700] text-gray-700"
                     >
                         {{ filled($player->master_take) ? $player->master_take : '#N/A' }}
                     </p>
@@ -294,13 +335,13 @@
                                 <button
                                     id="profile-player-combobox-trigger"
                                     type="button"
-                                    class="flex w-full min-w-0 max-w-full cursor-pointer items-center justify-center gap-0.5 rounded-sm border-0 bg-white bg-[right_0.3rem_center] bg-no-repeat py-0 pl-0.5 text-center font-sans font-[700] leading-none tracking-wide text-red-600 shadow-none ring-0 sm:bg-[right_0.35rem_center] sm:pl-1 {{ $comboBtn }}"
-                                    style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke-width=%222%22 stroke=%22%23dc2626%22%3E%3Cpath stroke-linecap=%22round%22 stroke-linejoin=%22round%22 d=%22M19.5 8.25l-7.5 7.5-7.5-7.5%22/%3E%3C/svg%3E')"
+                                    class="flex w-full min-w-0 max-w-full cursor-pointer items-center justify-center gap-0.5 rounded-sm border-0 bg-white bg-[right_0.3rem_center] bg-no-repeat py-0 pl-0.5 text-center font-sans leading-none tracking-wide shadow-none ring-0 sm:bg-[right_0.35rem_center] sm:pl-1 {{ $comboBtn }}"
+                                    style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22 stroke-width=%222%22 stroke=%22%230c2340%22%3E%3Cpath stroke-linecap=%22round%22 stroke-linejoin=%22round%22 d=%22M19.5 8.25l-7.5 7.5-7.5-7.5%22/%3E%3C/svg%3E')"
                                     @click="toggle()"
                                     :aria-expanded="open"
                                     aria-haspopup="listbox"
                                 >
-                                    <span class="min-w-0 truncate" x-text="selectedLabel"></span>
+                                    <span class="rangers-wordmark-text min-w-0 truncate" x-text="selectedLabel"></span>
                                 </button>
                                 <div
                                     x-cloak
@@ -329,7 +370,7 @@
                                             <li role="option" :aria-selected="p.id === selectedId">
                                                 <button
                                                     type="button"
-                                                    class="flex w-full px-2 py-0.5 text-left hover:bg-red-50 focus:bg-red-50 focus:outline-none"
+                                                    class="rangers-wordmark-text flex w-full px-2 py-0.5 text-left hover:bg-red-50 focus:bg-red-50 focus:outline-none"
                                                     :class="p.id === selectedId ? 'bg-red-50/80 font-[700]' : 'font-normal'"
                                                     @click="choose(p)"
                                                     x-text="p.label"
@@ -348,7 +389,7 @@
                             </div>
                         @else
                             <h1
-                                class="flex min-w-0 max-w-full shrink-0 items-center justify-center text-center font-sans font-[700] leading-tight tracking-wide text-red-600 {{ $fallbackName }}"
+                                class="rangers-wordmark-text flex min-w-0 max-w-full shrink-0 items-center justify-center text-center font-sans leading-tight tracking-wide {{ $fallbackName }}"
                             >
                                 {{ $comboboxSelectedLabel }}
                             </h1>
@@ -411,7 +452,8 @@
                                     </div>
                                     <div
                                         role="cell"
-                                        class="flex min-h-0 min-w-0 items-center justify-center overflow-hidden bg-white px-px py-0 text-center font-[700] tabular-nums text-black"
+                                        class="flex min-h-0 min-w-0 items-center justify-center overflow-hidden px-px py-0 text-center font-[700] tabular-nums"
+                                        style="{{ $player->gradeCellSummaryStyle($attribute) }}"
                                     >
                                         {{ $player->gradeCellDisplay($attribute) }}
                                     </div>
@@ -432,6 +474,7 @@
                         :compact="$compactProfile"
                         :comfortable="$comfortable && ! $compactProfile"
                         :show-legend="false"
+                        :radar="$rangerSheet['radar'] ?? null"
                         :player="$player"
                         class="min-w-0 shrink-0"
                     />

@@ -47,6 +47,207 @@
     }
 
     /*
+     * Group-by tabs: Safari/WebKit fails to paint Alpine-updated labels on <button>; use
+     * <a role="tab">. Labels use Carbon to match the app, with system fonts as fallback.
+     */
+    .dataset-group-tab-item {
+        text-decoration: none;
+        cursor: pointer;
+        color: #111827 !important;
+        -webkit-text-fill-color: #111827 !important;
+    }
+
+    .dataset-group-tab-item[data-active='true'] {
+        color: #312e81 !important;
+        -webkit-text-fill-color: #312e81 !important;
+    }
+
+    .dataset-group-tab-item:hover:not([data-active='true']) {
+        color: #030712 !important;
+        -webkit-text-fill-color: #030712 !important;
+    }
+
+    .dataset-group-tab-item:focus {
+        outline: none;
+    }
+
+    .dataset-group-tab-item:focus-visible {
+        outline: 2px solid #4f46e5;
+        outline-offset: 2px;
+        border-radius: 0.25rem;
+    }
+
+    .dataset-group-tab-item .dataset-group-tab-label {
+        display: inline-block;
+        font-family: Carbon, ui-sans-serif, system-ui, sans-serif !important;
+        font-size: 0.6875rem;
+        line-height: 1.125rem;
+        font-weight: 600;
+        letter-spacing: 0.05em;
+        color: inherit !important;
+        -webkit-text-fill-color: inherit !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        position: relative;
+        z-index: 1;
+        min-height: 1.125rem;
+        pointer-events: none;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /*
+     * Notes/Grades top bar: player combobox (max half width, centered) + Save flush right.
+     * Defined here so layout does not depend on Tailwind arbitrary grid utilities in the bundle.
+     */
+    .notes-grades-top-bar {
+        display: grid;
+        width: 100%;
+        align-items: center;
+        column-gap: 0.75rem;
+        grid-template-columns: 1fr minmax(0, 50%) 1fr;
+    }
+
+    @media (min-width: 640px) {
+        .notes-grades-top-bar {
+            column-gap: 1rem;
+        }
+    }
+
+    /*
+     * Notes/Grades: two columns of take boxes. Plain flex + media query so layout does not depend on
+     * Tailwind responsive grid utilities being present in the built CSS (avoids single-column fallbacks).
+     */
+    /*
+     * NCAA: 2×3 grid; rows size to content (same textarea height as pitch row). Spare height stays scrollable below.
+     */
+    .notes-ncaa-six-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-rows: repeat(3, auto);
+        gap: 0.625rem;
+        width: 100%;
+        flex: 0 1 auto;
+        min-height: 0;
+        align-items: start;
+    }
+
+    @media (min-width: 640px) {
+        .notes-ncaa-six-grid {
+            gap: 1rem;
+        }
+    }
+
+    .notes-ncaa-tail-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    @media (min-width: 640px) {
+        .notes-ncaa-tail-row {
+            gap: 1rem;
+        }
+    }
+
+    .notes-grades-columns {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 100%;
+        flex: 1 1 0;
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+    @media (min-width: 640px) {
+        .notes-grades-columns {
+            flex-direction: row;
+            align-items: stretch;
+            gap: 1rem;
+        }
+
+        .notes-grades-columns > .notes-grades-column {
+            flex: 1 1 0;
+            min-width: 0;
+            min-height: 0;
+            overflow-y: auto;
+        }
+    }
+
+    /*
+     * Notes textarea block: same fixed minimum as pitch-coverage row; grows with content (auto height).
+     */
+    .notes-grades-form-grid {
+        display: grid;
+        flex: none;
+        min-height: 0;
+        min-width: 0;
+        grid-template-rows: minmax(11rem, auto) auto;
+        gap: 0.5rem;
+        align-content: start;
+    }
+
+    @media (min-width: 640px) {
+        .notes-grades-form-grid {
+            grid-template-rows: minmax(14rem, auto) auto;
+        }
+    }
+
+    .notes-grades-textarea {
+        margin: 0;
+        margin-bottom: 1px;
+        min-height: 11rem;
+        height: auto;
+        width: 100%;
+        max-width: 100%;
+        resize: none;
+        overflow-y: auto;
+        box-sizing: border-box;
+        align-self: stretch;
+    }
+
+    @media (min-width: 640px) {
+        .notes-grades-textarea {
+            min-height: 14rem;
+        }
+    }
+
+    /*
+     * Navy fill + red perimeter (Rangers-style wordmark). Shared by section titles and player combobox names.
+     */
+    .rangers-wordmark-text,
+    .notes-grades-section-heading {
+        color: #0c2340;
+        font-weight: 560;
+        -webkit-text-stroke: clamp(1px, 0.11em, 2.25px) #c0111f;
+        paint-order: stroke fill;
+    }
+
+    /* Number inputs: true centering + no stepper gutter shifting the digit */
+    .notes-grade-score-input {
+        text-align: center;
+    }
+
+    .notes-grade-score-input::-webkit-outer-spin-button,
+    .notes-grade-score-input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    .notes-grade-score-input[type='number'] {
+        appearance: textfield;
+        -moz-appearance: textfield;
+    }
+
+    .notes-grades-readonly-body {
+        flex: 1 1 0;
+        min-height: 0;
+        min-width: 0;
+        overflow-y: auto;
+    }
+
+    /*
      * Main app nav: fixed px heights so the bar/logo never scale with html { font-size: clamp(...) } on 2xl.
      * Logo also needs !important height/max-height so it wins over Tailwind preflight img { height: auto; max-width: 100% },
      * which otherwise lets the bitmap grow to the row width.
@@ -271,26 +472,6 @@
         border-bottom-right-radius: 0.375rem !important;
     }
 
-    /* Ranger Traits banner (NCAA + HS); table padding unchanged. */
-    #ranger-traits-heading,
-    #ranger-traits-hs-heading {
-        font-size: calc(0.85rem * 1.15) !important;
-    }
-
-    @media (min-width: 640px) {
-        #ranger-traits-heading,
-        #ranger-traits-hs-heading {
-            font-size: calc(0.95rem * 1.15) !important;
-        }
-    }
-
-    @media (min-width: 768px) {
-        #ranger-traits-heading,
-        #ranger-traits-hs-heading {
-            font-size: calc(1.05rem * 1.15) !important;
-        }
-    }
-
     /* Dense trait pane: section title + take strip text (+15%); min-heights unchanged below. */
     .ranger-traits-dense-pane > div:first-child h3 {
         font-size: calc(0.72rem * 1.15) !important;
@@ -326,66 +507,67 @@
      * collapsed to padding-only while responsive steps never existed in CSS.
      * Ladder = 4.15 / 5.35 / 6 / 6.75 / 9.35rem at 16px (comfortable radar max-h steps).
      */
+    /* Dense take strips (non–tightStack): min-heights rounded from prior step ×1.15. */
     .dense-ranger-traits-take {
-        min-height: 66px !important;
-        font-size: calc(0.6875rem * 1.15) !important;
+        min-height: 91px !important;
+        font-size: 8px !important;
     }
 
     @media (min-width: 640px) {
         .dense-ranger-traits-take {
-            min-height: 86px !important;
-            font-size: calc(0.8125rem * 1.15) !important;
+            min-height: 118px !important;
+            font-size: 9px !important;
         }
     }
 
     @media (min-width: 768px) {
         .dense-ranger-traits-take {
-            min-height: 96px !important;
-            font-size: calc(0.875rem * 1.15) !important;
+            min-height: 132px !important;
+            font-size: 10px !important;
         }
     }
 
     @media (min-width: 1024px) {
-        .dense-ranger-traits-take {
-            min-height: 108px !important;
-        }
-    }
-
-    @media (min-width: 1536px) {
         .dense-ranger-traits-take {
             min-height: 150px !important;
         }
     }
 
-    /* NCAA tightStack: ×0.9 vs dense ladder (~10% shorter). */
+    @media (min-width: 1536px) {
+        .dense-ranger-traits-take {
+            min-height: 207px !important;
+        }
+    }
+
+    /* tightStack (HS + NCAA traits): same ladder ×1.15 vs previous min-heights. */
     .ncaa-ranger-traits-take {
-        min-height: 60px !important;
-        font-size: calc(0.6875rem * 1.15) !important;
+        min-height: 83px !important;
+        font-size: 8px !important;
     }
 
     @media (min-width: 640px) {
         .ncaa-ranger-traits-take {
-            min-height: 77px !important;
-            font-size: calc(0.8125rem * 1.15) !important;
+            min-height: 106px !important;
+            font-size: 9px !important;
         }
     }
 
     @media (min-width: 768px) {
         .ncaa-ranger-traits-take {
-            min-height: 86px !important;
-            font-size: calc(0.875rem * 1.15) !important;
+            min-height: 118px !important;
+            font-size: 10px !important;
         }
     }
 
     @media (min-width: 1024px) {
         .ncaa-ranger-traits-take {
-            min-height: 97px !important;
+            min-height: 133px !important;
         }
     }
 
     @media (min-width: 1536px) {
         .ncaa-ranger-traits-take {
-            min-height: 135px !important;
+            min-height: 186px !important;
         }
     }
 
@@ -399,4 +581,57 @@
     .cf-value-low {
         @apply text-blue-700 bg-blue-50;
     }
+}
+
+/*
+ * Take box typography (unlayered): wins over @tailwindcss/forms (textarea font-size: 1rem) and
+ * preflight on p (font-size: 75%; line-height: 0) inside profile trait strips.
+ */
+textarea.notes-grades-textarea {
+    font-size: 10px !important;
+    line-height: 1.4 !important;
+}
+
+@media (min-width: 640px) {
+    textarea.notes-grades-textarea {
+        font-size: 11px !important;
+    }
+}
+
+input[type='number'].notes-grade-score-input {
+    font-size: 9px !important;
+}
+
+@media (min-width: 640px) {
+    input[type='number'].notes-grade-score-input {
+        font-size: 10px !important;
+    }
+}
+
+.ranger-trait-take-text {
+    font-size: inherit !important;
+    line-height: 1.4 !important;
+}
+
+/*
+ * Profile header: overall summary (master take). Container-relative type so a narrow first column
+ * (3-up grid + scale wrapper) doesn’t overflow; comfortable layout gets slightly more padding via Blade.
+ */
+.profile-master-take-aside {
+    container-type: inline-size;
+    container-name: profile-master-take;
+}
+
+.profile-master-take-text {
+    line-height: 1.35 !important;
+    font-size: clamp(4.25px, 1.85cqw, 6.75px) !important;
+}
+
+.profile-top--comfortable .profile-master-take-text {
+    font-size: clamp(4.75px, 2.15cqw, 7.75px) !important;
+}
+
+.profile-top--compact .profile-master-take-text {
+    font-size: clamp(3.75px, 1.65cqw, 6px) !important;
+    line-height: 1.25 !important;
 }
