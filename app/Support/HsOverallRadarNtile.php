@@ -13,8 +13,8 @@ final class HsOverallRadarNtile
     /** @var list<AxisDef> */
     public const array AXES = [
         ['slug' => 'ops', 'label' => 'OPS', 'invert' => false],
-        ['slug' => 'swm_pct', 'label' => 'SwM%', 'invert' => false],
-        ['slug' => 'gb_pct', 'label' => 'GB%', 'invert' => false],
+        ['slug' => 'swm_pct', 'label' => 'SwM%', 'invert' => true],
+        ['slug' => 'gb_pct', 'label' => 'GB%', 'invert' => true],
         ['slug' => 'ev95', 'label' => 'EV95', 'invert' => false],
         ['slug' => 'ch_pct', 'label' => 'CH%', 'invert' => true],
     ];
@@ -56,14 +56,14 @@ final class HsOverallRadarNtile
             );
 
             $rawPlayer = trim((string) ($playerSlugRow[$slug] ?? ''));
-            if ($rawPlayer === '' || $rawPlayer === '—') {
+            if (PlayerSheetPlaceholder::isEmptyDisplay($rawPlayer)) {
                 $axesOut[] = [
                     'slug' => $slug,
                     'label' => $def['label'],
                     'invert' => $def['invert'],
                     'ntile' => null,
                     'chart_pct' => 0.0,
-                    'raw' => '—',
+                    'raw' => PlayerSheetPlaceholder::CELL,
                 ];
                 $values[] = 0.0;
 

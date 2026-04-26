@@ -27,14 +27,14 @@
         $noteWrapClass =
             'shrink-0 flex items-center justify-center app-outline-soft bg-[#f2f6f9] '.
             $noteDensePad.
-            'text-center font-sans font-[700] leading-snug text-gray-700'.
+            'text-center font-sans font-[700] leading-snug text-black'.
             $noteDenseTakeClass;
     } else {
         $noteClass = $comfortable
             ? 'min-h-[2.75rem] text-xs sm:min-h-[3.5rem] sm:text-sm md:text-[0.9375rem]'
             : 'min-h-[2.75rem] text-[calc(0.65rem/2)] sm:min-h-[3.25rem] sm:text-[calc(0.75rem/2)]';
         $noteWrapClass =
-            'shrink-0 app-outline-soft bg-[#f2f6f9] px-2 py-2 text-center font-[700] leading-snug text-gray-700 sm:px-3 sm:py-2.5 '.$noteClass;
+            'shrink-0 app-outline-soft bg-[#f2f6f9] px-2 py-2 text-center font-[700] leading-snug text-black sm:px-3 sm:py-2.5 '.$noteClass;
     }
     if ($fillHeight) {
         if ($dense) {
@@ -117,7 +117,7 @@
     </div>
 
     <div class="{{ $noteWrapClass }}">
-        <p class="ranger-trait-take-text max-w-full break-words">{{ $note ? $note : '#N/A' }}</p>
+        <p class="ranger-trait-take-text max-w-full break-words">{{ $note ? $note : '-' }}</p>
     </div>
 
     @if (! $slot->isEmpty())

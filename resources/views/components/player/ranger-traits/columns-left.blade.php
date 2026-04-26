@@ -28,12 +28,12 @@
                         >
                             2025
                         </th>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                        <td class="cf-value-high border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">—</td>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                        <td class="cf-value-low border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">—</td>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="cf-value-high border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="cf-value-low border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
                     </tr>
                     <tr>
                         <th
@@ -42,12 +42,12 @@
                         >
                             2024
                         </th>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                        <td class="cf-value-high border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">—</td>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                        <td class="cf-value-low border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">—</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="cf-value-high border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="cf-value-low border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
                     </tr>
                     <tr>
                         <th
@@ -56,12 +56,12 @@
                         >
                             2023
                         </th>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                        <td class="cf-value-high border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">—</td>
-                        <td class="cf-value-low border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">—</td>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="cf-value-high border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="cf-value-low border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
                     </tr>
                 </tbody>
             </table>
@@ -95,12 +95,12 @@
                         >
                             {{ __('TUSA') }}
                         </th>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                        <td class="cf-value-low border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">—</td>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                        <td class="cf-value-high border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">—</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="cf-value-low border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="cf-value-high border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
                     </tr>
                     <tr>
                         <th
@@ -109,12 +109,12 @@
                         >
                             {{ __('CAPE') }}
                         </th>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                        <td class="cf-value-high border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">—</td>
-                        <td class="cf-value-low border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">—</td>
-                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="cf-value-high border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="cf-value-low border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                        <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
                     </tr>
                 </tbody>
             </table>
@@ -157,12 +157,12 @@
                             >
                                 {{ $yr }}
                             </th>
-                            <td class="cf-value-low border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                            <td class="cf-value-low border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                            <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                            <td class="cf-value-low border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                            <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
-                            <td class="cf-value-low border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">#N/A</td>
+                            <td class="cf-value-low border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                            <td class="cf-value-low border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                            <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                            <td class="cf-value-low border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                            <td class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
+                            <td class="cf-value-low border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1">-</td>
                         </tr>
                     @endforeach
                 </tbody>

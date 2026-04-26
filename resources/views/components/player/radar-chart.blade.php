@@ -4,6 +4,8 @@
     'comfortable' => false,
     'compact' => false,
     'showLegend' => true,
+    /** When true, grow with parent height (profile header); width follows viewBox aspect ratio. */
+    'fillHeight' => false,
 ])
 
 @php
@@ -13,8 +15,13 @@
         && is_array($radar['values'])
         && count($radar['values']) >= 5;
 
+    $fillHeight = filter_var($fillHeight, FILTER_VALIDATE_BOOLEAN);
+
     if ($compact) {
         $svgSize = 'max-w-[30px] max-h-[24px] sm:max-w-[32px] sm:max-h-[26px]';
+    } elseif ($fillHeight) {
+        /* w-full h-full + slice: column is usually width-tight vs viewBox; meet leaves top/bottom gap. */
+        $svgSize = 'block h-full max-h-full w-full min-h-0 min-w-0';
     } elseif ($comfortable) {
         $svgSize =
             'max-w-[5.25rem] max-h-[4.15rem] sm:max-w-[6.75rem] sm:max-h-[5.35rem] md:max-w-[7.65rem] md:max-h-[6rem] lg:max-w-[8.5rem] lg:max-h-[6.75rem] 2xl:max-w-[12rem] 2xl:max-h-[9.35rem]';
@@ -81,12 +88,16 @@
 @endphp
 
 <div
-    {{ $attributes->merge(['class' => 'flex min-w-0 flex-col items-center gap-px text-black sm:gap-0.5']) }}
+    {{ $attributes->merge([
+        'class' =>
+            'flex min-w-0 flex-col items-center gap-px text-black sm:gap-0.5'.
+            ($fillHeight ? ' h-full min-h-0 w-full justify-center' : ''),
+    ]) }}
 >
     <svg
         viewBox="0 5 220 200"
-        class="h-auto w-full shrink-0 {{ $svgSize }}"
-        preserveAspectRatio="xMidYMid meet"
+        class="{{ $fillHeight ? $svgSize.' shrink-0' : 'h-auto w-full shrink-0 '.$svgSize }}"
+        preserveAspectRatio="{{ $fillHeight ? 'xMidYMid slice' : 'xMidYMid meet' }}"
         role="img"
         aria-label="{{ $ariaRadar }}"
     >

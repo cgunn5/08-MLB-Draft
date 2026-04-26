@@ -38,14 +38,14 @@
                         scope="row"
                         class="border border-gray-800 bg-gray-200 px-0.5 py-[0.204rem] font-[700] text-gray-900 sm:px-1 sm:py-[0.396rem]"
                     >
-                        {{ $cl['year'] ?? '—' }}
+                        {{ $cl['year'] ?? '-' }}
                     </th>
-                    <x-player.ranger-traits-hs.heat-td :heat="$ccl['g'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $cl['g'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$ccl['pa'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $cl['pa'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$ccl['avg'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $cl['avg'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$ccl['obp'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $cl['obp'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$ccl['slg'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $cl['slg'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$ccl['ops'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $cl['ops'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$ccl['g'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $cl['g'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$ccl['pa'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $cl['pa'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$ccl['avg'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $cl['avg'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$ccl['obp'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $cl['obp'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$ccl['slg'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $cl['slg'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$ccl['ops'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $cl['ops'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
                 </tr>
             </tbody>
         </table>
@@ -75,13 +75,13 @@
                         scope="row"
                         class="border border-gray-800 bg-gray-200 px-0.5 py-[0.204rem] font-[700] text-gray-900 sm:px-1 sm:py-[0.396rem]"
                     >
-                        {{ $ct['year'] ?? '—' }}
+                        {{ $ct['year'] ?? '-' }}
                     </th>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cct['pa'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ct['pa'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cct['avg'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ct['avg'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cct['obp'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ct['obp'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cct['slg'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ct['slg'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cct['ops'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ct['ops'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cct['pa'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ct['pa'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cct['avg'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ct['avg'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cct['obp'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ct['obp'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cct['slg'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ct['slg'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cct['ops'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ct['ops'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
                 </tr>
             </tbody>
         </table>
@@ -116,16 +116,16 @@
                             scope="row"
                             class="border border-gray-800 bg-gray-200 px-0.5 py-[0.204rem] font-[700] text-gray-900 sm:px-1 sm:py-[0.396rem]"
                         >
-                            {{ $pgRow['year'] ?? '—' }}
+                            {{ $pgRow['year'] ?? '-' }}
                         </th>
-                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['pa'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['pa'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['ops'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['ops'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['avg'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['avg'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['obp'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['obp'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['slg'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['slg'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['iso'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['iso'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['bb_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['bb_pct'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['k_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['k_pct'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['pa'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['pa'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['ops'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['ops'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['avg'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['avg'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['obp'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['obp'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['slg'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['slg'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['iso'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['iso'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['bb_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['bb_pct'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                        <x-player.ranger-traits-hs.heat-td :heat="$rowHeat['k_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $pgRow['k_pct'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
                     </tr>
                 @empty
                     <tr>
@@ -133,10 +133,10 @@
                             scope="row"
                             class="border border-gray-800 bg-gray-200 px-0.5 py-[0.204rem] font-[700] text-gray-900 sm:px-1 sm:py-[0.396rem]"
                         >
-                            —
+                            -
                         </th>
                         @for ($i = 0; $i < 8; $i++)
-                            <td class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">—</td>
+                            <td class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">-</td>
                         @endfor
                     </tr>
                 @endforelse

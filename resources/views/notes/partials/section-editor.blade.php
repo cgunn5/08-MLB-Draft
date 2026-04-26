@@ -14,17 +14,15 @@
     $gradeAttr = PlayerNoteFieldKeys::gradeAttributeForNoteField($fieldKey, $selectedPlayer->player_pool);
     $gradeBounds = PlayerNoteFieldKeys::gradeBoundsForNoteField($fieldKey);
     $storedGradeRaw = $gradeAttr ? $selectedPlayer->{$gradeAttr} : null;
-    $storedGradeInt =
-        $gradeAttr && filled($storedGradeRaw) && is_numeric($storedGradeRaw) ? (int) $storedGradeRaw : null;
     $oldValues = old('values');
     $displayValue =
         is_array($oldValues) && array_key_exists($fieldKey, $oldValues) ? $oldValues[$fieldKey] : $fieldValue;
     $oldGrades = old('grades');
-    $gradeInt = $storedGradeInt;
-    if (is_array($oldGrades) && array_key_exists($fieldKey, $oldGrades)) {
-        $g = $oldGrades[$fieldKey];
-        $gradeInt = $g !== null && $g !== '' && is_numeric($g) ? (int) $g : null;
-    }
+    $oldGrade = is_array($oldGrades) && array_key_exists($fieldKey, $oldGrades) ? $oldGrades[$fieldKey] : null;
+    $storedForGrade = $storedGradeRaw !== null && $storedGradeRaw !== '' ? (string) $storedGradeRaw : null;
+    [$gradeStyleVal, $gradeInputValue] = $gradeAttr
+        ? PlayerNoteFieldKeys::gradeFormFieldState($oldGrade, $storedForGrade)
+        : [null, ''];
     $gradeLabelShort =
         $fieldKey === 'master_take'
             ? __('Role (:min-:max)', [
@@ -72,14 +70,14 @@
                     name="grades[{{ $fieldKey }}]"
                     form="notes-bulk-save"
                     id="notes-grade-{{ $fieldKey }}"
-                    value="{{ $gradeInt }}"
+                    value="{{ $gradeInputValue }}"
                     min="{{ $gradeBounds['min'] }}"
                     max="{{ $gradeBounds['max'] }}"
-                    step="1"
-                    inputmode="numeric"
+                    step="0.5"
+                    inputmode="decimal"
                     aria-label="{{ $gradeLabelShort }}"
-                    class="notes-grade-score-input h-7 w-10 rounded border px-1.5 tabular-nums shadow-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-300/80 sm:w-11 sm:px-2"
-                    style="{{ NoteGradeInputAppearance::inputStyle($gradeInt, $gradeBounds['min'], $gradeBounds['max']) }}"
+                    class="notes-grade-score-input h-7 w-12 min-w-0 rounded border px-1 tabular-nums shadow-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-300/80 sm:w-14 sm:px-1.5"
+                    style="{{ NoteGradeInputAppearance::inputStyle($gradeStyleVal, $gradeBounds['min'], $gradeBounds['max']) }}"
                 />
                 <x-input-error :messages="$errors->get('grades.'.$fieldKey)" class="shrink-0 text-center" />
             </div>

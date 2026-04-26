@@ -40,19 +40,19 @@ final class NoteGradeInputAppearance
 
     /**
      * Style for the grade number control: navy (2) → #6A82C1 (3) → #FADADD (5) → #F28080 (6) → #E93423 (7).
-     * Digits are white on every filled value except 5 (pale pink tile → dark text).
+     * Digits are white on every filled value except exactly 5 (pale pink tile → dark text).
      */
-    public static function inputStyle(?int $value, int $min, int $max): string
+    public static function inputStyle(?float $value, int $min, int $max): string
     {
         if ($value === null) {
             return 'background-color: #ffffff; border-color: #cbd5e1; color: #0f172a; font-weight: 700;';
         }
 
-        $value = max($min, min($max, $value));
+        $value = max((float) $min, min((float) $max, $value));
 
         [$r, $g, $b] = self::rgbForValue($value, $min, $max);
 
-        if ($value === 5) {
+        if (self::isExactlyFive($value)) {
             $textColor = '#0f172a';
             $borderColor = '#cbd5e1';
         } else {
@@ -66,27 +66,32 @@ final class NoteGradeInputAppearance
     /**
      * Profile grade summary cells: same fill/text contrast as {@see inputStyle} without a control border.
      */
-    public static function summaryCellStyle(?int $value, int $min, int $max): string
+    public static function summaryCellStyle(?float $value, int $min, int $max): string
     {
         if ($value === null) {
             return 'background-color: #ffffff; color: #0f172a; font-weight: 700;';
         }
 
-        $value = max($min, min($max, $value));
+        $value = max((float) $min, min((float) $max, $value));
 
         [$r, $g, $b] = self::rgbForValue($value, $min, $max);
 
-        $textColor = $value === 5 ? '#0f172a' : '#ffffff';
+        $textColor = self::isExactlyFive($value) ? '#0f172a' : '#ffffff';
 
         return "background-color: rgb({$r},{$g},{$b}); color: {$textColor}; font-weight: 700;";
+    }
+
+    private static function isExactlyFive(float $value): bool
+    {
+        return abs($value - 5.0) < 1e-6;
     }
 
     /**
      * @return array{0: int, 1: int, 2: int}
      */
-    private static function rgbForValue(int $value, int $min, int $max): array
+    private static function rgbForValue(float $value, int $min, int $max): array
     {
-        $mid = (int) round(($min + $max) / 2);
+        $mid = ($min + $max) / 2.0;
 
         if ($max <= $min) {
             return [self::NAVY_R, self::NAVY_G, self::NAVY_B];

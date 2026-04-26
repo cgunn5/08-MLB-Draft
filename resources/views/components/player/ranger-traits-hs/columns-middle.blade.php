@@ -36,16 +36,16 @@
                         scope="row"
                         class="border border-gray-800 bg-gray-200 px-0.5 py-[0.204rem] font-[700] text-gray-900 sm:px-1 sm:py-[0.396rem]"
                     >
-                        {{ $ap['year'] ?? '—' }}
+                        {{ $ap['year'] ?? '-' }}
                     </th>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cap['bb_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ap['bb_pct'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cap['k_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ap['k_pct'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cap['sw_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ap['sw_pct'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cap['swdec'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ap['swdec'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cap['ch_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ap['ch_pct'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cap['ppa'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ap['ppa'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cap['swm_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ap['swm_pct'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cap['iz_swm_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ap['iz_swm_pct'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cap['bb_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ap['bb_pct'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cap['k_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ap['k_pct'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cap['sw_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ap['sw_pct'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cap['swdec'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ap['swdec'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cap['ch_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ap['ch_pct'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cap['ppa'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ap['ppa'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cap['swm_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ap['swm_pct'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cap['iz_swm_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ap['iz_swm_pct'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
                 </tr>
             </tbody>
         </table>
@@ -96,16 +96,16 @@
                         scope="row"
                         class="border border-gray-800 bg-gray-200 px-0.5 py-[0.204rem] font-[700] text-gray-900 sm:px-1 sm:py-[0.396rem]"
                     >
-                        {{ $im['year'] ?? '—' }}
+                        {{ $im['year'] ?? '-' }}
                     </th>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cim['iso'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $im['iso'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cim['ev70'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $im['ev70'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cim['ev95'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $im['ev95'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cim['max_ev'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $im['max_ev'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cim['bip100'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $im['bip100'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cim['bip105'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $im['bip105'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cim['barrel_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $im['barrel_pct'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cim['tx_barrel_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $im['tx_barrel_pct'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cim['iso'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $im['iso'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cim['ev70'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $im['ev70'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cim['ev95'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $im['ev95'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cim['max_ev'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $im['max_ev'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cim['bip100'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $im['bip100'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cim['bip105'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $im['bip105'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cim['barrel_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $im['barrel_pct'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cim['tx_barrel_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $im['tx_barrel_pct'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
                 </tr>
             </tbody>
         </table>
@@ -132,11 +132,11 @@
                         scope="row"
                         class="border border-gray-800 bg-gray-200 px-0.5 py-[0.204rem] font-[700] text-gray-900 sm:px-1 sm:py-[0.396rem]"
                     >
-                        {{ $ibb['year'] ?? '—' }}
+                        {{ $ibb['year'] ?? '-' }}
                     </th>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cibb['gb_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ibb['gb_pct'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cibb['fb_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ibb['fb_pct'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
-                    <x-player.ranger-traits-hs.heat-td :heat="$cibb['ld_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ibb['ld_pct'] ?? '—' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cibb['gb_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ibb['gb_pct'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cibb['fb_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ibb['fb_pct'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
+                    <x-player.ranger-traits-hs.heat-td :heat="$cibb['ld_pct'] ?? null" class="border border-gray-800 px-0.5 py-[0.102rem] sm:py-[0.198rem]">{{ $ibb['ld_pct'] ?? '-' }}</x-player.ranger-traits-hs.heat-td>
                 </tr>
             </tbody>
         </table>

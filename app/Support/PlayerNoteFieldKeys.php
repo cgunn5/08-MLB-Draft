@@ -85,4 +85,44 @@ final class PlayerNoteFieldKeys
     {
         return ['min' => 2, 'max' => 7];
     }
+
+    /**
+     * Laravel validation rules for a submitted grade (half-point steps: 2, 2.5, …, 7).
+     *
+     * @return list<string>
+     */
+    public static function gradeValueValidationRules(string $field): array
+    {
+        $b = self::gradeBoundsForNoteField($field);
+
+        return [
+            'nullable',
+            'numeric',
+            'min:'.$b['min'],
+            'max:'.$b['max'],
+            'multiple_of:0.5',
+        ];
+    }
+
+    /**
+     * @return array{0: ?float, 1: string} Style interpolation value (or null), HTML input value
+     */
+    public static function gradeFormFieldState(mixed $oldGrade, ?string $storedRaw): array
+    {
+        $pick = null;
+        if ($oldGrade !== null && $oldGrade !== '' && is_numeric((string) $oldGrade)) {
+            $pick = (string) $oldGrade;
+        } elseif ($storedRaw !== null && $storedRaw !== '' && is_numeric($storedRaw)) {
+            $pick = $storedRaw;
+        }
+        if ($pick === null) {
+            return [null, ''];
+        }
+        $f = (float) $pick;
+        $input = abs($f - round($f)) < 1e-9
+            ? (string) (int) round($f)
+            : number_format($f, 1, '.', '');
+
+        return [$f, $input];
+    }
 }

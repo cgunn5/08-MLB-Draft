@@ -10,11 +10,11 @@ final class HsRangerTraitsDisplay
     public static function formatThreeDecimals(?string $raw): string
     {
         if ($raw === null) {
-            return '—';
+            return PlayerSheetPlaceholder::CELL;
         }
         $t = trim((string) $raw);
-        if ($t === '' || $t === '—') {
-            return '—';
+        if (PlayerSheetPlaceholder::isEmptyDisplay($t)) {
+            return PlayerSheetPlaceholder::CELL;
         }
         $n = str_replace([',', '%', ' '], '', $t);
         if ($n === '' || ! is_numeric($n)) {
@@ -39,11 +39,11 @@ final class HsRangerTraitsDisplay
     public static function formatPercentRateForDisplay(?string $raw): string
     {
         if ($raw === null) {
-            return '—';
+            return PlayerSheetPlaceholder::CELL;
         }
         $t = trim((string) $raw);
-        if ($t === '' || $t === '—') {
-            return '—';
+        if (PlayerSheetPlaceholder::isEmptyDisplay($t)) {
+            return PlayerSheetPlaceholder::CELL;
         }
         $hadPercent = str_contains($t, '%');
         $n = str_replace([',', '%', ' '], '', $t);

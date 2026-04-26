@@ -272,6 +272,7 @@ class DataSourceController extends Controller
         }
 
         $browse = is_array($dataSourceUpload->dataset_browse_settings) ? $dataSourceUpload->dataset_browse_settings : null;
+        $browseHeatMerged = $this->mergedDatasetBrowseForHeatVolume($request, $browse);
         $effectiveHeatMinPa = $this->effectiveHeatMinPaForTable($request, $browse);
         $liveHeatMinQuery = $this->heatMinPaQueryOrNull($request);
         $heatMinForSubset = $groupFilterActive ? $effectiveHeatMinPa : null;
@@ -290,7 +291,7 @@ class DataSourceController extends Controller
             [$headers, $rows] = $this->reorderPlayerFirst($headers, $rows, $playerIdx);
             [$headers, $rows] = $this->applyColumnOrderPermutation($headers, $rows, $order);
             if ($liveHeatMinQuery !== null && $this->heatRulesAreEnabled($dataSourceUpload)) {
-                $computed = $this->computeHeatColumnStatsForUpload($dataSourceUpload, $liveHeatMinQuery);
+                $computed = $this->computeHeatColumnStatsForUpload($dataSourceUpload, $liveHeatMinQuery, $browseHeatMerged);
                 $heatColumnStatsOut = $computed === [] ? (object) [] : $computed;
             } else {
                 $heatColumnStatsOut = $dataSourceUpload->heat_column_stats ?? (object) [];
@@ -308,7 +309,7 @@ class DataSourceController extends Controller
             [$headers, $rows] = $this->reorderPlayerFirst($headers, $rows, $playerIdx);
             [$headers, $rows] = $this->applyColumnOrderPermutation($headers, $rows, $order);
             if ($liveHeatMinQuery !== null && $this->heatRulesAreEnabled($dataSourceUpload)) {
-                $computed = $this->computeHeatColumnStatsForUpload($dataSourceUpload, $liveHeatMinQuery);
+                $computed = $this->computeHeatColumnStatsForUpload($dataSourceUpload, $liveHeatMinQuery, $browseHeatMerged);
                 $heatColumnStatsOut = $computed === [] ? (object) [] : $computed;
             } else {
                 $heatColumnStatsOut = $dataSourceUpload->heat_column_stats ?? (object) [];
@@ -366,12 +367,13 @@ class DataSourceController extends Controller
                 $groupFilterActive ? $groupColumnIndex : null,
                 $groupFilterActive ? $groupValueMatch : null,
                 $heatMinForSubset,
-                $rawRowsForGroupScopedHeatStats
+                $rawRowsForGroupScopedHeatStats,
+                $browseHeatMerged
             );
             if ($subsetHeatStats !== null) {
                 $heatColumnStatsOut = $subsetHeatStats;
             } elseif ($liveHeatMinQuery !== null && $this->heatRulesAreEnabled($dataSourceUpload)) {
-                $computed = $this->computeHeatColumnStatsForUpload($dataSourceUpload, $liveHeatMinQuery);
+                $computed = $this->computeHeatColumnStatsForUpload($dataSourceUpload, $liveHeatMinQuery, $browseHeatMerged);
                 $heatColumnStatsOut = $computed === [] ? (object) [] : $computed;
             } else {
                 $heatColumnStatsOut = $dataSourceUpload->heat_column_stats ?? (object) [];
@@ -381,7 +383,7 @@ class DataSourceController extends Controller
         $from = $totalRows === 0 ? 0 : (($page - 1) * $perPage) + 1;
         $to = min($page * $perPage, $totalRows);
 
-        $heatRowPaOk = $this->heatRowPaOkFlags($effectiveHeatMinPa, $headers, $rows);
+        $heatRowPaOk = $this->heatRowPaOkFlags($effectiveHeatMinPa, $headers, $rows, $browseHeatMerged);
 
         return response()->json([
             'headers' => $headers,
@@ -402,7 +404,7 @@ class DataSourceController extends Controller
             ] : null,
             'heat_rules' => $dataSourceUpload->heat_rules ?? (object) [],
             'heat_column_stats' => $heatColumnStatsOut ?? (object) [],
-            'heat_pa_qualifier' => $this->heatPaQualifierForDisplay($headers, $effectiveHeatMinPa),
+            'heat_pa_qualifier' => $this->heatPaQualifierForDisplay($headers, $effectiveHeatMinPa, $browseHeatMerged),
             'heat_row_pa_ok' => $heatRowPaOk,
             'group' => $groupColumnIndex !== null ? [
                 'column' => $groupColumnIndex,
@@ -545,6 +547,7 @@ class DataSourceController extends Controller
             [$dispH] = $this->reorderPlayerFirst($headers, $dummyRow, $pIdx);
             [$dispH] = $this->applyColumnOrderPermutation($dispH, $dummyRow, $ord);
             $browse = is_array($dataSourceUpload->dataset_browse_settings) ? $dataSourceUpload->dataset_browse_settings : null;
+            $browseHeatMerged = $this->mergedDatasetBrowseForHeatVolume($request, $browse);
             $effectiveHeatMinPa = $this->effectiveHeatMinPaForTable($request, $browse);
 
             return response()->json([
@@ -563,7 +566,7 @@ class DataSourceController extends Controller
                 'sort' => null,
                 'heat_rules' => $dataSourceUpload->heat_rules ?? (object) [],
                 'heat_column_stats' => $dataSourceUpload->heat_column_stats ?? (object) [],
-                'heat_pa_qualifier' => $this->heatPaQualifierForDisplay($dispH, $effectiveHeatMinPa),
+                'heat_pa_qualifier' => $this->heatPaQualifierForDisplay($dispH, $effectiveHeatMinPa, $browseHeatMerged),
                 'heat_row_pa_ok' => null,
                 'group' => null,
             ]);
@@ -615,6 +618,7 @@ class DataSourceController extends Controller
         }
 
         $browse = is_array($dataSourceUpload->dataset_browse_settings) ? $dataSourceUpload->dataset_browse_settings : null;
+        $browseHeatMerged = $this->mergedDatasetBrowseForHeatVolume($request, $browse);
         $effectiveHeatMinPa = $this->effectiveHeatMinPaForTable($request, $browse);
         $liveHeatMinQuery = $this->heatMinPaQueryOrNull($request);
         $heatMinForSubset = $groupFilterActive ? $effectiveHeatMinPa : null;
@@ -668,12 +672,13 @@ class DataSourceController extends Controller
             $groupFilterActive ? $groupColumnIndex : null,
             $groupFilterActive ? $groupValueMatch : null,
             $heatMinForSubset,
-            $rawRowsForGroupScopedHeatStats
+            $rawRowsForGroupScopedHeatStats,
+            $browseHeatMerged
         );
         if ($subsetHeatStats !== null) {
             $heatColumnStatsOut = $subsetHeatStats;
         } elseif ($liveHeatMinQuery !== null && $this->heatRulesAreEnabled($dataSourceUpload)) {
-            $computed = $this->computeHeatColumnStatsForUpload($dataSourceUpload, $liveHeatMinQuery);
+            $computed = $this->computeHeatColumnStatsForUpload($dataSourceUpload, $liveHeatMinQuery, $browseHeatMerged);
             $heatColumnStatsOut = $computed === [] ? (object) [] : $computed;
         } else {
             $heatColumnStatsOut = $dataSourceUpload->heat_column_stats ?? (object) [];
@@ -682,7 +687,7 @@ class DataSourceController extends Controller
         $from = $totalRows === 0 ? 0 : (($page - 1) * $perPage) + 1;
         $to = min($page * $perPage, $totalRows);
 
-        $heatRowPaOk = $this->heatRowPaOkFlags($effectiveHeatMinPa, $headers, $rows);
+        $heatRowPaOk = $this->heatRowPaOkFlags($effectiveHeatMinPa, $headers, $rows, $browseHeatMerged);
 
         return response()->json([
             'headers' => $headers,
@@ -703,7 +708,7 @@ class DataSourceController extends Controller
             ] : null,
             'heat_rules' => $dataSourceUpload->heat_rules ?? (object) [],
             'heat_column_stats' => $heatColumnStatsOut ?? (object) [],
-            'heat_pa_qualifier' => $this->heatPaQualifierForDisplay($headers, $effectiveHeatMinPa),
+            'heat_pa_qualifier' => $this->heatPaQualifierForDisplay($headers, $effectiveHeatMinPa, $browseHeatMerged),
             'heat_row_pa_ok' => $heatRowPaOk,
             'group' => $groupColumnIndex !== null ? [
                 'column' => $groupColumnIndex,
@@ -822,7 +827,8 @@ class DataSourceController extends Controller
         if ($request->has('dataset_browse_settings')) {
             /** @var array<string, mixed> $rawBrowse */
             $rawBrowse = $request->input('dataset_browse_settings', []);
-            $normalizedBrowse = $this->normalizeDatasetBrowseSettings($rawBrowse, count($dataSourceUpload->header_row));
+            $fileHeaders = array_map(static fn ($h) => is_string($h) ? $h : '', $dataSourceUpload->header_row ?? []);
+            $normalizedBrowse = $this->normalizeDatasetBrowseSettings($rawBrowse, $fileHeaders);
             $dataSourceUpload->dataset_browse_settings = $normalizedBrowse;
         }
 
@@ -1082,7 +1088,7 @@ class DataSourceController extends Controller
     /**
      * @return array<string, array{min: float, max: float, median: float}>
      */
-    private function computeHeatColumnStatsForUpload(DataSourceUpload $upload, ?float $heatMinPa): array
+    private function computeHeatColumnStatsForUpload(DataSourceUpload $upload, ?float $heatMinPa, ?array $browseForHeatVolume = null): array
     {
         $rules = $upload->heat_rules;
         if (! is_array($rules) || $rules === []) {
@@ -1122,7 +1128,7 @@ class DataSourceController extends Controller
         $paCol = null;
         $paMinActive = null;
         if ($heatMinPa !== null) {
-            $paCol = DataSourceCsvHeaders::plateAppearancesColumnIndex($headerRow);
+            $paCol = DataSourceCsvHeaders::heatVolumeColumnIndex($headerRow, $browseForHeatVolume);
             if ($paCol !== null) {
                 $paMinActive = $heatMinPa;
             }
@@ -1225,8 +1231,9 @@ class DataSourceController extends Controller
             return;
         }
 
-        $paMin = $this->heatMinPaFromBrowse(is_array($upload->dataset_browse_settings) ? $upload->dataset_browse_settings : null);
-        $stats = $this->computeHeatColumnStatsForUpload($upload, $paMin);
+        $browse = is_array($upload->dataset_browse_settings) ? $upload->dataset_browse_settings : null;
+        $paMin = $this->heatMinPaFromBrowse($browse);
+        $stats = $this->computeHeatColumnStatsForUpload($upload, $paMin, $browse);
         $upload->heat_column_stats = $stats === [] ? null : $stats;
         $upload->save();
     }
@@ -1278,38 +1285,59 @@ class DataSourceController extends Controller
     }
 
     /**
+     * Saved browse settings plus optional live `heat_volume_header` query (preview before save).
+     *
+     * @param  array<string, mixed>|null  $savedBrowse
+     * @return array<string, mixed>
+     */
+    private function mergedDatasetBrowseForHeatVolume(Request $request, ?array $savedBrowse): array
+    {
+        $base = is_array($savedBrowse) ? [...$savedBrowse] : [];
+        if ($request->has('heat_volume_header')) {
+            $v = $request->query('heat_volume_header');
+            if ($v === null || (string) $v === '' || strcasecmp((string) $v, '__auto__') === 0) {
+                $base['heat_volume_header'] = null;
+            } else {
+                $base['heat_volume_header'] = trim((string) $v);
+            }
+        }
+
+        return $base;
+    }
+
+    /**
      * @return array{min: float|null, column_index: int|null}
      */
-    private function heatPaQualifierForDisplay(array $dispHeaders, ?float $minPa): array
+    private function heatPaQualifierForDisplay(array $dispHeaders, ?float $minPa, array $browseForHeatVolume): array
     {
         if ($minPa === null) {
             return ['min' => null, 'column_index' => null];
         }
-        $idx = DataSourceCsvHeaders::plateAppearancesColumnIndex($dispHeaders);
-        if ($idx === null) {
-            return ['min' => null, 'column_index' => null];
-        }
+        $idx = DataSourceCsvHeaders::heatVolumeColumnIndex($dispHeaders, $browseForHeatVolume);
 
-        return ['min' => $minPa, 'column_index' => $idx];
+        return [
+            'min' => $minPa,
+            'column_index' => $idx,
+        ];
     }
 
     /**
-     * One flag per displayed row: whether heat shading may apply for that row (PA meets minimum).
-     * Null when no PA minimum is active — client should not use this array to gate.
+     * One flag per displayed row: whether heat shading may apply (PA or P meets minimum).
+     * Null when no minimum is active — client should not use this array to gate.
      *
      * @param  list<string>  $dispHeaders
      * @param  list<list<string>>  $pageRows
      * @return list<bool>|null
      */
-    private function heatRowPaOkFlags(?float $minPa, array $dispHeaders, array $pageRows): ?array
+    private function heatRowPaOkFlags(?float $minPa, array $dispHeaders, array $pageRows, array $browseForHeatVolume): ?array
     {
         if ($minPa === null) {
             return null;
         }
 
-        $paIdx = DataSourceCsvHeaders::plateAppearancesColumnIndex($dispHeaders);
+        $volIdx = DataSourceCsvHeaders::heatVolumeColumnIndex($dispHeaders, $browseForHeatVolume);
         $out = [];
-        if ($paIdx === null) {
+        if ($volIdx === null) {
             foreach ($pageRows as $_) {
                 $out[] = false;
             }
@@ -1318,7 +1346,7 @@ class DataSourceController extends Controller
         }
 
         foreach ($pageRows as $row) {
-            $raw = (string) ($row[$paIdx] ?? '');
+            $raw = (string) ($row[$volIdx] ?? '');
             $val = $this->parseNumericForHeat($raw);
             $out[] = $val !== null && $val >= $minPa;
         }
@@ -1729,6 +1757,7 @@ class DataSourceController extends Controller
         ?string $groupDisplayValue = null,
         ?float $heatMinPaForSubset = null,
         ?array $rawRowsForGroupScopedHeatStats = null,
+        array $browseForHeatVolume = [],
     ): array {
         [$dispHeaders, $dispRows] = $this->reorderPlayerFirst($fileHeaders, $rawRows, $playerIdx);
         [$dispHeaders, $dispRows] = $this->applyColumnOrderPermutation($dispHeaders, $dispRows, $columnOrder);
@@ -1765,12 +1794,12 @@ class DataSourceController extends Controller
 
         $subsetHeatStats = null;
         if (is_array($heatRulesForSubset) && $heatRulesForSubset !== []) {
-            $paIdx = null;
-            $paMin = $heatMinPaForSubset;
-            if ($paMin !== null) {
-                $paIdx = DataSourceCsvHeaders::plateAppearancesColumnIndex($dispHeaders);
-                if ($paIdx === null) {
-                    $paMin = null;
+            $volIdx = null;
+            $volMin = $heatMinPaForSubset;
+            if ($volMin !== null) {
+                $volIdx = DataSourceCsvHeaders::heatVolumeColumnIndex($dispHeaders, $browseForHeatVolume);
+                if ($volIdx === null) {
+                    $volMin = null;
                 }
             }
             $rowsForHeatStats = $dispRows;
@@ -1785,7 +1814,7 @@ class DataSourceController extends Controller
                     $thresholdRules,
                 );
             }
-            $subsetHeatStats = DataSourceHeatColumnStats::compute($dispHeaders, $rowsForHeatStats, $heatRulesForSubset, $paIdx, $paMin);
+            $subsetHeatStats = DataSourceHeatColumnStats::compute($dispHeaders, $rowsForHeatStats, $heatRulesForSubset, $volIdx, $volMin);
         }
 
         $totalRows = count($dispRows);
@@ -1822,14 +1851,13 @@ class DataSourceController extends Controller
     }
 
     /**
-     * @return list<array{col: int, min: float|null, max: float|null}>
-     */
-    /**
      * @param  array<string, mixed>  $raw
-     * @return array{players: list<string>, column_thresholds: list<array{col: int, min?: float, max?: float}>, group_column: int|null, group_value: string|null}|null
+     * @param  list<string>  $fileHeaders
+     * @return array<string, mixed>|null
      */
-    private function normalizeDatasetBrowseSettings(array $raw, int $columnCount): ?array
+    private function normalizeDatasetBrowseSettings(array $raw, array $fileHeaders): ?array
     {
+        $columnCount = count($fileHeaders);
         if ($columnCount <= 0) {
             return null;
         }
@@ -1911,23 +1939,54 @@ class DataSourceController extends Controller
             }
         }
 
+        $heatVolumeHeader = null;
+        if (array_key_exists('heat_volume_header', $raw)) {
+            $hv = $raw['heat_volume_header'];
+            if ($hv === null || $hv === '') {
+                $heatVolumeHeader = null;
+            } elseif (is_string($hv)) {
+                $t = trim($hv);
+                if ($t === '' || strcasecmp($t, '__auto__') === 0) {
+                    $heatVolumeHeader = null;
+                } elseif (strcasecmp($t, 'p') === 0 && DataSourceCsvHeaders::pitchCountColumnIndex($fileHeaders) !== null) {
+                    $heatVolumeHeader = 'P';
+                } elseif (strcasecmp($t, 'pa') === 0 && DataSourceCsvHeaders::plateAppearancesColumnIndex($fileHeaders) !== null) {
+                    $heatVolumeHeader = 'PA';
+                } else {
+                    foreach ($fileHeaders as $fh) {
+                        if (strcasecmp(trim((string) $fh), $t) === 0) {
+                            $heatVolumeHeader = trim((string) $fh);
+
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
         $empty =
             $players === []
             && $thresholds === []
             && $groupColumn === null
-            && $heatMinPa === null;
+            && $heatMinPa === null
+            && $heatVolumeHeader === null;
 
         if ($empty) {
             return null;
         }
 
-        return [
+        $out = [
             'players' => $players,
             'column_thresholds' => $thresholds,
             'group_column' => $groupColumn,
             'group_value' => $groupValue,
             'heat_min_pa' => $heatMinPa,
         ];
+        if ($heatVolumeHeader !== null) {
+            $out['heat_volume_header'] = $heatVolumeHeader;
+        }
+
+        return $out;
     }
 
     private function parseColumnThresholds(Request $request, int $columnCount): array

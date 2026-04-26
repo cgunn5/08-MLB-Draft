@@ -42,8 +42,7 @@ class PlayerNoteSectionRequest extends FormRequest
         if ($this->isMethod('PATCH')) {
             $rules['value'] = ['nullable', 'string'];
             $field = $this->string('field')->toString();
-            $bounds = PlayerNoteFieldKeys::gradeBoundsForNoteField($field);
-            $rules['grade'] = ['nullable', 'integer', 'min:'.$bounds['min'], 'max:'.$bounds['max']];
+            $rules['grade'] = PlayerNoteFieldKeys::gradeValueValidationRules($field);
         }
 
         return $rules;

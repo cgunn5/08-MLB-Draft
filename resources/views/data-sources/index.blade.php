@@ -337,9 +337,25 @@
                                     </div>
 
                                     <div class="relative z-10 mt-4 shrink-0 border-t border-gray-200 pt-4">
-                                        <x-input-label class="!text-xs !font-semibold !text-gray-800" :value="__('Min PA for column colors')" />
+                                        <x-input-label
+                                            class="!text-xs !font-semibold !text-gray-800"
+                                            :value="__('Set coloring threshold by')"
+                                        />
+                                        <select
+                                            class="mt-1.5 w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm normal-case text-gray-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
+                                            x-model="heatVolumeHeaderDraft"
+                                            @change="loadPage(1)"
+                                            x-bind:disabled="loading || !activeId"
+                                        >
+                                            <option value="P" x-bind:disabled="!heatVolumeKindColumnPresent('P')">P</option>
+                                            <option value="PA" x-bind:disabled="!heatVolumeKindColumnPresent('PA')">PA</option>
+                                        </select>
+                                        <x-input-label
+                                            class="!text-xs !font-semibold !text-gray-800 mt-3"
+                                            :value="__('Minimum value')"
+                                        />
                                         <p class="mt-1 text-[10px] font-medium normal-case leading-snug text-gray-500">
-                                            {{ __('Enter a minimum PA, then click Apply. Rows below that PA stay unshaded on heat columns. Leave blank and apply to color everyone.') }}
+                                            {{ __('Row heat colors apply only when the selected column is at least this number. Use “Apply threshold to colors” after changing the value.') }}
                                         </p>
                                         <input
                                             type="number"
@@ -356,7 +372,7 @@
                                             x-bind:disabled="loading || !activeId"
                                             @click="applyHeatPaCutoff()"
                                         >
-                                            {{ __('Apply PA cutoff to colors') }}
+                                            {{ __('Apply threshold to colors') }}
                                         </button>
                                     </div>
 

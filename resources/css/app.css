@@ -396,6 +396,38 @@
         }
     }
 
+    /* Take strip body: same letter size as HS stat tables (was 8–10px on wrapper → faux-bold invisible). */
+    .dense-ranger-traits-take .ranger-trait-take-text {
+        font-size: calc(0.42rem * 1.3 * 1.15 * 0.85) !important;
+        font-weight: 700 !important;
+        color: #000000 !important;
+    }
+
+    @media (min-width: 640px) {
+        .dense-ranger-traits-take .ranger-trait-take-text {
+            font-size: calc(0.45rem * 1.3 * 1.15 * 0.85) !important;
+        }
+    }
+
+    @media (min-width: 768px) {
+        .dense-ranger-traits-take .ranger-trait-take-text {
+            font-size: calc(0.48rem * 1.3 * 1.15 * 0.85) !important;
+        }
+    }
+
+    /* NCAA dense take: match NCAA trait table sizing. */
+    .ncaa-ranger-traits-take .ranger-trait-take-text {
+        font-size: calc(0.52rem / 2 * 1.15 * 1.3 * 1.15) !important;
+        font-weight: 700 !important;
+        color: #000000 !important;
+    }
+
+    @media (min-width: 640px) {
+        .ncaa-ranger-traits-take .ranger-trait-take-text {
+            font-size: calc(0.6rem / 2 * 1.15 * 1.3 * 1.15) !important;
+        }
+    }
+
     /* HS: header cells used smaller py than body row-headers; align header row height to data rows. */
     .hs-ranger-traits-table thead th {
         padding-top: 0.204rem !important;
@@ -510,20 +542,17 @@
     /* Dense take strips (non–tightStack): min-heights rounded from prior step ×1.15. */
     .dense-ranger-traits-take {
         min-height: 91px !important;
-        font-size: 8px !important;
     }
 
     @media (min-width: 640px) {
         .dense-ranger-traits-take {
             min-height: 118px !important;
-            font-size: 9px !important;
         }
     }
 
     @media (min-width: 768px) {
         .dense-ranger-traits-take {
             min-height: 132px !important;
-            font-size: 10px !important;
         }
     }
 
@@ -542,20 +571,17 @@
     /* tightStack (HS + NCAA traits): same ladder ×1.15 vs previous min-heights. */
     .ncaa-ranger-traits-take {
         min-height: 83px !important;
-        font-size: 8px !important;
     }
 
     @media (min-width: 640px) {
         .ncaa-ranger-traits-take {
             min-height: 106px !important;
-            font-size: 9px !important;
         }
     }
 
     @media (min-width: 768px) {
         .ncaa-ranger-traits-take {
             min-height: 118px !important;
-            font-size: 10px !important;
         }
     }
 
@@ -609,8 +635,10 @@ input[type='number'].notes-grade-score-input {
 }
 
 .ranger-trait-take-text {
-    font-size: inherit !important;
     line-height: 1.4 !important;
+    font-weight: 700 !important;
+    color: #000000 !important;
+    -webkit-font-smoothing: antialiased;
 }
 
 /*
@@ -625,6 +653,9 @@ input[type='number'].notes-grade-score-input {
 .profile-master-take-text {
     line-height: 1.35 !important;
     font-size: clamp(4.25px, 1.85cqw, 6.75px) !important;
+    font-weight: 700 !important;
+    color: #000000 !important;
+    -webkit-font-smoothing: antialiased;
 }
 
 .profile-top--comfortable .profile-master-take-text {

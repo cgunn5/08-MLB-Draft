@@ -205,12 +205,13 @@ final class HsRangerTraitsSheetResolver
             && $compCol !== null
             && is_array($heatRules)
             && $heatRules !== []) {
-            $paIdxScoped = DataSourceCsvHeaders::plateAppearancesColumnIndex($headers);
-            $paMinScoped = $heatMinPaYearly;
-            if ($paMinScoped !== null && $paIdxScoped === null) {
-                $paMinScoped = null;
+            $heatBrowse = is_array($upload->dataset_browse_settings) ? $upload->dataset_browse_settings : null;
+            $volIdxScoped = DataSourceCsvHeaders::heatVolumeColumnIndex($headers, $heatBrowse);
+            $volMinScoped = $heatMinPaYearly;
+            if ($volMinScoped !== null && $volIdxScoped === null) {
+                $volMinScoped = null;
             }
-            $computedScoped = DataSourceHeatColumnStats::compute($headers, $rowsForCompHeatStats, $heatRules, $paIdxScoped, $paMinScoped);
+            $computedScoped = DataSourceHeatColumnStats::compute($headers, $rowsForCompHeatStats, $heatRules, $volIdxScoped, $volMinScoped);
             $scopedHeatStats = $computedScoped !== [] ? $computedScoped : null;
         }
 
@@ -229,15 +230,15 @@ final class HsRangerTraitsSheetResolver
                     if ($sourceRow !== null) {
                         $demCells = $this->extractSlugRow($sourceRow, $headers, ['bats', 'throws', 'demo_age'], $slugToIdx, $yearCol, false);
                         $demographics = [
-                            'bats' => $demCells['bats'] ?? '—',
-                            'throws' => $demCells['throws'] ?? '—',
-                            'age' => $this->formatOverallDemographicAge($demCells['demo_age'] ?? '—'),
+                            'bats' => $demCells['bats'] ?? PlayerSheetPlaceholder::CELL,
+                            'throws' => $demCells['throws'] ?? PlayerSheetPlaceholder::CELL,
+                            'age' => $this->formatOverallDemographicAge($demCells['demo_age'] ?? PlayerSheetPlaceholder::CELL),
                         ];
                     } else {
                         $demographics = [
-                            'bats' => '—',
-                            'throws' => '—',
-                            'age' => '—',
+                            'bats' => PlayerSheetPlaceholder::CELL,
+                            'throws' => PlayerSheetPlaceholder::CELL,
+                            'age' => PlayerSheetPlaceholder::CELL,
                         ];
                     }
                 }
@@ -364,13 +365,14 @@ final class HsRangerTraitsSheetResolver
                                 $groupRows[] = $r;
                             }
                         }
-                        $paIdxPitch = DataSourceCsvHeaders::plateAppearancesColumnIndex($headers);
-                        $paMinPitch = $heatMinPaYearly;
-                        if ($paMinPitch !== null && $paIdxPitch === null) {
-                            $paMinPitch = null;
+                        $heatBrowse = is_array($upload->dataset_browse_settings) ? $upload->dataset_browse_settings : null;
+                        $volumeIdxPitch = DataSourceCsvHeaders::heatVolumeColumnIndex($headers, $heatBrowse);
+                        $volumeMinPitch = $heatMinPaYearly;
+                        if ($volumeMinPitch !== null && $volumeIdxPitch === null) {
+                            $volumeMinPitch = null;
                         }
                         $groupHeatStats = ($rulesForHeat !== null)
-                            ? DataSourceHeatColumnStats::compute($headers, $groupRows, $rulesForHeat, $paIdxPitch, $paMinPitch)
+                            ? DataSourceHeatColumnStats::compute($headers, $groupRows, $rulesForHeat, $volumeIdxPitch, $volumeMinPitch)
                             : null;
                         $found = null;
                         foreach ($sorted as $r) {
@@ -384,12 +386,18 @@ final class HsRangerTraitsSheetResolver
                             $one = $this->extractSlugRow($found, $headers, $defSlugs, $slugToIdx, $yearCol, true);
                             $one['pitch'] = $pitchLabel;
                             $pitchRows[] = $one;
+                            $pitchQualHeat = true;
+                            if ($volumeMinPitch !== null && $volumeIdxPitch !== null) {
+                                $pitchQualHeat = $this->csvNumericCellMeetsMinimum($volumeMinPitch, $found, $volumeIdxPitch);
+                            }
                             $heatPitch[] = $this->heatForSlugs(
                                 $one,
                                 $defSlugs,
                                 $slugToHeader,
                                 $heatRules,
                                 $groupHeatStats ?? $this->heatStatsForBlock('adjust_pitch', $compHeatScope, $compCol, $scopedHeatStats, $heatStats),
+                                null,
+                                $pitchQualHeat,
                             );
                         } else {
                             $pitchRows[] = [
@@ -432,8 +440,8 @@ final class HsRangerTraitsSheetResolver
 
     private function formatOverallDemographicAge(string $cell): string
     {
-        if ($cell === '' || $cell === '—') {
-            return '—';
+        if (PlayerSheetPlaceholder::isEmptyDisplay($cell)) {
+            return PlayerSheetPlaceholder::CELL;
         }
         $norm = str_replace(',', '.', trim($cell));
         if (is_numeric($norm)) {
@@ -453,7 +461,7 @@ final class HsRangerTraitsSheetResolver
     {
         $o = [];
         foreach ($slugs as $s) {
-            $o[$s] = '—';
+            $o[$s] = PlayerSheetPlaceholder::CELL;
         }
 
         return $o;
@@ -587,15 +595,18 @@ final class HsRangerTraitsSheetResolver
             return null;
         }
 
+        // When the sheet uses a single aggregate row (blank / non-matching Rnds), comp-scoped
+        // heat still uses the bucket population; keep the same player row for radar instead of
+        // dropping the chart when no row matches the active comp tag.
         if ($compHeatScope !== null && $compCol !== null) {
-            $matchedRows = array_values(array_filter(
+            $matchedRowsScoped = array_values(array_filter(
                 $matchedRows,
                 static function (array $r) use ($compCol, $compHeatScope): bool {
                     return strcasecmp(trim((string) ($r[$compCol] ?? '')), $compHeatScope) === 0;
                 },
             ));
-            if ($matchedRows === []) {
-                return null;
+            if ($matchedRowsScoped !== []) {
+                $matchedRows = $matchedRowsScoped;
             }
         }
 
@@ -699,11 +710,11 @@ final class HsRangerTraitsSheetResolver
 
         $out = [];
         foreach ($slugs as $slug) {
-            $val = $row[$slug] ?? '—';
+            $val = $row[$slug] ?? PlayerSheetPlaceholder::CELL;
             if ($heatRawBySlug !== null && array_key_exists($slug, $heatRawBySlug)) {
                 $val = $heatRawBySlug[$slug];
             }
-            if ($val === '—' || $val === '') {
+            if (PlayerSheetPlaceholder::isEmptyDisplay((string) $val)) {
                 continue;
             }
             $header = $slugToHeader[$slug] ?? '';
@@ -748,7 +759,7 @@ final class HsRangerTraitsSheetResolver
             return true;
         }
         $raw = trim((string) ($slugRow['pa'] ?? ''));
-        if ($raw === '' || $raw === '—') {
+        if (PlayerSheetPlaceholder::isEmptyDisplay($raw)) {
             return false;
         }
         $t = str_replace([',', '%', ' '], '', $raw);
@@ -757,6 +768,49 @@ final class HsRangerTraitsSheetResolver
         }
 
         return (float) $t >= $minPa;
+    }
+
+    /**
+     * @param  list<string|null>  $row
+     */
+    private function csvNumericCellMeetsMinimum(?float $min, array $row, int $colIdx): bool
+    {
+        if ($min === null) {
+            return true;
+        }
+        $raw = trim((string) ($row[$colIdx] ?? ''));
+        if (PlayerSheetPlaceholder::isEmptyDisplay($raw)) {
+            return false;
+        }
+        $t = str_replace([',', '%', ' '], '', $raw);
+        if ($t === '' || ! is_numeric($t)) {
+            return false;
+        }
+
+        return (float) $t >= $min;
+    }
+
+    /**
+     * @param  array<string, string>  $slugRow
+     */
+    private function slugRowMeetsHeatNumericSlugMinimum(?float $min, array $slugRow, string $slug): bool
+    {
+        if ($min === null) {
+            return true;
+        }
+        if (! array_key_exists($slug, $slugRow)) {
+            return false;
+        }
+        $raw = trim((string) ($slugRow[$slug] ?? ''));
+        if (PlayerSheetPlaceholder::isEmptyDisplay($raw)) {
+            return false;
+        }
+        $t = str_replace([',', '%', ' '], '', $raw);
+        if ($t === '' || ! is_numeric($t)) {
+            return false;
+        }
+
+        return (float) $t >= $min;
     }
 
     /**
@@ -816,6 +870,14 @@ final class HsRangerTraitsSheetResolver
                 || str_contains($norm, 'percent');
         }
 
+        if ($canonical === 'bats' && $mapKey === 'b') {
+            return $norm === 'b';
+        }
+
+        if ($canonical === 'throws' && $mapKey === 't') {
+            return $norm === 't';
+        }
+
         return true;
     }
 
@@ -851,7 +913,7 @@ final class HsRangerTraitsSheetResolver
     {
         $out = [];
         if ($includeYear) {
-            $yearVal = '—';
+            $yearVal = PlayerSheetPlaceholder::CELL;
             if ($yearCol !== null && isset($row[$yearCol])) {
                 $y = trim((string) $row[$yearCol]);
                 if ($y !== '') {
@@ -875,11 +937,11 @@ final class HsRangerTraitsSheetResolver
     private function cellAt(array $row, ?int $idx): string
     {
         if ($idx === null || ! isset($row[$idx])) {
-            return '—';
+            return PlayerSheetPlaceholder::CELL;
         }
         $t = trim((string) $row[$idx]);
 
-        return $t !== '' ? $t : '—';
+        return $t !== '' ? $t : PlayerSheetPlaceholder::CELL;
     }
 
     /**

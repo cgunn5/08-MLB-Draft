@@ -139,7 +139,7 @@ class PlayerNotesTest extends TestCase
 
         $grades = [];
         foreach ($allowed as $field) {
-            $grades[$field] = $field === 'master_take' ? 5 : 3;
+            $grades[$field] = $field === 'master_take' ? 5.5 : 3;
         }
 
         $this->actingAs($user)
@@ -155,7 +155,7 @@ class PlayerNotesTest extends TestCase
         $player->refresh();
         $this->assertSame('New take', $player->master_take);
         $this->assertSame('New perf', $player->note_performance);
-        $this->assertSame('5', $player->grade_role);
+        $this->assertSame('5.5', $player->grade_role);
         $this->assertSame('3', $player->grade_perf);
     }
 
@@ -226,11 +226,11 @@ class PlayerNotesTest extends TestCase
             'player_id' => $player->id,
             'field' => 'note_performance',
             'value' => 'Solid',
-            'grade' => 4,
+            'grade' => 4.5,
         ])->assertSessionHasNoErrors();
 
         $player->refresh();
-        $this->assertSame('4', $player->grade_perf);
+        $this->assertSame('4.5', $player->grade_perf);
     }
 
     public function test_master_take_grade_saves_to_grade_role(): void
@@ -281,6 +281,22 @@ class PlayerNotesTest extends TestCase
                 'field' => 'note_swing',
                 'value' => 'Short',
                 'grade' => 8,
+            ])
+            ->assertSessionHasErrors('grade');
+    }
+
+    public function test_rejects_grade_not_in_half_point_steps(): void
+    {
+        $user = User::factory()->create();
+        $player = Player::factory()->create(['player_pool' => 'ncaa', 'note_swing' => 'Short']);
+
+        $this->actingAs($user)
+            ->patch(route('notes.update-section'), [
+                'player_pool' => 'ncaa',
+                'player_id' => $player->id,
+                'field' => 'note_swing',
+                'value' => 'Short',
+                'grade' => 4.25,
             ])
             ->assertSessionHasErrors('grade');
     }

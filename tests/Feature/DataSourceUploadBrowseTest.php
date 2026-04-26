@@ -812,6 +812,84 @@ class DataSourceUploadBrowseTest extends TestCase
             ->assertJsonPath('heat_column_stats.STAT.max', 20);
     }
 
+    public function test_hs_pitch_types_only_upload_gates_heat_on_p_not_pa(): void
+    {
+        $user = User::factory()->create();
+        $path = 'data-source-uploads/heat-p-pitch-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($path, "PLAYER,PA,P,STAT\nA,5,100,1\nB,200,5,10\nC,200,200,20\n");
+
+        $upload = DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Pitch P heat',
+            'original_filename' => 'p.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => ['PLAYER', 'PA', 'P', 'STAT'],
+            'row_count' => 3,
+            'dataset_browse_settings' => [
+                'players' => [],
+                'column_thresholds' => [],
+                'group_column' => null,
+                'group_value' => null,
+                'heat_min_pa' => 50,
+            ],
+        ]);
+
+        $this->actingAs($user)->patchJson(route('data-sources.uploads.settings', $upload), [
+            'heat_rules' => [
+                'STAT' => ['enabled' => true, 'higher_is_better' => true],
+            ],
+        ])->assertOk();
+
+        $this->actingAs($user)->getJson(route('data-sources.uploads.table-data', $upload))
+            ->assertOk()
+            ->assertJsonPath('heat_pa_qualifier.min', 50)
+            ->assertJsonPath('heat_pa_qualifier.column_index', 2)
+            ->assertJsonPath('heat_row_pa_ok.0', true)
+            ->assertJsonPath('heat_row_pa_ok.1', false)
+            ->assertJsonPath('heat_row_pa_ok.2', true)
+            ->assertJsonPath('heat_column_stats.STAT.min', 1)
+            ->assertJsonPath('heat_column_stats.STAT.max', 20);
+    }
+
+    public function test_browse_heat_volume_respects_saved_heat_volume_header_over_auto(): void
+    {
+        $user = User::factory()->create();
+        $path = 'data-source-uploads/heat-vol-hdr-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($path, "PLAYER,PA,P,STAT\nA,5,100,1\nB,200,5,10\nC,200,200,20\n");
+
+        $upload = DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Vol header',
+            'original_filename' => 'p.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => ['PLAYER', 'PA', 'P', 'STAT'],
+            'row_count' => 3,
+            'dataset_browse_settings' => [
+                'players' => [],
+                'column_thresholds' => [],
+                'group_column' => null,
+                'group_value' => null,
+                'heat_min_pa' => 50,
+                'heat_volume_header' => 'PA',
+            ],
+        ]);
+
+        $this->actingAs($user)->patchJson(route('data-sources.uploads.settings', $upload), [
+            'heat_rules' => [
+                'STAT' => ['enabled' => true, 'higher_is_better' => true],
+            ],
+        ])->assertOk();
+
+        $this->actingAs($user)->getJson(route('data-sources.uploads.table-data', $upload))
+            ->assertOk()
+            ->assertJsonPath('heat_pa_qualifier.column_index', 1)
+            ->assertJsonPath('heat_row_pa_ok.0', false)
+            ->assertJsonPath('heat_row_pa_ok.1', true)
+            ->assertJsonPath('heat_row_pa_ok.2', true);
+    }
+
     public function test_table_data_heat_row_pa_ok_is_null_without_min_pa(): void
     {
         $user = User::factory()->create();

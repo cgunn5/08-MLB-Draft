@@ -43,7 +43,7 @@
                                     <td
                                         class="border border-gray-800 px-0.5 py-0.5 sm:px-1 sm:py-1{{ $heat ? ' '.$heat : '' }}"
                                     >
-                                        #N/A
+                                        -
                                     </td>
                                 @endforeach
                             </tr>

@@ -45,8 +45,7 @@ class PlayerNotesBulkUpdateRequest extends FormRequest
 
         foreach ($allowed as $field) {
             $rules['values.'.$field] = ['nullable', 'string'];
-            $bounds = PlayerNoteFieldKeys::gradeBoundsForNoteField($field);
-            $rules['grades.'.$field] = ['nullable', 'integer', 'min:'.$bounds['min'], 'max:'.$bounds['max']];
+            $rules['grades.'.$field] = PlayerNoteFieldKeys::gradeValueValidationRules($field);
         }
 
         return $rules;

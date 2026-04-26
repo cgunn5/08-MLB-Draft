@@ -204,6 +204,8 @@ document.addEventListener('alpine:init', () => {
         sortDirection: 'asc',
         thresholdDraft: [],
         heatMinPaDraft: '',
+        /** `P` (pitch count) or `PA` (plate appearances) for heat volume gate. */
+        heatVolumeHeaderDraft: 'P',
         groupByColumnRaw: '',
         groupValues: [],
         activeGroupValue: null,
@@ -348,6 +350,128 @@ document.addEventListener('alpine:init', () => {
             return row?.name ?? '';
         },
 
+        heatVolumeKindColumnPresent(kind) {
+            const k = String(kind ?? '').trim().toUpperCase();
+            if (k === 'P') {
+                return this.pitchCountColumnIndex() !== null;
+            }
+            if (k === 'PA') {
+                return this.plateAppearancesColumnIndex() !== null;
+            }
+
+            return false;
+        },
+
+        defaultHeatVolumeKind() {
+            if (this.pitchCountColumnIndex() !== null) {
+                return 'P';
+            }
+            if (this.plateAppearancesColumnIndex() !== null) {
+                return 'PA';
+            }
+
+            return 'P';
+        },
+
+        ensureHeatVolumeDraftValid() {
+            if (!Array.isArray(this.headers) || this.headers.length === 0) {
+                return;
+            }
+            const row = this.uploadSummaries.find((u) => Number(u.id) === Number(this.activeId));
+            const savedHvh = row?.dataset_browse_settings?.heat_volume_header;
+            if (savedHvh !== undefined && savedHvh !== null && String(savedHvh).trim() !== '') {
+                const t = String(savedHvh).trim();
+                const u = t.toUpperCase();
+                if (u !== 'P' && u !== 'PA') {
+                    const idx = this.columnIndexForHeaderName(this.headers, t);
+                    const pIdx = this.pitchCountColumnIndex();
+                    const paIdx = this.plateAppearancesColumnIndex();
+                    if (idx !== null && pIdx === idx) {
+                        this.heatVolumeHeaderDraft = 'P';
+                    } else if (idx !== null && paIdx === idx) {
+                        this.heatVolumeHeaderDraft = 'PA';
+                    }
+                }
+            }
+            const hasP = this.pitchCountColumnIndex() !== null;
+            const hasPa = this.plateAppearancesColumnIndex() !== null;
+            let k = String(this.heatVolumeHeaderDraft ?? '').trim().toUpperCase();
+            if (k !== 'P' && k !== 'PA') {
+                k = this.defaultHeatVolumeKind();
+            }
+            if (k === 'P' && !hasP) {
+                k = hasPa ? 'PA' : 'P';
+            }
+            if (k === 'PA' && !hasPa) {
+                k = hasP ? 'P' : 'PA';
+            }
+            this.heatVolumeHeaderDraft = k;
+        },
+
+        columnIndexForHeaderName(list, name) {
+            const want = String(name ?? '').trim();
+            if (want === '') {
+                return null;
+            }
+            if (!Array.isArray(list)) {
+                return null;
+            }
+            for (let i = 0; i < list.length; i++) {
+                if (String(list[i] ?? '').trim() === want) {
+                    return i;
+                }
+            }
+            const lw = want.toLowerCase();
+            for (let j = 0; j < list.length; j++) {
+                if (String(list[j] ?? '').trim().toLowerCase() === lw) {
+                    return j;
+                }
+            }
+
+            return null;
+        },
+
+        headerSlugForHeatVolume(header) {
+            let t = String(header ?? '')
+                .replace(/^\ufeff/, '')
+                .replace(/[\u00a0\u2007\u202f\u3000]/g, ' ')
+                .trim()
+                .toLowerCase();
+            t = t.replace(/\s+/g, ' ').trim();
+            t = t.replace(/%/g, 'pct');
+
+            return t.replace(/[^a-z0-9]+/gi, '');
+        },
+
+        pitchCountColumnIndex() {
+            const list = this.headers;
+            if (!Array.isArray(list)) {
+                return null;
+            }
+            for (let i = 0; i < list.length; i++) {
+                if (this.headerSlugForHeatVolume(list[i]) === 'p') {
+                    return i;
+                }
+            }
+
+            return null;
+        },
+
+        heatVolumeGateColumnIndex() {
+            if (!Array.isArray(this.headers)) {
+                return null;
+            }
+            const k = String(this.heatVolumeHeaderDraft ?? '').trim().toUpperCase();
+            if (k === 'P') {
+                return this.pitchCountColumnIndex();
+            }
+            if (k === 'PA') {
+                return this.plateAppearancesColumnIndex();
+            }
+
+            return null;
+        },
+
         syncHsProfileFeedDraft() {
             const row = this.uploadSummaries.find((u) => Number(u.id) === Number(this.activeId));
             if (!row) {
@@ -368,6 +492,7 @@ document.addEventListener('alpine:init', () => {
                 this.groupByColumnRaw = '';
                 this.activeGroupValue = null;
                 this.heatMinPaDraft = '';
+                this.heatVolumeHeaderDraft = 'P';
 
                 return;
             }
@@ -389,6 +514,17 @@ document.addEventListener('alpine:init', () => {
                 this.activeGroupValue = gv === null || gv === undefined ? null : String(gv);
             } else {
                 this.activeGroupValue = null;
+            }
+            const hvh = s.heat_volume_header;
+            if (hvh !== undefined && hvh !== null && String(hvh).trim() !== '') {
+                const t = String(hvh).trim();
+                const u = t.toUpperCase();
+                this.heatVolumeHeaderDraft = u === 'P' || u === 'PA' ? u : t;
+            } else {
+                this.heatVolumeHeaderDraft = 'P';
+            }
+            if (Array.isArray(this.headers) && this.headers.length > 0) {
+                this.ensureHeatVolumeDraftValid();
             }
         },
 
@@ -434,6 +570,13 @@ document.addEventListener('alpine:init', () => {
                         heat_min_pa = n;
                     }
                 }
+                const hvDraft = String(this.heatVolumeHeaderDraft ?? '').trim().toUpperCase();
+                let heat_volume_header = null;
+                if (hvDraft === 'P' && this.pitchCountColumnIndex() !== null) {
+                    heat_volume_header = 'P';
+                } else if (hvDraft === 'PA' && this.plateAppearancesColumnIndex() !== null) {
+                    heat_volume_header = 'PA';
+                }
                 const browse = {
                     players: [...this.selectedPlayers],
                     column_thresholds: th,
@@ -441,6 +584,7 @@ document.addEventListener('alpine:init', () => {
                     group_value:
                         gci !== null && this.activeGroupValue !== null ? String(this.activeGroupValue) : null,
                     heat_min_pa,
+                    heat_volume_header,
                 };
                 const payload = { dataset_browse_settings: browse };
                 if (!this.activeUploadReadOnly) {
@@ -494,7 +638,14 @@ document.addEventListener('alpine:init', () => {
 
                 return;
             }
-            const col = this.plateAppearancesColumnIndex();
+            const qc = this.heatPaQualifier?.column_index;
+            let col =
+                qc !== undefined && qc !== null && String(qc) !== '' && !Number.isNaN(Number(qc))
+                    ? Number(qc)
+                    : null;
+            if (col === null) {
+                col = this.heatVolumeGateColumnIndex();
+            }
             if (!Array.isArray(this.rows)) {
                 return;
             }
@@ -1057,17 +1208,24 @@ document.addEventListener('alpine:init', () => {
             if (min === null) {
                 return true;
             }
-            const colIdx = this.plateAppearancesColumnIndex();
+            const qc = this.heatPaQualifier?.column_index;
+            let colIdx =
+                qc !== undefined && qc !== null && String(qc) !== '' && !Number.isNaN(Number(qc))
+                    ? Number(qc)
+                    : null;
+            if (colIdx === null) {
+                colIdx = this.heatVolumeGateColumnIndex();
+            }
             if (colIdx === undefined || colIdx === null) {
                 return false;
             }
-            const paRaw = row[colIdx];
-            const pa = Number.parseFloat(String(paRaw ?? '').replace(/[,% ]/g, ''));
-            if (Number.isNaN(pa)) {
+            const raw = row[colIdx];
+            const v = Number.parseFloat(String(raw ?? '').replace(/[,% ]/g, ''));
+            if (Number.isNaN(v)) {
                 return false;
             }
 
-            return pa >= min;
+            return v >= min;
         },
 
         datasetCellStyle(headerName, raw, row, rIdx) {
@@ -1202,6 +1360,12 @@ document.addEventListener('alpine:init', () => {
                 if (paParam !== null) {
                     params.heat_min_pa = paParam;
                 }
+                const hvDraft = String(this.heatVolumeHeaderDraft ?? '').trim().toUpperCase();
+                if (hvDraft === 'P' || hvDraft === 'PA') {
+                    params.heat_volume_header = hvDraft;
+                } else {
+                    params.heat_volume_header = '__auto__';
+                }
                 const { data } = await window.axios.get(`${this.tableDataBase}/${this.activeId}/table-data`, {
                     params,
                     headers: { Accept: 'application/json' },
@@ -1210,6 +1374,7 @@ document.addEventListener('alpine:init', () => {
                     return;
                 }
                 this.headers = data.headers ?? [];
+                this.ensureHeatVolumeDraftValid();
                 this.syncThresholdDraftLength();
                 this.rows = data.rows ?? [];
                 this.rowOrdinals = data.row_ordinals ?? [];

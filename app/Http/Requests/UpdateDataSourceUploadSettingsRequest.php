@@ -39,6 +39,7 @@ class UpdateDataSourceUploadSettingsRequest extends FormRequest
             'dataset_browse_settings.group_column' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'dataset_browse_settings.group_value' => ['sometimes', 'nullable', 'string', 'max:2000'],
             'dataset_browse_settings.heat_min_pa' => ['sometimes', 'nullable', 'numeric', 'min:0'],
+            'dataset_browse_settings.heat_volume_header' => ['sometimes', 'nullable', 'string', 'max:200'],
         ];
     }
 

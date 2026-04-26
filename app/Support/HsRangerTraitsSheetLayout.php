@@ -197,8 +197,9 @@ final class HsRangerTraitsSheetLayout
             'pitch' => ['pitch', 'pitchtype', 'ptype', 'type'],
             'xwobacon' => ['xwobacon'],
             'bipx' => ['bipx', 'bipxplus', 'bipex', 'bipexpected', 'xbip'],
-            'bats' => ['bats', 'bathand', 'hitside', 'hit'],
-            'throws' => ['throws', 'throw', 'throwhand', 'arm', 'thr'],
+            /* HS Stats — Overall often uses single-letter headers "B" / "T". */
+            'bats' => ['bats', 'bathand', 'hitside', 'hit', 'b'],
+            'throws' => ['throws', 'throw', 'throwhand', 'arm', 'thr', 't'],
             'demo_age' => ['age', 'playerage', 'player age', 'seasonage', 'draftage'],
         ];
     }

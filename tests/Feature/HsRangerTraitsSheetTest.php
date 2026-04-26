@@ -198,6 +198,130 @@ class HsRangerTraitsSheetTest extends TestCase
         $this->assertSame('300', $adj[2]['p'] ?? null);
     }
 
+    public function test_adjust_pitch_heat_gates_on_p_when_pa_column_absent(): void
+    {
+        $user = User::factory()->create();
+        $player = Player::factory()->create([
+            'player_pool' => 'hs',
+            'first_name' => 'Alex',
+            'last_name' => 'Rivera',
+        ]);
+
+        $path = 'data-source-uploads/hs-pitch-p-heat-'.uniqid('', true).'.csv';
+        $headers = ['PLAYER', 'YEAR', 'TYPE', 'P', 'BIPx', 'OPS', 'ISO', 'EV95', 'GB%', 'SWM%', 'IZ SWM%', 'CH%'];
+        $tail = ['.310', '.900', '.080', '94', '38', '11', '7', '22'];
+        $rowFb = array_merge(['RIVERA, ALEX', '2024', 'FB', '2000'], $tail);
+        $rowBb = ['RIVERA, ALEX', '2024', 'BB', '50', '.290', '.700', '.050', '88', '42', '15', '10', '28'];
+        $rowOs = array_merge(['RIVERA, ALEX', '2024', 'OS', '1200'], ['.270', '.650', '.040', '85', '45', '18', '12', '30']);
+        $rowFbLow = array_merge(['LOW, OTHER', '2024', 'FB', '2000'], ['.300', '.500', '.050', '90', '40', '10', '8', '20']);
+        $rowFbHigh = array_merge(['HIGH, OTHER', '2024', 'FB', '2000'], ['.300', '1.100', '.200', '95', '35', '9', '6', '18']);
+        $rowOsA = array_merge(['AAA, OTHER', '2024', 'OS', '1500'], ['.270', '.500', '.030', '82', '46', '19', '13', '31']);
+        $rowOsB = array_merge(['BBB, OTHER', '2024', 'OS', '1600'], ['.270', '.800', '.050', '88', '44', '17', '11', '29']);
+        $rowBbBig = array_merge(['BIG, OTHER', '2024', 'BB', '2000'], ['.290', '.600', '.050', '88', '42', '15', '10', '28']);
+        $this->assertCount(count($headers), $rowFb);
+
+        $fullPath = Storage::disk('local')->path($path);
+        $fh = fopen($fullPath, 'w');
+        $this->assertNotFalse($fh);
+        try {
+            fputcsv($fh, $headers);
+            fputcsv($fh, $rowFb);
+            fputcsv($fh, $rowBb);
+            fputcsv($fh, $rowOs);
+            fputcsv($fh, $rowFbLow);
+            fputcsv($fh, $rowFbHigh);
+            fputcsv($fh, $rowOsA);
+            fputcsv($fh, $rowOsB);
+            fputcsv($fh, $rowBbBig);
+        } finally {
+            fclose($fh);
+        }
+
+        DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'name' => 'HS pitch only',
+            'original_filename' => 'hs-pitch-p.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => $headers,
+            'row_count' => 8,
+            'hs_profile_feed_slots' => ['adjustability_pitch'],
+            'dataset_browse_settings' => ['heat_min_pa' => 1000],
+            'heat_rules' => [
+                'OPS' => ['enabled' => true, 'higher_is_better' => true],
+            ],
+        ]);
+
+        $sheet = app(HsRangerTraitsSheetResolver::class)->resolve($player, $user);
+        $heat = $sheet['cell_heat']['adjust_pitch'] ?? [];
+
+        $this->assertIsArray($heat);
+        $this->assertCount(3, $heat);
+        $this->assertArrayHasKey('ops', $heat[0]);
+        $this->assertArrayNotHasKey('ops', $heat[1]);
+        $this->assertArrayHasKey('ops', $heat[2]);
+    }
+
+    public function test_adjust_pitch_heat_uses_pitch_p_when_pa_lower_than_cutoff(): void
+    {
+        $user = User::factory()->create();
+        $player = Player::factory()->create([
+            'player_pool' => 'hs',
+            'first_name' => 'Alex',
+            'last_name' => 'Rivera',
+        ]);
+
+        $path = 'data-source-uploads/hs-pitch-p-over-pa-'.uniqid('', true).'.csv';
+        $headers = ['PLAYER', 'YEAR', 'TYPE', 'PA', 'P', 'BIPx', 'OPS', 'ISO', 'EV95', 'GB%', 'SWM%', 'IZ SWM%', 'CH%'];
+        $tail = ['.310', '.900', '.080', '94', '38', '11', '7', '22'];
+        $rowFb = array_merge(['RIVERA, ALEX', '2024', 'FB', '30', '200'], $tail);
+        $rowBb = array_merge(['RIVERA, ALEX', '2024', 'BB', '30', '50'], $tail);
+        $rowOs = array_merge(['RIVERA, ALEX', '2024', 'OS', '30', '1200'], ['.270', '.650', '.040', '85', '45', '18', '12', '30']);
+        $rowFbLow = array_merge(['LOW, OTHER', '2024', 'FB', '100', '2000'], ['.300', '.500', '.050', '90', '40', '10', '8', '20']);
+        $rowFbHigh = array_merge(['HIGH, OTHER', '2024', 'FB', '100', '2000'], ['.300', '1.100', '.200', '95', '35', '9', '6', '18']);
+        $rowOsA = array_merge(['AAA, OTHER', '2024', 'OS', '100', '1500'], ['.270', '.500', '.030', '82', '46', '19', '13', '31']);
+        $rowOsB = array_merge(['BBB, OTHER', '2024', 'OS', '100', '1600'], ['.270', '.800', '.050', '88', '44', '17', '11', '29']);
+        $rowBbBig = array_merge(['BIG, OTHER', '2024', 'BB', '100', '2000'], $tail);
+
+        $fullPath = Storage::disk('local')->path($path);
+        $fh = fopen($fullPath, 'w');
+        $this->assertNotFalse($fh);
+        try {
+            fputcsv($fh, $headers);
+            fputcsv($fh, $rowFb);
+            fputcsv($fh, $rowBb);
+            fputcsv($fh, $rowOs);
+            fputcsv($fh, $rowFbLow);
+            fputcsv($fh, $rowFbHigh);
+            fputcsv($fh, $rowOsA);
+            fputcsv($fh, $rowOsB);
+            fputcsv($fh, $rowBbBig);
+        } finally {
+            fclose($fh);
+        }
+
+        DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'name' => 'HS pitch P vs PA',
+            'original_filename' => 'x.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => $headers,
+            'row_count' => 8,
+            'hs_profile_feed_slots' => ['adjustability_pitch'],
+            'dataset_browse_settings' => ['heat_min_pa' => 80],
+            'heat_rules' => [
+                'OPS' => ['enabled' => true, 'higher_is_better' => true],
+            ],
+        ]);
+
+        $sheet = app(HsRangerTraitsSheetResolver::class)->resolve($player, $user);
+        $heat = $sheet['cell_heat']['adjust_pitch'] ?? [];
+        $this->assertArrayHasKey('ops', $heat[0]);
+        $this->assertArrayNotHasKey('ops', $heat[1]);
+        $this->assertArrayHasKey('ops', $heat[2]);
+    }
+
     public function test_performance_overall_slot_is_exclusive_per_user(): void
     {
         $user = User::factory()->create();
@@ -460,7 +584,7 @@ class HsRangerTraitsSheetTest extends TestCase
             '"DOE, JANE",2024,1-2,100,1,.300,.400,.500,.900,10,20,45,50,25,4,12,10,.200,80,95,100,1,0,0,0,40,30,30',
             '"LOW, OPS",2024,1-2,100,1,.200,.250,.300,.500,10,20,45,50,30,4,8,8,.100,70,85,90,1,0,0,0,50,25,25',
             '"HIGH, OPS",2024,1-2,100,1,.400,.450,.600,1.100,10,20,45,50,20,4,15,12,.250,85,100,105,1,0,0,0,35,35,30',
-            '"OTHER, X",2024,7+,100,1,.250,.330,.410,.740,10,20,45,50,28,4,11,9,.150,75,92,98,1,0,0,0,42,33,25',
+            '"OTHER, X",2024,7+,100,1,.250,.330,.410,.740,10,20,45,50,15,4,11,9,.150,75,92,98,1,0,0,0,42,33,25',
         ]));
 
         DataSourceUpload::query()->create([
@@ -486,11 +610,12 @@ class HsRangerTraitsSheetTest extends TestCase
         $this->assertNull($all['radar']['comp_scope']);
         $this->assertSame('1-2', $scoped['radar']['comp_scope']);
 
-        $gbNtileAll = $all['radar']['axes'][2]['ntile'] ?? null;
-        $gbNtileScoped = $scoped['radar']['axes'][2]['ntile'] ?? null;
-        $this->assertNotNull($gbNtileAll);
-        $this->assertNotNull($gbNtileScoped);
-        $this->assertNotSame($gbNtileAll, $gbNtileScoped);
+        // CH% is inverted (lower chase is better); dropping the 7+ row changes the comp pool shape.
+        $chNtileAll = $all['radar']['axes'][4]['ntile'] ?? null;
+        $chNtileScoped = $scoped['radar']['axes'][4]['ntile'] ?? null;
+        $this->assertNotNull($chNtileAll);
+        $this->assertNotNull($chNtileScoped);
+        $this->assertNotSame($chNtileAll, $chNtileScoped);
     }
 
     public function test_hs_radar_with_comp_scope_skips_upload_missing_rnds_column(): void
@@ -554,6 +679,44 @@ class HsRangerTraitsSheetTest extends TestCase
         $this->assertSame('10', (string) ($scoped12['radar']['axes'][1]['raw'] ?? ''));
         $this->assertNotNull($swm36);
         $this->assertNotNull($swm12);
-        $this->assertGreaterThan($swm12, $swm36);
+        // Lower SwM% is a better ntile; 10 vs {10,20} outranks 14 vs {6,14,18}.
+        $this->assertGreaterThan($swm36, $swm12);
+    }
+
+    public function test_hs_radar_comp_scope_keeps_chart_when_player_row_has_no_bucket_tag(): void
+    {
+        $user = User::factory()->create();
+        $player = Player::factory()->create([
+            'player_pool' => 'hs',
+            'first_name' => 'Pat',
+            'last_name' => 'Summers',
+        ]);
+
+        $hdr = 'PLAYER,YEAR,Rnds,PA,G,AVG,OBP,SLG,OPS,BB%,K%,SW%,SWDEC,CH%,PPA,SWM%,IZ SWM%,ISO,EV70,EV95,MAX EV,BIP 100+,BIP 105+,NITRO%,TX BAL%,GB%,FB%,LD%';
+        $path = 'data-source-uploads/hs-radar-agg-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($path, implode("\n", [
+            $hdr,
+            '"SUMMERS, PAT",2024,,100,1,.300,.400,.500,.900,10,20,45,50,25,4,12,10,.200,80,95,100,1,0,0,0,40,30,30',
+            '"OTHER, A",2024,1-2,100,1,.280,.380,.480,.850,10,20,45,50,30,4,10,8,.200,80,95,100,1,0,0,0,45,30,25',
+            '"OTHER, B",2024,1-2,100,1,.320,.420,.520,.950,10,20,45,50,20,4,14,12,.200,80,95,100,1,0,0,0,35,35,30',
+        ]));
+
+        DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'name' => 'HS Overall',
+            'original_filename' => 'radar.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => explode(',', $hdr),
+            'row_count' => 3,
+            'hs_profile_feed_slots' => ['performance_overall', 'approach_overall', 'impact_overall'],
+        ]);
+
+        $resolver = app(HsRangerTraitsSheetResolver::class);
+        $scoped = $resolver->resolve($player, $user, '1-2');
+
+        $this->assertIsArray($scoped['radar'] ?? null);
+        $this->assertSame('1-2', $scoped['radar']['comp_scope']);
+        $this->assertCount(5, $scoped['radar']['values']);
     }
 }

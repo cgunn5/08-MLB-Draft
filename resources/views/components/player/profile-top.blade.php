@@ -16,6 +16,7 @@
     $compactProfile = filter_var($compactProfile, FILTER_VALIDATE_BOOLEAN);
     $omitCenterColumn = filter_var($omitCenterColumn ?? false, FILTER_VALIDATE_BOOLEAN);
     $hsGradesRadarRowGrid = $omitCenterColumn && ! $compactProfile;
+    $fillHeaderRadar = ! $compactProfile;
     /* HS omit: same 3-col + gaps as ranger-traits-hs so middle column matches Approach / Miss & Impact/Damage. */
     $profileTopGridColsClass = $omitCenterColumn
         ? 'grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]'
@@ -137,9 +138,9 @@
                 ])
             >
                 <p
-                    class="profile-master-take-text max-w-full break-words text-center font-sans font-[700] text-gray-700"
+                    class="profile-master-take-text max-w-full break-words text-center font-sans font-[700] text-black"
                 >
-                    {{ filled($player->master_take) ? $player->master_take : '#N/A' }}
+                    {{ filled($player->master_take) ? $player->master_take : '-' }}
                 </p>
             </aside>
             <div
@@ -248,7 +249,7 @@
                                             @if ($aggregateRankBoardHeatStyle !== null)
                                                 style="{{ $aggregateRankBoardHeatStyle }}"
                                             @endif
-                                        >{{ $player->aggregate_rank ?? '—' }}</span>
+                                        >{{ $player->aggregate_rank ?? '-' }}</span>
                                     </span>
                                     <span class="text-gray-300" aria-hidden="true">·</span>
                                     <span class="inline-flex items-center gap-x-1 tabular-nums">
@@ -258,14 +259,14 @@
                                             @if ($modelDraftListRankBoardHeatStyle !== null)
                                                 style="{{ $modelDraftListRankBoardHeatStyle }}"
                                             @endif
-                                        >{{ ($player->modelDraftListRank()) ?? '—' }}</span>
+                                        >{{ ($player->modelDraftListRank()) ?? '-' }}</span>
                                     </span>
                                     <span class="text-gray-300" aria-hidden="true">·</span>
                                     <span
                                         class="rounded-md border border-dashed border-gray-300 bg-gray-50/90 px-2 py-0.5 tabular-nums text-gray-800"
                                         title="{{ __('Personal rank') }}"
                                     >
-                                        CG {{ $player->personal_rank ?? '—' }}
+                                        CG {{ $player->personal_rank ?? '-' }}
                                     </span>
                                 </div>
                             </div>
@@ -286,9 +287,9 @@
                     ])
                 >
                     <p
-                        class="profile-master-take-text max-w-full break-words text-center font-sans font-[700] text-gray-700"
+                        class="profile-master-take-text max-w-full break-words text-center font-sans font-[700] text-black"
                     >
-                        {{ filled($player->master_take) ? $player->master_take : '#N/A' }}
+                        {{ filled($player->master_take) ? $player->master_take : '-' }}
                     </p>
                 </aside>
             </div>
@@ -417,7 +418,7 @@
             <div
                 @class([
                     'w-full min-w-0 max-w-full flex-1',
-                    'grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 md:gap-3 2xl:gap-4' => $hsGradesRadarRowGrid,
+                    'grid grid-cols-[auto_minmax(0,1fr)_auto] items-stretch gap-2 md:gap-3 2xl:gap-4' => $hsGradesRadarRowGrid,
                     'flex flex-col items-center justify-center gap-0.5 sm:flex-row sm:items-stretch md:gap-2 2xl:gap-3' => ! $hsGradesRadarRowGrid,
                     'sm:justify-between' => ! $hsGradesRadarRowGrid && (! $omitCenterColumn || $compactProfile),
                     'sm:justify-start sm:gap-2 md:gap-3 2xl:gap-4' => ! $hsGradesRadarRowGrid && $omitCenterColumn && ! $compactProfile,
@@ -465,14 +466,15 @@
 
                 <div
                     @class([
-                        'flex min-h-0 min-w-0 shrink-0 items-center justify-center',
-                        'h-full max-h-full self-center' => ! $hsGradesRadarRowGrid,
-                        'h-full' => $hsGradesRadarRowGrid,
+                        'flex min-h-0 min-w-0 shrink-0 justify-center',
+                        'items-center' => $compactProfile,
+                        'h-full max-h-full items-stretch' => $fillHeaderRadar,
                     ])
                 >
                     <x-player.radar-chart
                         :compact="$compactProfile"
-                        :comfortable="$comfortable && ! $compactProfile"
+                        :comfortable="$comfortable && ! $compactProfile && ! $fillHeaderRadar"
+                        :fill-height="$fillHeaderRadar"
                         :show-legend="false"
                         :radar="$rangerSheet['radar'] ?? null"
                         :player="$player"

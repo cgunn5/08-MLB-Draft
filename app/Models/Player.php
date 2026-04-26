@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\NoteGradeInputAppearance;
 use App\Support\PlayerListRankCellHeat;
 use App\Support\PlayerNoteFieldKeys;
+use App\Support\PlayerSheetPlaceholder;
 use Database\Factories\PlayerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -85,7 +86,7 @@ class Player extends Model
             'ROLE' => 'grade_role',
             'PERF' => 'grade_perf',
             'APPROACH' => 'grade_approach',
-            'CONTACT' => 'grade_contact',
+            'CONTACT' => 'grade_approach',
             'DAMAGE' => 'grade_damage',
             'SWING' => 'grade_swing',
         ];
@@ -147,18 +148,18 @@ class Player extends Model
      */
     public function profileHeaderBioLine(?array $overallDemographics = null): string
     {
-        $school = filled($this->school) ? (string) $this->school : '—';
-        $pos = filled($this->position) ? (string) $this->position : '—';
+        $school = filled($this->school) ? (string) $this->school : PlayerSheetPlaceholder::CELL;
+        $pos = filled($this->position) ? (string) $this->position : PlayerSheetPlaceholder::CELL;
         if ($overallDemographics !== null) {
-            $b = trim((string) ($overallDemographics['bats'] ?? '—')) ?: '—';
-            $t = trim((string) ($overallDemographics['throws'] ?? '—')) ?: '—';
-            $age = trim((string) ($overallDemographics['age'] ?? '—')) ?: '—';
+            $b = trim((string) ($overallDemographics['bats'] ?? PlayerSheetPlaceholder::CELL)) ?: PlayerSheetPlaceholder::CELL;
+            $t = trim((string) ($overallDemographics['throws'] ?? PlayerSheetPlaceholder::CELL)) ?: PlayerSheetPlaceholder::CELL;
+            $age = trim((string) ($overallDemographics['age'] ?? PlayerSheetPlaceholder::CELL)) ?: PlayerSheetPlaceholder::CELL;
         } else {
-            $b = filled($this->bats) ? (string) $this->bats : '—';
-            $t = filled($this->throws) ? (string) $this->throws : '—';
+            $b = filled($this->bats) ? (string) $this->bats : PlayerSheetPlaceholder::CELL;
+            $t = filled($this->throws) ? (string) $this->throws : PlayerSheetPlaceholder::CELL;
             $age = $this->age !== null
                 ? rtrim(rtrim(number_format((float) $this->age, 2, '.', ''), '0'), '.')
-                : '—';
+                : PlayerSheetPlaceholder::CELL;
         }
 
         return implode(' · ', [
@@ -199,7 +200,7 @@ class Player extends Model
     }
 
     /**
-     * Cell text for the profile grades table (list data fills ROLE when grade is empty).
+     * Cell text for the profile grades table (empty values use {@see PlayerSheetPlaceholder::CELL}).
      */
     public function gradeCellDisplay(string $attribute): string
     {
@@ -209,11 +210,7 @@ class Player extends Model
             return (string) $value;
         }
 
-        if ($attribute === 'grade_role' && filled($this->position)) {
-            return (string) $this->position;
-        }
-
-        return '#N/A';
+        return PlayerSheetPlaceholder::CELL;
     }
 
     /**
@@ -234,9 +231,7 @@ class Player extends Model
             return NoteGradeInputAppearance::summaryCellStyle(null, $min, $max);
         }
 
-        $int = (int) round((float) $raw);
-
-        return NoteGradeInputAppearance::summaryCellStyle($int, $min, $max);
+        return NoteGradeInputAppearance::summaryCellStyle((float) $raw, $min, $max);
     }
 
     /**
