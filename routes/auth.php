@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('guest')->group(function () {
     Route::get('setup', [SetupController::class, 'create'])->name('setup');
     Route::post('setup', [SetupController::class, 'store'])->name('setup.store');
+    Route::post('setup/restore-backup', [SetupController::class, 'restoreFromBackup'])->name('setup.restore-backup');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');

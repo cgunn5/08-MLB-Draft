@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 final class ApplicationDatabaseBootstrap
@@ -34,6 +35,8 @@ final class ApplicationDatabaseBootstrap
         if ($createdFile || ! Schema::hasTable('migrations')) {
             self::runMigrationsOnce();
         }
+
+        self::recoverEmptyDatabaseFromBackupIfNeeded($path);
     }
 
     public static function needsFirstRunSetup(): bool
@@ -47,11 +50,61 @@ final class ApplicationDatabaseBootstrap
         }
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
+    public static function latestRecoverableBackupSummary(): ?array
+    {
+        foreach (SqliteDatabaseRecovery::listBackupFiles() as $path) {
+            $users = SqliteDatabaseRecovery::userCountInFile($path);
+            if ($users !== null && $users > 0) {
+                return SqliteDatabaseRecovery::describeBackup($path);
+            }
+        }
+
+        return null;
+    }
+
+    public static function restoreFromLatestRecoverableBackup(): ?array
+    {
+        if (config('database.default') !== 'sqlite') {
+            throw new \RuntimeException('Database recovery only supports SQLite.');
+        }
+
+        $path = self::configuredSqlitePath();
+        $restoredFrom = SqliteDatabaseRecovery::restoreLatestBackupTo($path);
+        if ($restoredFrom === null) {
+            return null;
+        }
+
+        DB::purge('sqlite');
+        Artisan::call('optimize:clear');
+        self::$ran = false;
+
+        return SqliteDatabaseRecovery::describeBackup($restoredFrom);
+    }
+
     public static function configuredSqlitePath(): string
     {
         $path = (string) config('database.connections.sqlite.database');
 
         return SqliteDatabaseBootstrap::resolvePath($path);
+    }
+
+    private static function recoverEmptyDatabaseFromBackupIfNeeded(string $path): void
+    {
+        $restoredFrom = SqliteDatabaseRecovery::restoreLatestBackupIfLiveDatabaseIsEmpty($path);
+        if ($restoredFrom === null) {
+            return;
+        }
+
+        DB::purge('sqlite');
+        self::$ran = false;
+    }
+
+    public static function resetBootstrappedForTesting(): void
+    {
+        self::$ran = false;
     }
 
     private static function runMigrationsOnce(): void

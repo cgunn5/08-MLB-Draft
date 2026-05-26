@@ -75,6 +75,13 @@ final class SqliteDatabaseBootstrap
             $sources[] = $candidate;
         }
 
+        $latestBackup = SqliteDatabaseRecovery::latestBackupPath();
+        if ($latestBackup !== null
+            && $latestBackup !== $targetPath
+            && ! in_array($latestBackup, $sources, true)) {
+            $sources[] = $latestBackup;
+        }
+
         return $sources;
     }
 

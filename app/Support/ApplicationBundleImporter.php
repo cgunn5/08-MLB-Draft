@@ -64,6 +64,7 @@ final class ApplicationBundleImporter
             $this->restoreUploadFiles($tempDir.'/uploads');
 
             Artisan::call('optimize:clear');
+            ApplicationDatabaseBackupTrigger::maybeRun();
 
             return $manifest;
         } finally {

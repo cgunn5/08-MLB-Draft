@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\SetupAdminRequest;
 use App\Models\User;
+use App\Support\ApplicationDatabaseBackupTrigger;
 use App\Support\ApplicationDatabaseBootstrap;
 use Database\Seeders\AggregatesPlayerSeeder;
 use Illuminate\Http\RedirectResponse;
@@ -19,7 +20,38 @@ class SetupController extends Controller
             return redirect()->route('login');
         }
 
-        return view('auth.setup');
+        return view('auth.setup', [
+            'recoverableBackup' => ApplicationDatabaseBootstrap::latestRecoverableBackupSummary(),
+        ]);
+    }
+
+    public function restoreFromBackup(): RedirectResponse
+    {
+        if (! ApplicationDatabaseBootstrap::needsFirstRunSetup()) {
+            return redirect()->route('login');
+        }
+
+        try {
+            $backup = ApplicationDatabaseBootstrap::restoreFromLatestRecoverableBackup();
+        } catch (\Throwable $e) {
+            return back()->withErrors(['restore' => $e->getMessage()]);
+        }
+
+        if ($backup === null) {
+            return back()->withErrors([
+                'restore' => __('No backup with saved user accounts was found.'),
+            ]);
+        }
+
+        if (ApplicationDatabaseBootstrap::needsFirstRunSetup()) {
+            return back()->withErrors([
+                'restore' => __('Backup was copied but no user accounts were found inside it.'),
+            ]);
+        }
+
+        return redirect()
+            ->route('login')
+            ->with('status', __('Your previous database was restored from backup. Log in with your existing email and password.'));
     }
 
     public function store(SetupAdminRequest $request): RedirectResponse
@@ -41,6 +73,8 @@ class SetupController extends Controller
         if ($request->boolean('load_players')) {
             (new AggregatesPlayerSeeder)->run();
         }
+
+        ApplicationDatabaseBackupTrigger::maybeRun();
 
         Auth::login($user);
         $request->session()->regenerate();
