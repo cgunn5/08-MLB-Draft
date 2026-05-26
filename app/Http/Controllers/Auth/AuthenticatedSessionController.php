@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Support\ApplicationDatabaseBackupTrigger;
 use App\Support\ApplicationDatabaseBootstrap;
+use App\Support\ApplicationInstallationMarker;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,13 +17,14 @@ class AuthenticatedSessionController extends Controller
     /**
      * Display the login view.
      */
-    public function create(): View|RedirectResponse
+    public function create(): View
     {
-        if (ApplicationDatabaseBootstrap::needsFirstRunSetup()) {
-            return redirect()->route('setup');
-        }
-
-        return view('auth.login');
+        return view('auth.login', [
+            'needsFirstRunSetup' => ApplicationDatabaseBootstrap::needsFirstRunSetup(),
+            'laravelCloudSqliteMisconfiguration' => ApplicationDatabaseBootstrap::laravelCloudSqliteMisconfiguration(),
+            'recoverableBackup' => ApplicationDatabaseBootstrap::latestRecoverableBackupSummary(),
+            'installationPreviouslyCompleted' => ApplicationInstallationMarker::exists(),
+        ]);
     }
 
     /**

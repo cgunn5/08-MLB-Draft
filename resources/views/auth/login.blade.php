@@ -2,6 +2,34 @@
     <!-- Session Status -->
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
+    @if ($laravelCloudSqliteMisconfiguration ?? false)
+        <div class="mb-4 rounded-md bg-red-50 border border-red-200 p-4 text-sm text-red-900 normal-case">
+            <p class="font-semibold">{{ __('Database not configured for Laravel Cloud') }}</p>
+            <p class="mt-2">{{ __('Log in will not work until a hosted database is attached. See setup instructions:') }}
+                <a class="underline font-medium" href="{{ route('setup') }}">{{ __('Fix hosting') }}</a>
+            </p>
+        </div>
+    @elseif ($needsFirstRunSetup ?? false)
+        @if ($recoverableBackup)
+            <div class="mb-4 rounded-md bg-green-50 border border-green-200 p-4 text-sm text-green-900 normal-case">
+                <p class="font-semibold">{{ __('Previous data found') }}</p>
+                <p class="mt-2">{{ __('Restore your account instead of creating a new one:') }}
+                    <a class="underline font-medium" href="{{ route('setup') }}">{{ __('Restore from backup') }}</a>
+                </p>
+            </div>
+        @elseif ($installationPreviouslyCompleted ?? false)
+            <div class="mb-4 rounded-md bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900 normal-case">
+                <p>{{ __('This app was set up before but no login accounts were found. Try your existing email and password below first.') }}</p>
+            </div>
+        @else
+            <div class="mb-4 rounded-md bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900 normal-case">
+                <p>{{ __('First time here?') }}
+                    <a class="underline font-medium" href="{{ route('setup') }}">{{ __('Create your admin account') }}</a>
+                </p>
+            </div>
+        @endif
+    @endif
+
     <form method="POST" action="{{ route('login') }}">
         @csrf
 

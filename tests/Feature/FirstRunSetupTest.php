@@ -11,14 +11,28 @@ class FirstRunSetupTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_home_redirects_to_setup_when_no_users(): void
+    public function test_home_redirects_to_login_when_no_users(): void
     {
-        $this->get('/')->assertRedirect(route('setup'));
+        $this->get('/')->assertRedirect(route('login'));
     }
 
-    public function test_login_redirects_to_setup_when_no_users(): void
+    public function test_login_page_is_shown_when_no_users(): void
     {
-        $this->get('/login')->assertRedirect(route('setup'));
+        $this->get('/login')->assertOk()->assertSee('Log in', false);
+    }
+
+    public function test_home_redirects_to_login_when_users_exist(): void
+    {
+        User::factory()->create();
+
+        $this->get('/')->assertRedirect(route('login'));
+    }
+
+    public function test_login_page_is_shown_when_users_exist(): void
+    {
+        User::factory()->create();
+
+        $this->get('/login')->assertOk()->assertSee('Log in', false);
     }
 
     public function test_setup_creates_admin_and_loads_dashboard(): void
