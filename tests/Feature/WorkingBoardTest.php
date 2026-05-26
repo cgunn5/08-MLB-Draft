@@ -25,7 +25,7 @@ class WorkingBoardTest extends TestCase
 
     public function test_board_patch_persists_rounds(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $a = Player::factory()->create([
             'player_pool' => 'hs',
             'last_name' => 'Alpha',
@@ -77,7 +77,7 @@ class WorkingBoardTest extends TestCase
 
     public function test_board_patch_rejects_duplicate_player(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $a = Player::factory()->create(['player_pool' => 'hs']);
 
         $payload = [
@@ -95,7 +95,7 @@ class WorkingBoardTest extends TestCase
 
     public function test_board_patch_rejects_non_hs_player(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $p = Player::factory()->create(['player_pool' => 'ncaa']);
 
         $payload = [

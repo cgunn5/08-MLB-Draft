@@ -17,7 +17,7 @@ class HsRangerTraitsSheetTest extends TestCase
 
     public function test_hs_player_page_shows_values_from_assigned_data_source(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'hs',
             'first_name' => 'Jane',
@@ -50,7 +50,7 @@ class HsRangerTraitsSheetTest extends TestCase
 
     public function test_hs_profile_slot_is_exclusive_per_user(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $pathA = 'data-source-uploads/hs-a-'.uniqid('', true).'.csv';
         $pathB = 'data-source-uploads/hs-b-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($pathA, "PLAYER\nX\n");
@@ -87,7 +87,7 @@ class HsRangerTraitsSheetTest extends TestCase
 
     public function test_hs_settings_patch_returns_hs_profile_feed_assignments_for_all_datasets(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $pathA = 'data-source-uploads/hs-sum-a-'.uniqid('', true).'.csv';
         $pathB = 'data-source-uploads/hs-sum-b-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($pathA, "PLAYER\nA\n");
@@ -129,7 +129,7 @@ class HsRangerTraitsSheetTest extends TestCase
 
     public function test_hs_adjustability_uses_pitch_rows_and_overall_row_for_other_blocks(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'hs',
             'first_name' => 'Alex',
@@ -201,7 +201,7 @@ class HsRangerTraitsSheetTest extends TestCase
 
     public function test_adjust_pitch_heat_gates_on_p_when_pa_column_absent(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'hs',
             'first_name' => 'Alex',
@@ -265,7 +265,7 @@ class HsRangerTraitsSheetTest extends TestCase
 
     public function test_adjust_pitch_heat_uses_pitch_p_when_pa_lower_than_cutoff(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'hs',
             'first_name' => 'Alex',
@@ -325,7 +325,7 @@ class HsRangerTraitsSheetTest extends TestCase
 
     public function test_performance_overall_slot_is_exclusive_per_user(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $pathA = 'data-source-uploads/hs-oa-'.uniqid('', true).'.csv';
         $pathB = 'data-source-uploads/hs-ob-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($pathA, "PLAYER\nX\n");
@@ -362,7 +362,7 @@ class HsRangerTraitsSheetTest extends TestCase
 
     public function test_hs_profile_merges_separate_overall_and_pitch_uploads(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'hs',
             'first_name' => 'Casey',
@@ -422,7 +422,7 @@ class HsRangerTraitsSheetTest extends TestCase
 
     public function test_hs_pg_chart_prepends_career_row_with_same_shape_as_season_rows(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'hs',
             'first_name' => 'Jane',
@@ -461,7 +461,7 @@ class HsRangerTraitsSheetTest extends TestCase
 
     public function test_circuit_pg_prefers_canonical_year_pg_upload_when_multiple_have_performance_pg_slot(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'hs',
             'first_name' => 'Jane',
@@ -521,7 +521,7 @@ class HsRangerTraitsSheetTest extends TestCase
 
     public function test_circuit_pg_maps_k_pct_column_not_strikeout_count_k(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'hs',
             'first_name' => 'Sam',
@@ -554,7 +554,7 @@ class HsRangerTraitsSheetTest extends TestCase
 
     public function test_circuit_pg_k_pct_resolves_when_percent_column_is_before_strikeout_count(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'hs',
             'first_name' => 'Will',
@@ -586,7 +586,7 @@ class HsRangerTraitsSheetTest extends TestCase
 
     public function test_hs_comp_heat_scope_changes_performance_overall_ops_heat(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'hs',
             'first_name' => 'Jane',
@@ -631,7 +631,7 @@ class HsRangerTraitsSheetTest extends TestCase
 
     public function test_hs_radar_quintiles_use_overall_columns_and_comp_scope(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'hs',
             'first_name' => 'Jane',
@@ -681,7 +681,7 @@ class HsRangerTraitsSheetTest extends TestCase
 
     public function test_hs_radar_with_comp_scope_skips_upload_missing_rnds_column(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'hs',
             'first_name' => 'Will',
@@ -746,7 +746,7 @@ class HsRangerTraitsSheetTest extends TestCase
 
     public function test_hs_radar_comp_scope_keeps_chart_when_player_row_has_no_bucket_tag(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'hs',
             'first_name' => 'Pat',

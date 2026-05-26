@@ -22,6 +22,7 @@ final class ApplicationDatabaseBackupTrigger
         try {
             Artisan::call('app:backup-database');
             Cache::put($cacheKey, now()->toIso8601String(), now()->addHour());
+            ApplicationInstallationMarker::mark();
         } catch (\Throwable) {
             // Backup failure must not block login or setup.
         }

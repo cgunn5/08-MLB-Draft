@@ -22,7 +22,7 @@ class RecoverHsPerfectGamePerformanceSlotTest extends TestCase
 
     public function test_prefers_largest_row_count_among_pg_shaped_uploads(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $headerLine = implode(',', self::HEADERS);
 
         $pathSmall = 'data-source-uploads/pg-small-'.uniqid('', true).'.csv';
@@ -72,7 +72,7 @@ class RecoverHsPerfectGamePerformanceSlotTest extends TestCase
 
     public function test_reassign_moves_performance_pg_to_largest_pg_shaped_upload(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $headerLine = implode(',', self::HEADERS);
 
         $pathSmall = 'data-source-uploads/pg-small-'.uniqid('', true).'.csv';

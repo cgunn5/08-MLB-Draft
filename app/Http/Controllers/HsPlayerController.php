@@ -19,7 +19,7 @@ class HsPlayerController extends Controller
 
         $hsPlayers = Player::query()->hs()->orderedByName()->get();
         /** @var User $user */
-        $user = auth()->user();
+        $user = auth()->user()->dataOwner();
         $compHeatRaw = $request->query(HsCompHeatScope::QUERY_KEY);
         $compHeatString = is_string($compHeatRaw) ? $compHeatRaw : null;
         $hsCompHeatScope = HsCompHeatScope::normalize($compHeatString);

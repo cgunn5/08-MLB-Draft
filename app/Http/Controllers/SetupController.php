@@ -6,6 +6,7 @@ use App\Http\Requests\SetupAdminRequest;
 use App\Models\User;
 use App\Support\ApplicationDatabaseBackupTrigger;
 use App\Support\ApplicationDatabaseBootstrap;
+use App\Support\ApplicationInstallationMarker;
 use Database\Seeders\AggregatesPlayerSeeder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -22,6 +23,7 @@ class SetupController extends Controller
 
         return view('auth.setup', [
             'recoverableBackup' => ApplicationDatabaseBootstrap::latestRecoverableBackupSummary(),
+            'installationPreviouslyCompleted' => ApplicationInstallationMarker::exists(),
         ]);
     }
 
@@ -49,6 +51,8 @@ class SetupController extends Controller
             ]);
         }
 
+        ApplicationInstallationMarker::mark();
+
         return redirect()
             ->route('login')
             ->with('status', __('Your previous database was restored from backup. Log in with your existing email and password.'));
@@ -75,6 +79,7 @@ class SetupController extends Controller
         }
 
         ApplicationDatabaseBackupTrigger::maybeRun();
+        ApplicationInstallationMarker::mark();
 
         Auth::login($user);
         $request->session()->regenerate();

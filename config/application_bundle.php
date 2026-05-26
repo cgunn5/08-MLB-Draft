@@ -10,7 +10,7 @@ return [
     | Override in tests to keep exports isolated from developer data.
     |
     */
-    'uploads_directory' => storage_path('app/private/data-source-uploads'),
+    'uploads_directory' => config('persistence.uploads'),
 
     /*
     |--------------------------------------------------------------------------

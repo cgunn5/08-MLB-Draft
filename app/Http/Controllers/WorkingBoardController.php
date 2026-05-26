@@ -16,7 +16,7 @@ class WorkingBoardController extends Controller
     public function index(): View
     {
         /** @var User $user */
-        $user = auth()->user();
+        $user = auth()->user()->dataOwner();
 
         $rkPos = array_flip(WorkingBoardEntry::ROUND_KEYS);
         $entries = WorkingBoardEntry::query()
@@ -59,6 +59,7 @@ class WorkingBoardController extends Controller
             'boardRiskOptions' => WorkingBoardEntry::RISK_OPTIONS,
             'boardInitialRounds' => $rounds,
             'boardPlayerPool' => $pool,
+            'boardReadOnly' => ! auth()->user()->canManageApplicationData(),
         ]);
     }
 

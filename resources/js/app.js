@@ -2061,6 +2061,7 @@ document.addEventListener('alpine:init', () => {
         pool: Array.isArray(config.playerPool) ? config.playerPool : [],
         updateUrl: config.updateUrl ?? '',
         hsPlayerBaseUrl: String(config.hsPlayerBaseUrl ?? '').replace(/\/$/, ''),
+        readOnly: Boolean(config.readOnly),
         nextAddByRound: {},
         saving: false,
         saveError: '',
@@ -2299,6 +2300,9 @@ document.addEventListener('alpine:init', () => {
         },
 
         scheduleSave() {
+            if (this.readOnly) {
+                return;
+            }
             this.saveError = '';
             if (this._saveT) {
                 clearTimeout(this._saveT);

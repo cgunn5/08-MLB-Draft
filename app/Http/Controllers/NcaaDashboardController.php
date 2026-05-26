@@ -14,7 +14,7 @@ class NcaaDashboardController extends Controller
         $ncaaPlayers = Player::query()->ncaa()->orderedByName()->get();
         $placeholder = Player::profilePlaceholder('ncaa');
         /** @var User $user */
-        $user = auth()->user();
+        $user = auth()->user()->dataOwner();
         $rangerSheet = app(NcaaRangerTraitsSheetResolver::class)->resolve($placeholder, $user, null);
 
         $ncaaCompHeatRoutePlayer = $ncaaPlayers->isNotEmpty()

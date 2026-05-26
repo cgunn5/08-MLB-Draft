@@ -14,7 +14,7 @@ class RemapDatasetPortalsByNameTest extends TestCase
 
     public function test_moves_ncaa_pitch_types_from_hs_to_ncaa_and_remaps_pitch_slot(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/remap-ncaa-pitch-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "Pitch,PA\nFB,10");
 
@@ -43,7 +43,7 @@ class RemapDatasetPortalsByNameTest extends TestCase
 
     public function test_moves_hs_overall_from_ncaa_to_hs_and_remaps_slots(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/remap-hs-overall-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "PLAYER,YEAR,PA\nA,2024,1");
 
@@ -74,7 +74,7 @@ class RemapDatasetPortalsByNameTest extends TestCase
 
     public function test_uppercase_tab_names_remap_correctly(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $pathHs = 'data-source-uploads/remap-upper-hs-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($pathHs, "A\n1");
         $pathNcaa = 'data-source-uploads/remap-upper-ncaa-'.uniqid('', true).'.csv';
@@ -116,7 +116,7 @@ class RemapDatasetPortalsByNameTest extends TestCase
 
     public function test_hs_data_index_auto_corrects_ncaa_pitch_types_stored_under_hs(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/auto-heal-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "P,PA\nFB,1");
 
@@ -145,7 +145,7 @@ class RemapDatasetPortalsByNameTest extends TestCase
 
     public function test_ncaa_data_index_auto_corrects_hs_overall_stored_under_ncaa(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/auto-heal-ncaa-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "PLAYER,YEAR\nA,1");
 
@@ -174,7 +174,7 @@ class RemapDatasetPortalsByNameTest extends TestCase
 
     public function test_dry_run_does_not_persist(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/remap-dry-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "A\n1");
 

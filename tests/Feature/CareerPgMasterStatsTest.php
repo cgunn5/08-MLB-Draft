@@ -16,7 +16,7 @@ class CareerPgMasterStatsTest extends TestCase
 
     public function test_career_pg_dataset_not_created_without_performance_pg_slot(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/pg-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, implode("\n", [
             'PLAYER,YEAR,G,PA,AB,1B,2B,3B,HR,BB,K',
@@ -45,7 +45,7 @@ class CareerPgMasterStatsTest extends TestCase
 
     public function test_career_pg_aggregates_counts_and_recomputes_rate_columns(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/pg-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, implode("\n", [
             'PLAYER,YEAR,G,PA,AB,1B,2B,3B,HR,BB,K,AVG,OBP,SLG,OPS,ISO,BB%,K%',
@@ -102,7 +102,7 @@ class CareerPgMasterStatsTest extends TestCase
 
     public function test_career_pg_table_data_is_read_only_for_row_mutations(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/pg-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, implode("\n", [
             'PLAYER,YEAR,PA,1B,BB,K',
@@ -147,7 +147,7 @@ class CareerPgMasterStatsTest extends TestCase
 
     public function test_hs_profile_feed_assignments_mirror_source_slots_for_career_pg_master(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/pg-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "PLAYER\nA\n");
 
@@ -182,7 +182,7 @@ class CareerPgMasterStatsTest extends TestCase
 
     public function test_appending_row_to_pg_source_refreshes_career_pg_master_row_count(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/pg-append-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, implode("\n", [
             'PLAYER,YEAR,PA,BB,K',
@@ -224,7 +224,7 @@ class CareerPgMasterStatsTest extends TestCase
 
     public function test_hs_data_index_sets_perfect_game_yearly_tab_label_for_generic_source_names(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/pg-tab-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, implode("\n", [
             'PLAYER,YEAR,G,PA,AB,1B,2B,3B,HR,BB,K,AVG,OBP,SLG,OPS,ISO,BB%,K%',
@@ -255,7 +255,7 @@ class CareerPgMasterStatsTest extends TestCase
 
     public function test_hs_data_index_preserves_custom_pg_source_display_name(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/pg-custom-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, implode("\n", [
             'PLAYER,YEAR,G,PA,AB,1B,2B,3B,HR,BB,K,AVG,OBP,SLG,OPS,ISO,BB%,K%',
@@ -287,7 +287,7 @@ class CareerPgMasterStatsTest extends TestCase
 
     public function test_hs_data_sources_index_html_lists_career_tab_before_yearly_tab(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $hdr = 'PLAYER,YEAR,G,PA,AB,1B,2B,3B,HR,BB,K,AVG,OBP,SLG,OPS,ISO,BB%,K%';
 
         $pathYearly = 'data-source-uploads/pg-order-yearly-'.uniqid('', true).'.csv';

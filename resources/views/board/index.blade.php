@@ -17,6 +17,7 @@
                     playerPool: @json($boardPlayerPool),
                     updateUrl: @json(route('board.update')),
                     hsPlayerBaseUrl: @json(url('/hs/players')),
+                    readOnly: @json($boardReadOnly),
                 })"
             >
                 <div

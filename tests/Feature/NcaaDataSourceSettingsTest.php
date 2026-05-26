@@ -18,7 +18,7 @@ class NcaaDataSourceSettingsTest extends TestCase
 
     public function test_save_ncaa_dataset_persists_profile_feed_slots_and_browse_settings(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/ncaa-settings-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "PLAYER\nTEST\n");
 
@@ -59,7 +59,7 @@ class NcaaDataSourceSettingsTest extends TestCase
 
     public function test_can_rename_ncaa_upload_display_name(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/ncaa-rename-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "PLAYER\nA\n");
 
@@ -89,7 +89,7 @@ class NcaaDataSourceSettingsTest extends TestCase
 
     public function test_ncaa_resolver_uses_saved_slots_for_assigned_upload(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/ncaa-resolver-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, implode("\n", [
             'PLAYER,Draft Year,PA,PA (N-1),PA (N-2),OPS,OPS (N-1),OPS (N-2)',
@@ -123,7 +123,7 @@ class NcaaDataSourceSettingsTest extends TestCase
 
     public function test_ncaa_resolver_platoon_block_returns_three_year_rows(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/ncaa-platoon-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, implode("\n", [
             'PLAYER,Year,OPS vs R,ISO vs R,K/BB vs R,OPS vs L,ISO vs L,K/BB vs L',
@@ -162,7 +162,7 @@ class NcaaDataSourceSettingsTest extends TestCase
 
     public function test_ncaa_resolver_adjustability_returns_three_pitch_tables_with_year_rows(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/ncaa-adjust-pitch-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, implode("\n", [
             'PLAYER,Year,Pitch,P,BIPx,OPS,ISO,EV95,GB%,SwM%,IZSwM%,CH%',
@@ -219,7 +219,7 @@ class NcaaDataSourceSettingsTest extends TestCase
 
     public function test_ncaa_resolver_adjustability_maps_gb_r_to_gb_pct(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/ncaa-adj-gbr-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, implode("\n", [
             'PLAYER,Year,Pitch,P,BIPx,OPS,ISO,EV95,GB_r,SwM%,IZSwM%,CH%',
@@ -254,7 +254,7 @@ class NcaaDataSourceSettingsTest extends TestCase
 
     public function test_ncaa_resolver_adjustability_prefers_upload_named_pitch_types_when_merged_last(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $pathOverall = 'data-source-uploads/ncaa-adj-overall-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($pathOverall, implode("\n", [
@@ -309,7 +309,7 @@ class NcaaDataSourceSettingsTest extends TestCase
 
     public function test_ncaa_resolver_adjustability_accepts_game_year_and_pitch_group_headers(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/ncaa-adj-gameyr-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, implode("\n", [
             'PLAYER,Game Year,Pitch Group,P,BIPx,OPS,ISO,EV95,GB%,SwM%,IZSwM%,CH%',
@@ -349,7 +349,7 @@ class NcaaDataSourceSettingsTest extends TestCase
 
     public function test_ncaa_resolver_overall_radar_respects_comp_scope(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'ncaa',
             'first_name' => 'Jane',
@@ -398,7 +398,7 @@ class NcaaDataSourceSettingsTest extends TestCase
 
     public function test_ncaa_resolver_comp_scope_matches_unicode_dash_in_rnds_column(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'ncaa',
             'first_name' => 'Jane',

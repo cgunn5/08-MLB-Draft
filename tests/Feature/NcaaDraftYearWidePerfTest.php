@@ -17,7 +17,7 @@ class NcaaDraftYearWidePerfTest extends TestCase
 
     public function test_ncaa_perf_maps_n_n_minus_1_n_minus_2_columns_to_three_year_rows(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'ncaa',
             'first_name' => 'Jane',
@@ -78,7 +78,7 @@ class NcaaDraftYearWidePerfTest extends TestCase
 
     public function test_ncaa_k_zone_wide_maps_three_year_rows(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'ncaa',
             'first_name' => 'Jane',
@@ -118,7 +118,7 @@ class NcaaDraftYearWidePerfTest extends TestCase
 
     public function test_ncaa_engine_wide_maps_three_year_rows(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'ncaa',
             'first_name' => 'Jane',
@@ -157,7 +157,7 @@ class NcaaDraftYearWidePerfTest extends TestCase
 
     public function test_ncaa_platoon_wide_maps_three_year_rows(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'ncaa',
             'first_name' => 'Jane',

@@ -10,9 +10,6 @@ final class ApplicationDatabaseBootstrap
 {
     private static bool $ran = false;
 
-    /**
-     * Create the SQLite file and run migrations when needed (first deploy / empty server).
-     */
     public static function ensureReady(): void
     {
         if (self::$ran || app()->runningUnitTests()) {
@@ -30,6 +27,10 @@ final class ApplicationDatabaseBootstrap
             return;
         }
 
+        if (! PersistentStorage::databasePathIsUnderSharedStorage($path) && app()->environment('production')) {
+            // Misconfigured production path — still attempt bootstrap but doctor will warn.
+        }
+
         $createdFile = SqliteDatabaseBootstrap::ensureFileExists($path);
 
         if ($createdFile || ! Schema::hasTable('migrations')) {
@@ -42,6 +43,21 @@ final class ApplicationDatabaseBootstrap
     public static function needsFirstRunSetup(): bool
     {
         self::ensureReady();
+
+        if (self::hasUsers()) {
+            ApplicationInstallationMarker::mark();
+
+            return false;
+        }
+
+        if (ApplicationInstallationMarker::exists()) {
+            self::recoverEmptyDatabaseFromBackupIfNeeded(self::configuredSqlitePath());
+            DB::purge('sqlite');
+
+            if (self::hasUsers()) {
+                return false;
+            }
+        }
 
         try {
             return ! Schema::hasTable('users') || ! \App\Models\User::query()->exists();
@@ -81,6 +97,10 @@ final class ApplicationDatabaseBootstrap
         Artisan::call('optimize:clear');
         self::$ran = false;
 
+        if (self::hasUsers()) {
+            ApplicationInstallationMarker::mark();
+        }
+
         return SqliteDatabaseRecovery::describeBackup($restoredFrom);
     }
 
@@ -89,6 +109,20 @@ final class ApplicationDatabaseBootstrap
         $path = (string) config('database.connections.sqlite.database');
 
         return SqliteDatabaseBootstrap::resolvePath($path);
+    }
+
+    public static function resetBootstrappedForTesting(): void
+    {
+        self::$ran = false;
+    }
+
+    private static function hasUsers(): bool
+    {
+        try {
+            return Schema::hasTable('users') && \App\Models\User::query()->exists();
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private static function recoverEmptyDatabaseFromBackupIfNeeded(string $path): void
@@ -100,11 +134,10 @@ final class ApplicationDatabaseBootstrap
 
         DB::purge('sqlite');
         self::$ran = false;
-    }
 
-    public static function resetBootstrappedForTesting(): void
-    {
-        self::$ran = false;
+        if (self::hasUsers()) {
+            ApplicationInstallationMarker::mark();
+        }
     }
 
     private static function runMigrationsOnce(): void

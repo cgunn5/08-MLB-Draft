@@ -19,7 +19,7 @@ class NcaaPlayerController extends Controller
 
         $ncaaPlayers = Player::query()->ncaa()->orderedByName()->get();
         /** @var User $user */
-        $user = auth()->user();
+        $user = auth()->user()->dataOwner();
         $compHeatRaw = $request->query(HsCompHeatScope::QUERY_KEY);
         $compHeatString = is_string($compHeatRaw) ? $compHeatRaw : null;
         $ncaaCompHeatScope = HsCompHeatScope::normalize($compHeatString);

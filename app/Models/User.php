@@ -39,4 +39,23 @@ class User extends Authenticatable
     {
         return $this->hasMany(DataSourceUpload::class);
     }
+
+    /**
+     * Admin who owns uploads, notes, and board state. Viewers read this account's data.
+     */
+    public function dataOwner(): self
+    {
+        if ($this->is_admin) {
+            return $this;
+        }
+
+        $admin = self::query()->where('is_admin', true)->orderBy('id')->first();
+
+        return $admin ?? $this;
+    }
+
+    public function canManageApplicationData(): bool
+    {
+        return $this->is_admin;
+    }
 }

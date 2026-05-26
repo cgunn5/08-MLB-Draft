@@ -27,15 +27,18 @@
                     <x-nav-link :href="url('/board')" :active="request()->is('board*')">
                         {{ __('BOARD') }}
                     </x-nav-link>
+                    @if (Auth::user()->is_admin)
                     <x-nav-link :href="url('/players')" :active="request()->is('players*')">
                         {{ __('PLAYERS') }}
                     </x-nav-link>
+                    @endif
                     <x-nav-link :href="url('/ncaa')" :active="request()->is('ncaa', 'ncaa/*')">
                         {{ __('NCAA') }}
                     </x-nav-link>
                     <x-nav-link :href="url('/hs')" :active="request()->is('hs', 'hs/*')">
                         {{ __('HS') }}
                     </x-nav-link>
+                    @if (Auth::user()->is_admin)
                     <x-nav-link :href="url('/notes')" :active="request()->is('notes*')">
                         {{ __('Notes/Grades') }}
                     </x-nav-link>
@@ -45,6 +48,7 @@
                     <x-nav-link :href="url('/ncaa-data-sources')" :active="request()->is('ncaa-data-sources*')">
                         {{ __('NCAA DATA') }}
                     </x-nav-link>
+                    @endif
                     @if (Auth::user()->is_admin)
                         <x-nav-link :href="url('/admin/restore-data')" :active="request()->is('admin/restore-data*')">
                             {{ __('SYNC') }}
@@ -111,15 +115,18 @@
             <x-responsive-nav-link :href="url('/board')" :active="request()->is('board*')">
                 {{ __('BOARD') }}
             </x-responsive-nav-link>
+            @if (Auth::user()->is_admin)
             <x-responsive-nav-link :href="url('/players')" :active="request()->is('players*')">
                 {{ __('PLAYERS') }}
             </x-responsive-nav-link>
+            @endif
             <x-responsive-nav-link :href="url('/ncaa')" :active="request()->is('ncaa', 'ncaa/*')">
                 {{ __('NCAA') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="url('/hs')" :active="request()->is('hs', 'hs/*')">
                 {{ __('HS') }}
             </x-responsive-nav-link>
+            @if (Auth::user()->is_admin)
             <x-responsive-nav-link :href="url('/notes')" :active="request()->is('notes*')">
                 {{ __('Notes/Grades') }}
             </x-responsive-nav-link>
@@ -129,6 +136,7 @@
             <x-responsive-nav-link :href="url('/ncaa-data-sources')" :active="request()->is('ncaa-data-sources*')">
                 {{ __('NCAA DATA') }}
             </x-responsive-nav-link>
+            @endif
             @if (Auth::user()->is_admin)
                 <x-responsive-nav-link :href="url('/admin/restore-data')" :active="request()->is('admin/restore-data*')">
                     {{ __('SYNC') }}

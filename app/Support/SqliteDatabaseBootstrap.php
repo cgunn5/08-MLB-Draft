@@ -7,20 +7,20 @@ use RuntimeException;
 
 final class SqliteDatabaseBootstrap
 {
-    /**
-     * Default SQLite location (under storage/ so deploys are less likely to wipe it).
-     */
     public static function defaultPath(): string
     {
-        return storage_path('app/database.sqlite');
+        return PersistentStorage::databasePath();
     }
 
-    /**
-     * Older installs kept the file next to migrations.
-     */
     public static function legacyPath(): string
     {
         return database_path('database.sqlite');
+    }
+
+    /** @deprecated Previous default before persistent/ subdirectory */
+    public static function previousDefaultPath(): string
+    {
+        return storage_path('app/database.sqlite');
     }
 
     public static function configuredPath(): string
@@ -47,23 +47,14 @@ final class SqliteDatabaseBootstrap
         return $path;
     }
 
-    public static function fileExists(?string $path = null): bool
-    {
-        $path = $path ?? self::configuredPath();
-
-        return is_file($path);
-    }
-
     /**
-     * Existing database files that can be copied into $targetPath when it is missing.
-     *
      * @return list<string>
      */
     public static function existingCandidateSources(string $targetPath): array
     {
         $sources = [];
 
-        foreach ([self::legacyPath(), self::defaultPath()] as $candidate) {
+        foreach ([self::legacyPath(), self::previousDefaultPath(), self::defaultPath()] as $candidate) {
             if ($candidate === $targetPath || ! is_file($candidate)) {
                 continue;
             }
@@ -85,9 +76,6 @@ final class SqliteDatabaseBootstrap
         return $sources;
     }
 
-    /**
-     * When the configured database file is missing, copy an older file from a known location.
-     */
     public static function adoptExistingFileIfAvailable(?string $targetPath = null): bool
     {
         $targetPath = $targetPath ?? self::configuredPath();
@@ -106,12 +94,13 @@ final class SqliteDatabaseBootstrap
             }
         }
 
+        if (SqliteDatabaseRecovery::restoreLatestBackupTo($targetPath) !== null) {
+            return true;
+        }
+
         return false;
     }
 
-    /**
-     * Create an empty SQLite file (and parent directory) when missing.
-     */
     public static function ensureFileExists(?string $path = null): bool
     {
         $path = $path ?? self::configuredPath();
@@ -121,6 +110,14 @@ final class SqliteDatabaseBootstrap
         }
 
         self::adoptExistingFileIfAvailable($path);
+
+        if (is_file($path)) {
+            return false;
+        }
+
+        if (ApplicationInstallationMarker::exists()) {
+            SqliteDatabaseRecovery::restoreLatestBackupTo($path);
+        }
 
         if (is_file($path)) {
             return false;

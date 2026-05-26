@@ -50,7 +50,7 @@ class PlayerNotesTest extends TestCase
 
     public function test_authenticated_user_can_update_single_ncaa_section(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'ncaa',
             'master_take' => null,
@@ -74,7 +74,7 @@ class PlayerNotesTest extends TestCase
 
     public function test_section_update_can_clear_field_with_empty_value(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'ncaa',
             'master_take' => 'Was',
@@ -92,7 +92,7 @@ class PlayerNotesTest extends TestCase
 
     public function test_hs_section_update_does_not_touch_note_left_right(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'hs',
             'note_left_right' => 'Keep me',
@@ -112,7 +112,7 @@ class PlayerNotesTest extends TestCase
 
     public function test_notes_index_redirects_when_player_query_is_unknown(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)
             ->get(route('notes.index', ['player' => 999999]))
@@ -121,7 +121,7 @@ class PlayerNotesTest extends TestCase
 
     public function test_bulk_update_saves_all_sections_and_grades(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'hs',
             'master_take' => null,
@@ -162,7 +162,7 @@ class PlayerNotesTest extends TestCase
 
     public function test_rejects_section_update_when_player_id_does_not_match_pool(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $hsPlayer = Player::factory()->create(['player_pool' => 'hs']);
 
         $this->actingAs($user)
@@ -177,7 +177,7 @@ class PlayerNotesTest extends TestCase
 
     public function test_rejects_section_update_for_field_not_in_pool(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $hsPlayer = Player::factory()->create(['player_pool' => 'hs']);
 
         $this->actingAs($user)
@@ -192,7 +192,7 @@ class PlayerNotesTest extends TestCase
 
     public function test_authenticated_user_can_delete_single_section(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'ncaa',
             'master_take' => 'M',
@@ -215,7 +215,7 @@ class PlayerNotesTest extends TestCase
 
     public function test_section_update_can_set_matching_profile_grade(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'ncaa',
             'note_performance' => 'Solid',
@@ -236,7 +236,7 @@ class PlayerNotesTest extends TestCase
 
     public function test_master_take_grade_saves_to_grade_role(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'player_pool' => 'hs',
             'master_take' => 'Corner bat',
@@ -256,7 +256,7 @@ class PlayerNotesTest extends TestCase
 
     public function test_rejects_grade_below_take_scale_for_master_take(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create(['player_pool' => 'ncaa', 'master_take' => 'X']);
 
         $this->actingAs($user)
@@ -272,7 +272,7 @@ class PlayerNotesTest extends TestCase
 
     public function test_rejects_grade_above_take_scale_for_trait_note(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create(['player_pool' => 'ncaa', 'note_swing' => 'Short']);
 
         $this->actingAs($user)
@@ -288,7 +288,7 @@ class PlayerNotesTest extends TestCase
 
     public function test_rejects_grade_not_in_half_point_steps(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create(['player_pool' => 'ncaa', 'note_swing' => 'Short']);
 
         $this->actingAs($user)
@@ -304,7 +304,7 @@ class PlayerNotesTest extends TestCase
 
     public function test_notes_index_renders_sections_when_player_pool_has_legacy_uppercase_in_database(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create(['player_pool' => 'ncaa']);
         DB::table('players')->where('id', $player->id)->update(['player_pool' => 'NCAA']);
 
@@ -316,7 +316,7 @@ class PlayerNotesTest extends TestCase
 
     public function test_bulk_update_accepts_uppercase_player_pool_in_request(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create(['player_pool' => 'ncaa', 'master_take' => 'A']);
         $values = $this->noteValuesPayload($player, ['master_take' => 'B']);
 

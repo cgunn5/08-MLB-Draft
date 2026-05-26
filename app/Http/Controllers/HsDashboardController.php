@@ -14,7 +14,7 @@ class HsDashboardController extends Controller
         $hsPlayers = Player::query()->hs()->orderedByName()->get();
         $placeholder = Player::profilePlaceholder('hs');
         /** @var User $user */
-        $user = auth()->user();
+        $user = auth()->user()->dataOwner();
         $rangerSheet = app(HsRangerTraitsSheetResolver::class)->resolve($placeholder, $user);
 
         return view('hs.players.show', [

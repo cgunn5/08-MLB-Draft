@@ -14,7 +14,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_legacy_upload_show_url_redirects_to_index_with_dataset_query(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/test-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "a,b\n1,2\n3,4\n");
 
@@ -35,7 +35,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_can_rename_hs_upload_display_name(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/hs-rename-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "PLAYER\nX\n");
 
@@ -62,7 +62,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_index_shows_dataset_tab_when_dataset_query_matches(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/test-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "a,b\n1,2\n3,4\n");
 
@@ -87,7 +87,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_authenticated_user_can_fetch_table_data_json(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/test-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "a,b\n1,2\n3,4\n");
 
@@ -120,7 +120,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_table_data_moves_player_column_first(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/player-order-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "YEAR,PLAYER,STAT\n2025,ALPHA,10\n2026,BETA,20\n");
 
@@ -144,7 +144,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_table_data_filters_by_player_substring(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/player-filter-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "YEAR,PLAYER,STAT\n2025,ALPHA,10\n2026,BETA,20\n");
 
@@ -170,7 +170,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_table_data_sorts_by_column_numeric_asc(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/sort-num-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "YEAR,PLAYER,STAT\n2025,A,3\n2026,B,1\n2027,C,2\n");
 
@@ -202,7 +202,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_table_data_sorts_filtered_rows(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/sort-filter-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "YEAR,PLAYER,STAT\n2025,A,10\n2026,B,30\n2027,C,20\n");
 
@@ -232,7 +232,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_table_data_filters_by_column_thresholds(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/thresh-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "YEAR,PLAYER,STAT\n2025,A,10\n2026,B,5\n2027,C,20\n");
 
@@ -263,7 +263,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_table_data_thresholds_combine_with_players(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/thresh-players-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "YEAR,PLAYER,STAT\n2025,A,10\n2026,B,30\n2027,C,20\n");
 
@@ -294,7 +294,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_table_data_filters_by_multiple_players_exact(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/player-multi-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "YEAR,PLAYER,STAT\n2025,ALPHA,10\n2026,BETA,20\n2027,GAMMA,30\n");
 
@@ -323,7 +323,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_player_names_returns_sorted_unique_list(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/player-names-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "YEAR,PLAYER,STAT\n2025,ALPHA,10\n2026,BETA,20\n2027,GAMMA,30\n");
 
@@ -345,8 +345,8 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_user_cannot_fetch_another_users_player_names(): void
     {
-        $owner = User::factory()->create();
-        $other = User::factory()->create();
+        $owner = User::factory()->admin()->create();
+        $other = User::factory()->admin()->create();
         $path = 'data-source-uploads/other-names-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "YEAR,PLAYER,STAT\n2025,ALPHA,10\n");
 
@@ -365,8 +365,8 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_user_cannot_open_another_users_upload_show(): void
     {
-        $owner = User::factory()->create();
-        $other = User::factory()->create();
+        $owner = User::factory()->admin()->create();
+        $other = User::factory()->admin()->create();
         $path = 'data-source-uploads/other-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "x\ny\n");
 
@@ -385,8 +385,8 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_user_cannot_fetch_another_users_table_data(): void
     {
-        $owner = User::factory()->create();
-        $other = User::factory()->create();
+        $owner = User::factory()->admin()->create();
+        $other = User::factory()->admin()->create();
         $path = 'data-source-uploads/other-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "x\ny\n");
 
@@ -405,7 +405,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_can_patch_column_order_after_player_first(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/col-order-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "YEAR,PLAYER,STAT\n2025,ALPHA,10\n2026,BETA,20\n");
 
@@ -431,7 +431,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_can_enable_heat_rules_and_persist_column_stats(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/heat-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "YEAR,PLAYER,STAT\n2025,ALPHA,10\n2026,BETA,20\n");
 
@@ -467,7 +467,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_can_rename_player_in_csv_by_row_ordinal(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/rename-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "YEAR,PLAYER,STAT\n2025,ALPHA,10\n2026,BETA,20\n");
 
@@ -493,7 +493,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_can_append_data_row_to_csv(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/append-row-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "YEAR,PLAYER,STAT\n2025,ALPHA,10\n");
 
@@ -520,7 +520,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_append_row_requires_player_column(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/append-reject-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "YEAR,PLAYER,STAT\n2025,ALPHA,10\n");
 
@@ -541,7 +541,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_can_delete_data_row_by_ordinal(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/del-row-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "YEAR,PLAYER,STAT\n2025,ALPHA,10\n2026,BETA,20\n");
 
@@ -568,8 +568,8 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_user_cannot_delete_row_from_another_users_upload(): void
     {
-        $owner = User::factory()->create();
-        $other = User::factory()->create();
+        $owner = User::factory()->admin()->create();
+        $other = User::factory()->admin()->create();
         $path = 'data-source-uploads/del-other-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "YEAR,PLAYER,STAT\n2025,ALPHA,10\n");
 
@@ -590,7 +590,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_user_can_delete_entire_upload_and_file_is_removed(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/wipe-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "a,b\n1,2\n");
 
@@ -614,8 +614,8 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_user_cannot_delete_another_users_upload(): void
     {
-        $owner = User::factory()->create();
-        $other = User::factory()->create();
+        $owner = User::factory()->admin()->create();
+        $other = User::factory()->admin()->create();
         $path = 'data-source-uploads/other-del-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "x\ny\n");
 
@@ -636,7 +636,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_group_column_values_returns_distinct_display_column_values(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/grp-val-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "Player,Type,VAL\nA,Fastball,1\nA,Breaking,2\nB,Fastball,3\n");
 
@@ -661,7 +661,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_table_data_filters_rows_by_group_column_and_value(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/grp-filt-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "Player,Type,VAL\nA,Fastball,1\nA,Breaking,2\nB,Fastball,3\n");
 
@@ -691,7 +691,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_table_data_group_filter_uses_subset_heat_column_stats(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/grp-heat-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "Player,Kind,STAT\nA,FB,10\nB,BB,100\nC,FB,20\n");
 
@@ -728,7 +728,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_table_data_group_plus_player_filter_keeps_group_scoped_heat_stats(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/grp-heat-player-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "Player,Kind,STAT\nA,FB,10\nB,BB,100\nC,FB,20\n");
 
@@ -764,7 +764,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_heat_column_stats_use_only_rows_meeting_min_pa(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/heat-pa-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "PLAYER,PA,STAT\nA,5,1\nB,100,10\nC,200,20\n");
 
@@ -806,7 +806,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_table_data_heat_min_pa_query_recomputes_stats_without_save(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/heat-pa-q-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "PLAYER,PA,STAT\nA,5,1\nB,100,10\nC,200,20\n");
 
@@ -841,7 +841,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_hs_pitch_types_gates_heat_on_pitches_header_when_volume_is_p(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/heat-pitches-col-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "PLAYER,PA,PITCHES,STAT\nA,5,10,1\nB,200,900,10\nC,200,200,20\n");
 
@@ -882,7 +882,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_hs_pitch_types_only_upload_gates_heat_on_p_not_pa(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/heat-p-pitch-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "PLAYER,PA,P,STAT\nA,5,100,1\nB,200,5,10\nC,200,200,20\n");
 
@@ -922,7 +922,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_browse_heat_volume_respects_saved_heat_volume_header_over_auto(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/heat-vol-hdr-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "PLAYER,PA,P,STAT\nA,5,100,1\nB,200,5,10\nC,200,200,20\n");
 
@@ -960,7 +960,7 @@ class DataSourceUploadBrowseTest extends TestCase
 
     public function test_table_data_heat_row_pa_ok_is_null_without_min_pa(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $path = 'data-source-uploads/hrpo-null-'.uniqid('', true).'.csv';
         Storage::disk('local')->put($path, "PLAYER,PA,STAT\nA,100,10\n");
 

@@ -13,7 +13,7 @@ class PlayerListTest extends TestCase
 
     public function test_authenticated_user_can_delete_a_player(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create();
 
         $response = $this->actingAs($user)->delete(route('players.destroy', $player));
@@ -34,7 +34,7 @@ class PlayerListTest extends TestCase
 
     public function test_authenticated_user_can_patch_player_names_and_source_ranks(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'first_name' => 'Bo',
             'last_name' => 'Jackson',
@@ -81,7 +81,7 @@ class PlayerListTest extends TestCase
 
     public function test_authenticated_user_can_add_player_with_source_ranks(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)->post(route('players.store'), [
             'first_name' => 'Casey',
