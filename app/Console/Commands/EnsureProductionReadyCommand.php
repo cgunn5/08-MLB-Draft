@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Support\SqliteDatabaseBootstrap;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
@@ -61,34 +62,60 @@ class EnsureProductionReadyCommand extends Command
         $sessionDriver = (string) config('session.driver');
         $this->line("  CACHE_STORE={$cacheStore}  SESSION_DRIVER={$sessionDriver}");
 
-        if ($cacheStore === 'database' && ! Schema::hasTable('cache')) {
+        $sqliteReady = true;
+        if (config('database.default') === 'sqlite') {
+            $sqlitePath = (string) config('database.connections.sqlite.database');
+
+            if ($sqlitePath === '' || $sqlitePath === ':memory:') {
+                $this->line('  DB_DATABASE=:memory: (tests)');
+            } else {
+                $this->line("  DB_DATABASE={$sqlitePath}");
+
+                if (! SqliteDatabaseBootstrap::fileExists($sqlitePath)) {
+                    $sqliteReady = false;
+                    $failures++;
+                    $this->components->error('SQLite database file is missing (login will 500).');
+                    $this->line('  Fix: php artisan app:init-database');
+                    $this->line('       then php artisan app:ensure-admin-user');
+                } elseif (! is_readable($sqlitePath) || ! is_writable($sqlitePath)) {
+                    $sqliteReady = false;
+                    $failures++;
+                    $this->components->error("SQLite database is not readable/writable: {$sqlitePath}");
+                    $this->line('  Fix: sudo chown www-data:www-data '.$sqlitePath.' && sudo chmod 664 '.$sqlitePath);
+                }
+            }
+        }
+
+        if ($sqliteReady && $cacheStore === 'database' && ! Schema::hasTable('cache')) {
             $failures++;
             $this->components->error('CACHE_STORE=database but the cache table is missing (POST /login will 500).');
             $this->line('  Fix: php artisan migrate --force   OR set CACHE_STORE=file in .env and php artisan config:clear');
         }
 
-        if ($sessionDriver === 'database' && ! Schema::hasTable('sessions')) {
+        if ($sqliteReady && $sessionDriver === 'database' && ! Schema::hasTable('sessions')) {
             $failures++;
             $this->components->error('SESSION_DRIVER=database but the sessions table is missing.');
             $this->line('  Fix: php artisan migrate --force   OR set SESSION_DRIVER=file in .env and php artisan config:clear');
         }
 
-        try {
-            DB::connection()->getPdo();
-            $this->components->info('Database connection OK.');
-        } catch (\Throwable $e) {
-            $failures++;
-            $this->components->error('Database connection failed: '.$e->getMessage());
+        if ($sqliteReady) {
+            try {
+                DB::connection()->getPdo();
+                $this->components->info('Database connection OK.');
+            } catch (\Throwable $e) {
+                $failures++;
+                $this->components->error('Database connection failed: '.$e->getMessage());
+            }
         }
 
-        if (! Schema::hasTable('users')) {
+        if ($sqliteReady && ! Schema::hasTable('users')) {
             $failures++;
             $this->components->error('Missing users table (login cannot work).');
-            $this->line('  Fix: php artisan migrate --force');
-        } elseif (! Schema::hasColumn('users', 'is_admin')) {
+            $this->line('  Fix: php artisan app:init-database');
+        } elseif ($sqliteReady && Schema::hasTable('users') && ! Schema::hasColumn('users', 'is_admin')) {
             $failures++;
             $this->components->error('Missing column users.is_admin');
-            $this->line('  Fix: php artisan migrate --force');
+            $this->line('  Fix: php artisan app:init-database');
         }
 
         try {
@@ -103,8 +130,8 @@ class EnsureProductionReadyCommand extends Command
             $this->line('  Fix: set CACHE_STORE=file in .env, then php artisan config:clear');
         }
 
-        $userCount = Schema::hasTable('users') ? (int) DB::table('users')->count() : 0;
-        if ($userCount === 0) {
+        $userCount = ($sqliteReady && Schema::hasTable('users')) ? (int) DB::table('users')->count() : 0;
+        if ($sqliteReady && Schema::hasTable('users') && $userCount === 0) {
             $failures++;
             $this->components->error('No users in the database — every login will fail.');
             $this->line('  Fix: php artisan app:ensure-admin-user');
@@ -134,8 +161,7 @@ class EnsureProductionReadyCommand extends Command
             $this->line('  git pull');
             $this->line('  composer install --no-dev --optimize-autoloader');
             $this->line('  php artisan optimize:clear');
-            $this->line('  php artisan migrate --force');
-            $this->line('  npm ci && npm run build');
+            $this->line('  php artisan app:init-database');
             $this->line('  php artisan app:ensure-admin-user');
             $this->line('  php artisan config:clear   # after editing .env (use CACHE_STORE=file, SESSION_DRIVER=file)');
 

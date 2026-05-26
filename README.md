@@ -84,11 +84,23 @@ php artisan app:production-doctor
 **Emergency login recovery on the server:**
 
 ```bash
+git pull
+composer install --no-dev --optimize-autoloader
+composer run recover-login
+```
+
+That creates `/var/www/html/database/database.sqlite` if missing, runs migrations, and prompts for an admin password.
+
+Or step by step:
+
+```bash
+cd /var/www/html
 php artisan optimize:clear
-php artisan migrate --force
-# If .env has CACHE_STORE=database, switch to file then:
 php artisan config:clear
+php artisan app:init-database
 php artisan app:ensure-admin-user --email=admin@example.com
+sudo chown www-data:www-data database/database.sqlite
+sudo chmod 664 database/database.sqlite
 php artisan app:production-doctor
 ```
 
@@ -96,7 +108,7 @@ Do **not** run `php artisan route:cache` unless you know you need it; stale rout
 
 **If login fails after setup:** use the same host as `APP_URL` in `.env` (e.g. open `http://127.0.0.1:8000`, not `http://localhost:8000`, when `APP_URL` is `http://127.0.0.1:8000`).
 
-**Backups (notes, grades, and all app DB state):** Player **notes and grades** live in the database (`players` columns and related tables), not in uploaded CSV files. Git does **not** back up the database.
+**Backups (notes, grades, and all app DB state):** Player **notes and grades** live in the database (`players` columns and related tables), not in uploaded CSV files. Git does **not** back up the database. The SQLite file `database/database.sqlite` is **gitignored** — you must create it on the server (`php artisan app:init-database`) before login will work.
 
 1. **Automated (recommended)** — The app ships `php artisan app:backup-database`, which copies the SQLite file (default) into `storage/app/database-backups/` with a timestamped name, then deletes backups older than `APP_DB_BACKUP_RETENTION_DAYS` (default 30). A daily run is registered at `APP_DB_BACKUP_DAILY_AT` (default `03:15`). **You must run the Laravel scheduler in production**, for example:
    - Cron (every minute): `* * * * * cd /path/to/08-MLB-Draft && php artisan schedule:run >> /dev/null 2>&1`

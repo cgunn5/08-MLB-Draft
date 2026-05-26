@@ -54,15 +54,15 @@
         "deploy": [
             "composer install --no-dev --optimize-autoloader",
             "@php artisan optimize:clear --ansi",
-            "@php artisan migrate --force --ansi",
+            "@php artisan app:init-database --ansi",
             "npm ci --ignore-scripts",
             "npm run build",
             "@php artisan app:production-doctor --ansi"
         ],
         "recover-login": [
             "@php artisan optimize:clear --ansi",
-            "@php artisan migrate --force --ansi",
             "@php artisan config:clear --ansi",
+            "@php artisan app:init-database --ansi",
             "@php artisan app:ensure-admin-user --ansi",
             "@php artisan app:production-doctor --ansi"
         ],
