@@ -53,6 +53,29 @@ php artisan serve
 
 Change the admin email and password immediately in production. Use HTTPS, strong `APP_KEY`, and set `APP_DEBUG=false`. For production hardening, also configure your web server, rate limiting, and backups.
 
+### Production deploy (after `git pull`)
+
+Login can return **500** while the login form still loads if deploy steps are skipped:
+
+1. **Stale route cache** — The home page after login renders the nav, which references routes such as `ncaa-data-sources.index`. If `php artisan route:cache` ran *before* the new code was on disk, Laravel throws `Route […] not defined` and you get a 500. Clear caches after every deploy, then rebuild them from the current code.
+2. **Missing Vite build** — `public/build/` is not in git. Run `npm ci && npm run build` on the server (or in CI) so `@vite` can find `public/build/manifest.json`.
+
+Recommended one-liner from the app root:
+
+```bash
+composer run deploy
+```
+
+That runs `optimize:clear`, migrations, `npm ci`, `npm run build`, and re-caches config/routes/views. If you deploy manually, at minimum run:
+
+```bash
+php artisan optimize:clear
+php artisan migrate --force
+npm ci && npm run build
+```
+
+Only run `php artisan route:cache` / `config:cache` **after** the new code is present and caches were cleared.
+
 **If login fails after setup:** use the same host as `APP_URL` in `.env` (e.g. open `http://127.0.0.1:8000`, not `http://localhost:8000`, when `APP_URL` is `http://127.0.0.1:8000`).
 
 **Backups (notes, grades, and all app DB state):** Player **notes and grades** live in the database (`players` columns and related tables), not in uploaded CSV files. Git does **not** back up the database.

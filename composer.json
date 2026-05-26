@@ -51,6 +51,16 @@
         "backup-db": [
             "@php artisan app:backup-database"
         ],
+        "deploy": [
+            "composer install --no-dev --optimize-autoloader",
+            "@php artisan optimize:clear --ansi",
+            "@php artisan migrate --force --ansi",
+            "npm ci --ignore-scripts",
+            "npm run build",
+            "@php artisan config:cache --ansi",
+            "@php artisan route:cache --ansi",
+            "@php artisan view:cache --ansi"
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
