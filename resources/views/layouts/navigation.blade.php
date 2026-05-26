@@ -6,7 +6,7 @@
             <div class="flex min-h-0">
                 <!-- Logo -->
                 <div class="flex h-full min-h-0 shrink-0 items-center overflow-hidden">
-                    <a href="{{ route('dashboard') }}" class="flex h-full min-h-0 max-w-[120px] items-center">
+                    <a href="{{ url('/dashboard') }}" class="flex h-full min-h-0 max-w-[120px] items-center">
                         <img
                             src="{{ asset('images/texas-rangers-logo.png') }}"
                             alt="{{ __('Texas Rangers') }}"
@@ -19,33 +19,34 @@
                 </div>
 
                 <!-- Navigation Links -->
+                {{-- Use url() paths so stale route:cache cannot 500 the layout after login. --}}
                 <div class="hidden space-x-5 sm:-my-px sm:ms-6 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+                    <x-nav-link :href="url('/dashboard')" :active="request()->is('dashboard')">
                         {{ __('HOME') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('board.index')" :active="request()->routeIs('board.*')">
+                    <x-nav-link :href="url('/board')" :active="request()->is('board*')">
                         {{ __('BOARD') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('players.index')" :active="request()->routeIs('players.*')">
+                    <x-nav-link :href="url('/players')" :active="request()->is('players*')">
                         {{ __('PLAYERS') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('ncaa.index')" :active="request()->routeIs('ncaa.*')">
+                    <x-nav-link :href="url('/ncaa')" :active="request()->is('ncaa', 'ncaa/*')">
                         {{ __('NCAA') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('hs.index')" :active="request()->routeIs('hs.*')">
+                    <x-nav-link :href="url('/hs')" :active="request()->is('hs', 'hs/*')">
                         {{ __('HS') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('notes.index')" :active="request()->routeIs('notes.*')">
+                    <x-nav-link :href="url('/notes')" :active="request()->is('notes*')">
                         {{ __('Notes/Grades') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('data-sources.index')" :active="request()->routeIs('data-sources.*')">
+                    <x-nav-link :href="url('/data-sources')" :active="request()->is('data-sources*')">
                         {{ __('HS DATA') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('ncaa-data-sources.index')" :active="request()->routeIs('ncaa-data-sources.*')">
+                    <x-nav-link :href="url('/ncaa-data-sources')" :active="request()->is('ncaa-data-sources*')">
                         {{ __('NCAA DATA') }}
                     </x-nav-link>
                     @if (Auth::user()->is_admin)
-                        <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.*')">
+                        <x-nav-link :href="url('/admin/users')" :active="request()->is('admin*')">
                             {{ __('USERS') }}
                         </x-nav-link>
                     @endif
@@ -68,15 +69,15 @@
                     </x-slot>
 
                     <x-slot name="content">
-                        <x-dropdown-link :href="route('profile.edit')">
+                        <x-dropdown-link :href="url('/profile')">
                             {{ __('Profile') }}
                         </x-dropdown-link>
 
                         <!-- Authentication -->
-                        <form method="POST" action="{{ route('logout') }}">
+                        <form method="POST" action="{{ url('/logout') }}">
                             @csrf
 
-                            <x-dropdown-link :href="route('logout')"
+                            <x-dropdown-link :href="url('/logout')"
                                     onclick="event.preventDefault();
                                                 this.closest('form').submit();">
                                 {{ __('Log Out') }}
@@ -101,32 +102,32 @@
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-1 pb-2 space-y-0.5">
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
+            <x-responsive-nav-link :href="url('/dashboard')" :active="request()->is('dashboard')">
                 {{ __('HOME') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('board.index')" :active="request()->routeIs('board.*')">
+            <x-responsive-nav-link :href="url('/board')" :active="request()->is('board*')">
                 {{ __('BOARD') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('players.index')" :active="request()->routeIs('players.*')">
+            <x-responsive-nav-link :href="url('/players')" :active="request()->is('players*')">
                 {{ __('PLAYERS') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('ncaa.index')" :active="request()->routeIs('ncaa.*')">
+            <x-responsive-nav-link :href="url('/ncaa')" :active="request()->is('ncaa', 'ncaa/*')">
                 {{ __('NCAA') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('hs.index')" :active="request()->routeIs('hs.*')">
+            <x-responsive-nav-link :href="url('/hs')" :active="request()->is('hs', 'hs/*')">
                 {{ __('HS') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('notes.index')" :active="request()->routeIs('notes.*')">
+            <x-responsive-nav-link :href="url('/notes')" :active="request()->is('notes*')">
                 {{ __('Notes/Grades') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('data-sources.index')" :active="request()->routeIs('data-sources.*')">
+            <x-responsive-nav-link :href="url('/data-sources')" :active="request()->is('data-sources*')">
                 {{ __('HS DATA') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('ncaa-data-sources.index')" :active="request()->routeIs('ncaa-data-sources.*')">
+            <x-responsive-nav-link :href="url('/ncaa-data-sources')" :active="request()->is('ncaa-data-sources*')">
                 {{ __('NCAA DATA') }}
             </x-responsive-nav-link>
             @if (Auth::user()->is_admin)
-                <x-responsive-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.*')">
+                <x-responsive-nav-link :href="url('/admin/users')" :active="request()->is('admin*')">
                     {{ __('USERS') }}
                 </x-responsive-nav-link>
             @endif
@@ -140,15 +141,15 @@
             </div>
 
             <div class="mt-2 space-y-0.5">
-                <x-responsive-nav-link :href="route('profile.edit')">
+                <x-responsive-nav-link :href="url('/profile')">
                     {{ __('Profile') }}
                 </x-responsive-nav-link>
 
                 <!-- Authentication -->
-                <form method="POST" action="{{ route('logout') }}">
+                <form method="POST" action="{{ url('/logout') }}">
                     @csrf
 
-                    <x-responsive-nav-link :href="route('logout')"
+                    <x-responsive-nav-link :href="url('/logout')"
                             onclick="event.preventDefault();
                                         this.closest('form').submit();">
                         {{ __('Log Out') }}

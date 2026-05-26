@@ -58,8 +58,7 @@
             "npm ci --ignore-scripts",
             "npm run build",
             "@php artisan config:cache --ansi",
-            "@php artisan route:cache --ansi",
-            "@php artisan view:cache --ansi"
+            "@php artisan app:production-doctor --ansi"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

@@ -5,15 +5,30 @@ namespace App\Support;
 final class StaleRouteCacheGuard
 {
     /**
-     * Drop cached routes when route files changed after the cache was built.
+     * Route names that must exist whenever a route cache file is present.
      *
-     * Prevents 500s after deploy when navigation calls route names added in a
-     * newer release while bootstrap/cache/routes-*.php still reflects old code.
+     * @var list<string>
+     */
+    private const REQUIRED_ROUTE_NAMES = [
+        'dashboard',
+        'board.index',
+        'ncaa-data-sources.index',
+    ];
+
+    /**
+     * Drop cached routes when route files changed after the cache was built, or when
+     * the cache is missing route names required by the current release.
      */
     public static function invalidateIfStale(string $basePath): void
     {
         $cacheFiles = glob($basePath.'/bootstrap/cache/routes-*.php') ?: [];
         if ($cacheFiles === []) {
+            return;
+        }
+
+        if (self::cacheMissingRequiredRouteNames($cacheFiles)) {
+            self::deleteCacheFiles($cacheFiles);
+
             return;
         }
 
@@ -29,6 +44,35 @@ final class StaleRouteCacheGuard
             return;
         }
 
+        self::deleteCacheFiles($cacheFiles);
+    }
+
+    /**
+     * @param  list<string>  $cacheFiles
+     */
+    private static function cacheMissingRequiredRouteNames(array $cacheFiles): bool
+    {
+        foreach ($cacheFiles as $cacheFile) {
+            $contents = @file_get_contents($cacheFile);
+            if ($contents === false) {
+                continue;
+            }
+
+            foreach (self::REQUIRED_ROUTE_NAMES as $routeName) {
+                if (! str_contains($contents, $routeName)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  list<string>  $cacheFiles
+     */
+    private static function deleteCacheFiles(array $cacheFiles): void
+    {
         foreach ($cacheFiles as $cacheFile) {
             @unlink($cacheFile);
         }

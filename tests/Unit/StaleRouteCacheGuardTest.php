@@ -33,7 +33,7 @@ class StaleRouteCacheGuardTest extends TestCase
         mkdir($base.'/routes', 0777, true);
 
         $cacheFile = $base.'/bootstrap/cache/routes-v7.php';
-        file_put_contents($cacheFile, '<?php return [];');
+        file_put_contents($cacheFile, '<?php return []; dashboard board.index ncaa-data-sources.index');
         touch($cacheFile, 1_900_000_000);
 
         $routeFile = $base.'/routes/web.php';
@@ -43,5 +43,24 @@ class StaleRouteCacheGuardTest extends TestCase
         StaleRouteCacheGuard::invalidateIfStale($base);
 
         $this->assertFileExists($cacheFile);
+    }
+
+    public function test_drops_route_cache_when_required_route_names_are_missing(): void
+    {
+        $base = sys_get_temp_dir().'/stale-route-cache-guard-'.uniqid('', true);
+        mkdir($base.'/bootstrap/cache', 0777, true);
+        mkdir($base.'/routes', 0777, true);
+
+        $cacheFile = $base.'/bootstrap/cache/routes-v7.php';
+        file_put_contents($cacheFile, '<?php return []; dashboard board.index');
+        touch($cacheFile, 1_900_000_000);
+
+        $routeFile = $base.'/routes/web.php';
+        file_put_contents($routeFile, '<?php');
+        touch($routeFile, 1_800_000_000);
+
+        StaleRouteCacheGuard::invalidateIfStale($base);
+
+        $this->assertFileDoesNotExist($cacheFile);
     }
 }

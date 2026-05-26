@@ -66,17 +66,20 @@ Recommended one-liner from the app root:
 composer run deploy
 ```
 
-That runs `optimize:clear`, migrations, `npm ci`, `npm run build`, and re-caches config/routes/views. If you deploy manually, at minimum run:
+That runs `optimize:clear`, migrations, `npm ci`, `npm run build`, and `php artisan app:production-doctor`. If you deploy manually, run at minimum:
 
 ```bash
+git pull
+composer install --no-dev --optimize-autoloader
 php artisan optimize:clear
 php artisan migrate --force
 npm ci && npm run build
+php artisan app:production-doctor
 ```
 
-Only run `php artisan route:cache` / `config:cache` **after** the new code is present and caches were cleared.
+`app:production-doctor --fix` clears caches first, then reports missing Vite build, unwritable storage, pending migrations, or missing routes.
 
-After deploy, stale `bootstrap/cache/routes-*.php` files are dropped automatically when `routes/*.php` is newer than the cache (see `App\Support\StaleRouteCacheGuard` in `bootstrap/app.php`), so the first request after `git pull` should recover without manual `route:clear`—but `composer run deploy` is still recommended.
+Do **not** run `php artisan route:cache` unless you know you need it; stale route caches caused post-login 500s when navigation referenced new routes. The app clears bad route caches automatically on boot (`StaleRouteCacheGuard`).
 
 **If login fails after setup:** use the same host as `APP_URL` in `.env` (e.g. open `http://127.0.0.1:8000`, not `http://localhost:8000`, when `APP_URL` is `http://127.0.0.1:8000`).
 
