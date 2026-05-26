@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Support\ApplicationDatabaseBootstrap;
+use App\Support\PersistentDatabaseConfig;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -20,6 +21,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        PersistentDatabaseConfig::apply();
         ApplicationDatabaseBootstrap::ensureReady();
     }
 }

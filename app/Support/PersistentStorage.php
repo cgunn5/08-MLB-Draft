@@ -37,8 +37,8 @@ final class PersistentStorage
     public static function databasePathIsUnderSharedStorage(string $path): bool
     {
         $normalized = str_replace('\\', '/', $path);
-        $storageRoot = str_replace('\\', '/', storage_path());
+        $persistentDir = str_replace('\\', '/', dirname(self::databasePath())).'/';
 
-        return str_starts_with($normalized, $storageRoot.'/');
+        return str_starts_with($normalized, $persistentDir);
     }
 }

@@ -20,4 +20,9 @@ return [
 
     'installation_marker' => storage_path('app/persistent/.installation-complete'),
 
+    /*
+    | Used only by PHPUnit to exercise PersistentDatabaseConfig::apply().
+    */
+    'apply_in_tests' => env('PERSISTENCE_APPLY_IN_TESTS', false),
+
 ];
