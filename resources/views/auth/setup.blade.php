@@ -3,6 +3,10 @@
         {{ __('Welcome! This is the one-time setup for your MLB Draft app. Create your admin login below — no server commands required.') }}
     </div>
 
+    <div class="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-900 normal-case">
+        {{ __('Already completed setup? Your host may have reset the database during a redeploy. Create your account again, then open Admin → SYNC to restore notes and data from your Mac.') }}
+    </div>
+
     <form method="POST" action="{{ route('setup.store') }}" class="normal-case">
         @csrf
 

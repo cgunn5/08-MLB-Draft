@@ -50,7 +50,9 @@ After your host deploys the latest code from GitHub (git pull / auto-deploy):
 2. You should see **one-time setup** — enter your name, email, and password.
 3. Click **Create account & continue**. You land on the home page, logged in.
 
-The app creates `database/database.sqlite` and runs migrations automatically on that first visit. You do **not** need SSH or artisan commands unless something still fails.
+The app creates `storage/app/database.sqlite` and runs migrations automatically on that first visit. You do **not** need SSH or artisan commands unless something still fails.
+
+**Setup keeps reappearing after redeploy?** Some hosts wipe `database/` on every deploy. Set `DB_DATABASE=/var/www/html/storage/app/database.sqlite` in production `.env` (or remove `DB_DATABASE` to use that path by default). Then use **Admin → SYNC** to restore data from your Mac after setup.
 
 If you see a generic 500 instead of setup, your host must run **`composer install`**, **`npm run build`**, and allow the web server to write to `storage/` and `database/`. Ask your host to redeploy from the latest `main` branch, or run `composer run deploy` once if they can do that for you.
 
@@ -103,7 +105,7 @@ composer install --no-dev --optimize-autoloader
 composer run recover-login
 ```
 
-That creates `/var/www/html/database/database.sqlite` if missing, runs migrations, and prompts for an admin password.
+That creates `/var/www/html/storage/app/database.sqlite` if missing, runs migrations, and prompts for an admin password.
 
 Or step by step:
 
@@ -113,8 +115,8 @@ php artisan optimize:clear
 php artisan config:clear
 php artisan app:init-database
 php artisan app:ensure-admin-user --email=admin@example.com
-sudo chown www-data:www-data database/database.sqlite
-sudo chmod 664 database/database.sqlite
+sudo chown www-data:www-data storage/app/database.sqlite
+sudo chmod 664 storage/app/database.sqlite
 php artisan app:production-doctor
 ```
 
@@ -122,13 +124,13 @@ Do **not** run `php artisan route:cache` unless you know you need it; stale rout
 
 **If login fails after setup:** use the same host as `APP_URL` in `.env` (e.g. open `http://127.0.0.1:8000`, not `http://localhost:8000`, when `APP_URL` is `http://127.0.0.1:8000`).
 
-**Backups (notes, grades, and all app DB state):** Player **notes and grades** live in the database (`players` columns and related tables), not in uploaded CSV files. Git does **not** back up the database. The SQLite file `database/database.sqlite` is **gitignored** — you must create it on the server (`php artisan app:init-database`) before login will work.
+**Backups (notes, grades, and all app DB state):** Player **notes and grades** live in the database (`players` columns and related tables), not in uploaded CSV files. Git does **not** back up the database. The SQLite file lives at `storage/app/database.sqlite` by default (gitignored) — it is created on first visit or via `php artisan app:init-database`.
 
 1. **Automated (recommended)** — The app ships `php artisan app:backup-database`, which copies the SQLite file (default) into `storage/app/database-backups/` with a timestamped name, then deletes backups older than `APP_DB_BACKUP_RETENTION_DAYS` (default 30). A daily run is registered at `APP_DB_BACKUP_DAILY_AT` (default `03:15`). **You must run the Laravel scheduler in production**, for example:
    - Cron (every minute): `* * * * * cd /path/to/08-MLB-Draft && php artisan schedule:run >> /dev/null 2>&1`
    - Or a supervisor/systemd service running `php artisan schedule:work`
    - Manual anytime: `php artisan app:backup-database` or `composer backup-db` (add `--dry-run` to inspect paths only; `--no-prune` to skip deleting old files)
-2. **Off-server copy** — Sync or copy `storage/app/database-backups/` (and/or `database/database.sqlite`) to another disk, cloud object storage, or your host’s backup system so a server failure does not take everything with it.
+2. **Off-server copy** — Sync or copy `storage/app/database-backups/` (and/or `storage/app/database.sqlite`) to another disk, cloud object storage, or your host’s backup system so a server failure does not take everything with it.
 3. **MySQL / MariaDB** — If `DB_CONNECTION` is `mysql` or `mariadb`, the same command runs `mysqldump` when the client binary is on `PATH` (override with `MYSQLDUMP_PATH`) and writes a gzipped `.sql.gz` into the same backup directory. Large DBs are held in memory during gzip; for huge databases prefer your host’s native backup tools.
 
 Set `APP_DB_BACKUP_SCHEDULE_ENABLED=false` in CI or local environments where the DB is in-memory only.

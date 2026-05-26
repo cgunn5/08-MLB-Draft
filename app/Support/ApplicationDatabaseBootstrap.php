@@ -24,16 +24,12 @@ final class ApplicationDatabaseBootstrap
             return;
         }
 
-        $path = (string) config('database.connections.sqlite.database');
+        $path = self::configuredSqlitePath();
         if ($path === '' || $path === ':memory:') {
             return;
         }
 
-        $createdFile = false;
-        if (! is_file($path)) {
-            SqliteDatabaseBootstrap::ensureFileExists($path);
-            $createdFile = true;
-        }
+        $createdFile = SqliteDatabaseBootstrap::ensureFileExists($path);
 
         if ($createdFile || ! Schema::hasTable('migrations')) {
             self::runMigrationsOnce();
@@ -49,6 +45,13 @@ final class ApplicationDatabaseBootstrap
         } catch (\Throwable) {
             return true;
         }
+    }
+
+    public static function configuredSqlitePath(): string
+    {
+        $path = (string) config('database.connections.sqlite.database');
+
+        return SqliteDatabaseBootstrap::resolvePath($path);
     }
 
     private static function runMigrationsOnce(): void

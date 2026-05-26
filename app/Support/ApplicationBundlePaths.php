@@ -24,16 +24,6 @@ final class ApplicationBundlePaths
             throw new InvalidArgumentException('Application bundles only support SQLite databases.');
         }
 
-        $path = (string) config('database.connections.sqlite.database');
-
-        if ($path === '' || $path === ':memory:') {
-            throw new InvalidArgumentException('SQLite database path is not configured for file backup.');
-        }
-
-        if ($path[0] !== '/' && ! preg_match('~^([A-Za-z]:[\\\\/])~', $path)) {
-            $path = base_path($path);
-        }
-
-        return $path;
+        return SqliteDatabaseBootstrap::configuredPath();
     }
 }
