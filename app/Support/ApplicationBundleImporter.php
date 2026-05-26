@@ -23,9 +23,6 @@ final class ApplicationBundleImporter
             throw new RuntimeException('The PHP Zip extension is required to import an application bundle.');
         }
 
-        $databasePath = ApplicationBundlePaths::resolveSqliteDatabasePath();
-        $this->backupCurrentDatabase($databasePath);
-
         $tempDir = storage_path('app/application-import-'.uniqid('', true));
         if (! mkdir($tempDir, 0755, true) && ! is_dir($tempDir)) {
             throw new RuntimeException("Could not create temp directory: {$tempDir}");
@@ -54,12 +51,17 @@ final class ApplicationBundleImporter
                 throw new RuntimeException('Bundle is missing database.sqlite.');
             }
 
-            DB::disconnect();
-            File::ensureDirectoryExists(dirname($databasePath));
-            if (! copy($bundleDb, $databasePath)) {
-                throw new RuntimeException("Could not replace database at {$databasePath}");
+            $this->backupCurrentDatabase();
+
+            $targetDriver = config('database.connections.'.config('database.default').'.driver');
+
+            if ($targetDriver === 'sqlite') {
+                $databasePath = ApplicationBundlePaths::resolveSqliteDatabasePath();
+                $this->importIntoSqliteDatabase($bundleDb, $databasePath);
+            } else {
+                $tableCounts = (new ApplicationBundleSqliteTableCopier)->copyFromSqliteFile($bundleDb);
+                $manifest['imported_tables'] = $tableCounts;
             }
-            @chmod($databasePath, 0664);
 
             $this->restoreUploadFiles($tempDir.'/uploads');
 
@@ -72,14 +74,35 @@ final class ApplicationBundleImporter
         }
     }
 
-    private function backupCurrentDatabase(string $databasePath): void
+    private function importIntoSqliteDatabase(string $bundleDb, string $databasePath): void
     {
-        if (! is_file($databasePath)) {
+        DB::disconnect();
+        File::ensureDirectoryExists(dirname($databasePath));
+        if (! copy($bundleDb, $databasePath)) {
+            throw new RuntimeException("Could not replace database at {$databasePath}");
+        }
+        @chmod($databasePath, 0664);
+    }
+
+    private function backupCurrentDatabase(): void
+    {
+        if (config('database.connections.'.config('database.default').'.driver') === 'sqlite') {
+            $databasePath = ApplicationBundlePaths::resolveSqliteDatabasePath();
+            if (! is_file($databasePath)) {
+                return;
+            }
+
+            $backupDir = storage_path('app/'.trim((string) config('database_backup.directory', 'database-backups'), '/'));
+            SqliteDatabaseFileBackup::copyTo($databasePath, $backupDir, 'pre-import');
+
             return;
         }
 
-        $backupDir = storage_path('app/'.trim((string) config('database_backup.directory', 'database-backups'), '/'));
-        SqliteDatabaseFileBackup::copyTo($databasePath, $backupDir, 'pre-import');
+        try {
+            Artisan::call('app:backup-database', ['--no-prune' => true]);
+        } catch (\Throwable) {
+            // Import should still proceed if mysqldump is unavailable on Cloud.
+        }
     }
 
     private function restoreUploadFiles(string $extractedUploadsDir): void

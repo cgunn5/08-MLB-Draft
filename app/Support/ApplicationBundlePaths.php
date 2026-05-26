@@ -20,10 +20,15 @@ final class ApplicationBundlePaths
 
     public static function resolveSqliteDatabasePath(): string
     {
-        if (config('database.default') !== 'sqlite') {
-            throw new InvalidArgumentException('Application bundles only support SQLite databases.');
+        $connection = (string) config('database.default');
+        $driver = config("database.connections.{$connection}.driver");
+
+        if ($driver !== 'sqlite') {
+            throw new InvalidArgumentException('Application bundle export requires a SQLite database connection.');
         }
 
-        return SqliteDatabaseBootstrap::configuredPath();
+        return SqliteDatabaseBootstrap::resolvePath(
+            (string) config("database.connections.{$connection}.database")
+        );
     }
 }

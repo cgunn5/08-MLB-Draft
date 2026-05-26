@@ -36,15 +36,14 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900 space-y-4">
                     <p class="text-sm text-gray-600">
-                        {{ __('Move everything from your Mac to the live app in one step: player notes, grades, working board, users, upload settings, and the CSV stat files themselves.') }}
+                        {{ __('Move everything from your Mac to the live app in one step: player notes, grades, working board, users, upload settings, and the CSV stat files themselves. Works on Laravel Cloud (MySQL) and local SQLite.') }}
                     </p>
 
                     <ol class="list-decimal ps-5 text-sm text-gray-700 space-y-2">
                         <li>{{ __('On your Mac (localhost), log in as an admin and open this page.') }}</li>
                         <li>{{ __('Click Download bundle and save the zip file.') }}</li>
-                        <li>{{ __('On the live site, log in as an admin and open Sync data (same page).') }}</li>
-                        <li>{{ __('Upload the zip below and confirm.') }}</li>
-                        <li>{{ __('Log in again with the email and password from your Mac account (the live admin account is replaced).') }}</li>
+                        <li>{{ __('On the live site, log in as an admin and upload the zip below.') }}</li>
+                        <li>{{ __('After import, log in with the email and password from your Mac account (live users are replaced by the bundle).') }}</li>
                     </ol>
 
                     <p class="text-sm text-gray-500">
