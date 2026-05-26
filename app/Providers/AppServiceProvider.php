@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Support\ApplicationDatabaseBootstrap;
+use App\Support\CloudDatabaseConfig;
 use App\Support\PersistentDatabaseConfig;
 use App\Support\ProductionDriverGuard;
 use Illuminate\Support\ServiceProvider;
@@ -14,7 +15,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        CloudDatabaseConfig::apply();
     }
 
     /**
@@ -22,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        CloudDatabaseConfig::apply();
         PersistentDatabaseConfig::apply();
 
         try {

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Support\ApplicationDatabaseBootstrap;
+use App\Support\CloudDatabaseConfig;
 use App\Support\HostedEnvironment;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
@@ -15,6 +16,8 @@ class LaravelCloudBootstrapCommand extends Command
 
     public function handle(): int
     {
+        CloudDatabaseConfig::apply();
+
         if (! HostedEnvironment::isLaravelCloud()) {
             $this->components->warn('Not running on Laravel Cloud — running migrate only.');
             Artisan::call('migrate', ['--force' => true]);

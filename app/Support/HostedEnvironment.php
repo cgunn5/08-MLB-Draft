@@ -27,6 +27,16 @@ final class HostedEnvironment
      */
     public static function laravelCloudSqliteMisconfiguration(): bool
     {
-        return self::isLaravelCloud() && config('database.default') === 'sqlite';
+        if (! self::isLaravelCloud()) {
+            return false;
+        }
+
+        CloudDatabaseConfig::apply();
+
+        if (CloudDatabaseConfig::managedDatabaseConfigured()) {
+            return false;
+        }
+
+        return config('database.default') === 'sqlite';
     }
 }

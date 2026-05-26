@@ -44,6 +44,8 @@ Save and **Redeploy**.
 
 This runs migrations and creates your admin login from `ADMIN_EMAIL` / `ADMIN_PASSWORD` if no users exist yet.
 
+> **Note:** Do not run `php artisan config:cache` in build commands before the database is attached — it can lock in `sqlite` as the default. The app now overrides this at runtime when `DB_HOST` is injected.
+
 ### 4. Log in
 
 Open your site → **Login** (not setup):
