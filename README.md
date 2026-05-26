@@ -55,7 +55,9 @@ Change the admin email and password immediately in production. Use HTTPS, strong
 
 ### Production deploy (after `git pull`)
 
-Login can return **500** while the login form still loads if deploy steps are skipped:
+**Login returns 500 (not “invalid credentials”)?** That is an app/server misconfiguration, not a wrong password. The most common cause is `CACHE_STORE=database` in `.env` when the `cache` table was never migrated — POST `/login` hits the rate limiter, crashes, and returns 500. Use `CACHE_STORE=file` and `SESSION_DRIVER=file` unless you have run full migrations.
+
+Login can also 500 after a successful password check when **stale route/view caches** or a **missing Vite build** break the dashboard redirect.
 
 1. **Stale route cache** — The home page after login renders the nav, which references routes such as `ncaa-data-sources.index`. If `php artisan route:cache` ran *before* the new code was on disk, Laravel throws `Route […] not defined` and you get a 500. Clear caches after every deploy, then rebuild them from the current code.
 2. **Missing Vite build** — `public/build/` is not in git. Run `npm ci && npm run build` on the server (or in CI) so `@vite` can find `public/build/manifest.json`.
@@ -77,7 +79,18 @@ npm ci && npm run build
 php artisan app:production-doctor
 ```
 
-`app:production-doctor --fix` clears caches first, then reports missing Vite build, unwritable storage, pending migrations, or missing routes.
+`app:production-doctor --fix` clears caches first, then reports missing Vite build, bad cache/session drivers, empty users table, etc.
+
+**Emergency login recovery on the server:**
+
+```bash
+php artisan optimize:clear
+php artisan migrate --force
+# If .env has CACHE_STORE=database, switch to file then:
+php artisan config:clear
+php artisan app:ensure-admin-user --email=admin@example.com
+php artisan app:production-doctor
+```
 
 Do **not** run `php artisan route:cache` unless you know you need it; stale route caches caused post-login 500s when navigation referenced new routes. The app clears bad route caches automatically on boot (`StaleRouteCacheGuard`).
 

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -56,6 +57,22 @@ class EnsureProductionReadyCommand extends Command
             $this->components->info('Storage paths writable.');
         }
 
+        $cacheStore = (string) config('cache.default');
+        $sessionDriver = (string) config('session.driver');
+        $this->line("  CACHE_STORE={$cacheStore}  SESSION_DRIVER={$sessionDriver}");
+
+        if ($cacheStore === 'database' && ! Schema::hasTable('cache')) {
+            $failures++;
+            $this->components->error('CACHE_STORE=database but the cache table is missing (POST /login will 500).');
+            $this->line('  Fix: php artisan migrate --force   OR set CACHE_STORE=file in .env and php artisan config:clear');
+        }
+
+        if ($sessionDriver === 'database' && ! Schema::hasTable('sessions')) {
+            $failures++;
+            $this->components->error('SESSION_DRIVER=database but the sessions table is missing.');
+            $this->line('  Fix: php artisan migrate --force   OR set SESSION_DRIVER=file in .env and php artisan config:clear');
+        }
+
         try {
             DB::connection()->getPdo();
             $this->components->info('Database connection OK.');
@@ -64,10 +81,35 @@ class EnsureProductionReadyCommand extends Command
             $this->components->error('Database connection failed: '.$e->getMessage());
         }
 
-        if (Schema::hasTable('users') && ! Schema::hasColumn('users', 'is_admin')) {
+        if (! Schema::hasTable('users')) {
+            $failures++;
+            $this->components->error('Missing users table (login cannot work).');
+            $this->line('  Fix: php artisan migrate --force');
+        } elseif (! Schema::hasColumn('users', 'is_admin')) {
             $failures++;
             $this->components->error('Missing column users.is_admin');
             $this->line('  Fix: php artisan migrate --force');
+        }
+
+        try {
+            Cache::put('production-doctor-probe', 'ok', 10);
+            if (Cache::pull('production-doctor-probe') !== 'ok') {
+                throw new \RuntimeException('Cache read/write failed.');
+            }
+            $this->components->info('Cache store read/write OK.');
+        } catch (\Throwable $e) {
+            $failures++;
+            $this->components->error('Cache store failed: '.$e->getMessage());
+            $this->line('  Fix: set CACHE_STORE=file in .env, then php artisan config:clear');
+        }
+
+        $userCount = Schema::hasTable('users') ? (int) DB::table('users')->count() : 0;
+        if ($userCount === 0) {
+            $failures++;
+            $this->components->error('No users in the database — every login will fail.');
+            $this->line('  Fix: php artisan app:ensure-admin-user');
+        } else {
+            $this->components->info("Users table has {$userCount} account(s).");
         }
 
         $missingRoutes = [];
@@ -88,12 +130,14 @@ class EnsureProductionReadyCommand extends Command
         if ($failures > 0) {
             $this->newLine();
             $this->warn('Production doctor found '.$failures.' problem(s).');
-            $this->line('Recommended deploy from the app root:');
+            $this->line('Recommended recovery from the app root:');
             $this->line('  git pull');
             $this->line('  composer install --no-dev --optimize-autoloader');
-            $this->line('  php artisan app:production-doctor --fix');
+            $this->line('  php artisan optimize:clear');
             $this->line('  php artisan migrate --force');
             $this->line('  npm ci && npm run build');
+            $this->line('  php artisan app:ensure-admin-user');
+            $this->line('  php artisan config:clear   # after editing .env (use CACHE_STORE=file, SESSION_DRIVER=file)');
 
             return self::FAILURE;
         }

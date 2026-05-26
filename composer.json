@@ -57,7 +57,13 @@
             "@php artisan migrate --force --ansi",
             "npm ci --ignore-scripts",
             "npm run build",
-            "@php artisan config:cache --ansi",
+            "@php artisan app:production-doctor --ansi"
+        ],
+        "recover-login": [
+            "@php artisan optimize:clear --ansi",
+            "@php artisan migrate --force --ansi",
+            "@php artisan config:clear --ansi",
+            "@php artisan app:ensure-admin-user --ansi",
             "@php artisan app:production-doctor --ansi"
         ],
         "post-autoload-dump": [

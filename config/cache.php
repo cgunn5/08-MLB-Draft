@@ -15,7 +15,9 @@ return [
     |
     */
 
-    'default' => env('CACHE_STORE', 'database'),
+    // Default file (not database): login rate limiting uses cache; database driver
+    // requires the cache table from migrations and 500s on POST /login if missing.
+    'default' => env('CACHE_STORE', 'file'),
 
     /*
     |--------------------------------------------------------------------------
