@@ -74,7 +74,7 @@
 
                 @if ($selectedPlayer)
                     @php
-                        $isNcaaNotes = strtolower((string) $selectedPlayer->player_pool) === 'ncaa';
+                        $isNcaaNotes = \App\Support\PlayerNoteFieldKeys::canonicalPoolForNotes((string) $selectedPlayer->player_pool) === 'ncaa';
                     @endphp
 
                     <div

@@ -57,4 +57,64 @@ final class HsRangerTraitsDisplay
 
         return sprintf('%.1f%%', round($v, 4));
     }
+
+    /**
+     * K/BB style ratios: always two decimal places (e.g. 0.55, 2.50, 10.00).
+     */
+    public static function formatTwoDecimalRatio(?string $raw): string
+    {
+        if ($raw === null) {
+            return PlayerSheetPlaceholder::CELL;
+        }
+        $t = trim((string) $raw);
+        if (PlayerSheetPlaceholder::isEmptyDisplay($t)) {
+            return PlayerSheetPlaceholder::CELL;
+        }
+        $n = str_replace([',', '%', ' '], '', $t);
+        if ($n === '' || ! is_numeric($n)) {
+            return $t;
+        }
+
+        return sprintf('%.2f', round((float) $n, 2));
+    }
+
+    /**
+     * Exit velo / mph-style numbers: one decimal (e.g. 88.5, 105.0).
+     */
+    public static function formatOneDecimalDisplay(?string $raw): string
+    {
+        if ($raw === null) {
+            return PlayerSheetPlaceholder::CELL;
+        }
+        $t = trim((string) $raw);
+        if (PlayerSheetPlaceholder::isEmptyDisplay($t)) {
+            return PlayerSheetPlaceholder::CELL;
+        }
+        $n = str_replace([',', '%', ' '], '', $t);
+        if ($n === '' || ! is_numeric($n)) {
+            return $t;
+        }
+
+        return sprintf('%.1f', round((float) $n, 1));
+    }
+
+    /**
+     * Whole-number display (no fractional part), e.g. swing-decision counts.
+     */
+    public static function formatIntegerForDisplay(?string $raw): string
+    {
+        if ($raw === null) {
+            return PlayerSheetPlaceholder::CELL;
+        }
+        $t = trim((string) $raw);
+        if (PlayerSheetPlaceholder::isEmptyDisplay($t)) {
+            return PlayerSheetPlaceholder::CELL;
+        }
+        $n = str_replace([',', '%', ' '], '', $t);
+        if ($n === '' || ! is_numeric($n)) {
+            return $t;
+        }
+
+        return (string) (int) round((float) $n, 0, PHP_ROUND_HALF_UP);
+    }
 }

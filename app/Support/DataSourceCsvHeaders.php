@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\DataSourceUpload;
+
 final class DataSourceCsvHeaders
 {
     public static function normalizeForMatch(string $header): string
@@ -68,7 +70,78 @@ final class DataSourceCsvHeaders
             }
         }
 
+        foreach ($headerRow as $i => $h) {
+            $norm = trim((string) preg_replace('/\s+/u', ' ', self::normalizeForMatch((string) $h)));
+            if ($norm === '') {
+                continue;
+            }
+            if (str_contains($norm, 'game year')
+                || str_contains($norm, 'stat year')
+                || str_contains($norm, 'season year')
+                || str_contains($norm, 'calendar year')
+                || str_contains($norm, 'competition year')
+                || str_contains($norm, 'school year')
+                || str_contains($norm, 'academic year')) {
+                return (int) $i;
+            }
+        }
+
         return null;
+    }
+
+    /**
+     * Draft class year N for NCAA wide-format stat columns (plain = N, (N-1), (N-2)).
+     *
+     * @param  list<string>  $headerRow
+     */
+    public static function draftYearColumnIndex(array $headerRow): ?int
+    {
+        foreach ($headerRow as $i => $h) {
+            $norm = self::normalizeForMatch((string) $h);
+            $norm = trim((string) preg_replace('/\s+/u', ' ', $norm));
+            if ($norm === 'draft year' || $norm === 'draft yr' || str_contains($norm, 'draft year')) {
+                return (int) $i;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Best-effort portal for a recovered CSV (used when DB metadata was lost).
+     *
+     * @param  list<string>  $headerRow
+     */
+    public static function guessDatasetPortal(array $headerRow): string
+    {
+        if (self::draftYearColumnIndex($headerRow) !== null) {
+            return DataSourceUpload::PORTAL_NCAA;
+        }
+        if (self::headerRowLooksLikeNcaaWideStats($headerRow)) {
+            return DataSourceUpload::PORTAL_NCAA;
+        }
+        if (self::hsCompBucketColumnIndex($headerRow) !== null) {
+            return DataSourceUpload::PORTAL_HS;
+        }
+
+        return DataSourceUpload::PORTAL_HS;
+    }
+
+    /**
+     * NCAA library exports often include wOBA / xWOBA-style columns; HS Ranger Overall exports do not.
+     *
+     * @param  list<string>  $headerRow
+     */
+    private static function headerRowLooksLikeNcaaWideStats(array $headerRow): bool
+    {
+        foreach ($headerRow as $h) {
+            $slug = self::slugify((string) $h);
+            if ($slug !== '' && str_contains($slug, 'woba')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -77,13 +150,25 @@ final class DataSourceCsvHeaders
     public static function pitchColumnIndex(array $headerRow): ?int
     {
         foreach ($headerRow as $i => $h) {
-            $norm = self::normalizeForMatch((string) $h);
+            $norm = trim((string) preg_replace('/\s+/u', ' ', self::normalizeForMatch((string) $h)));
+            if ($norm === '') {
+                continue;
+            }
             $slug = self::slugify((string) $h);
             if ($norm === 'pitch'
                 || $norm === 'pitch type'
                 || $norm === 'pitchtype'
-                || $norm === 'type'
-                || $slug === 'ptype') {
+                || $slug === 'ptype'
+                || (str_contains($norm, 'pitch') && str_contains($norm, 'type'))
+                || (str_contains($norm, 'pitch') && str_contains($norm, 'group'))
+                || str_contains($norm, 'pitch class')) {
+                return (int) $i;
+            }
+        }
+
+        foreach ($headerRow as $i => $h) {
+            $norm = trim((string) preg_replace('/\s+/u', ' ', self::normalizeForMatch((string) $h)));
+            if ($norm === 'type') {
                 return (int) $i;
             }
         }
@@ -133,7 +218,7 @@ final class DataSourceCsvHeaders
     }
 
     /**
-     * Pitch-count column (header "P", slug "p" from {@see slugify}).
+     * Pitch-count / sample-size column for heat gating: short "P" first, then common full headers (e.g. NCAA "PITCHES").
      *
      * @param  list<string>  $headerRow
      */
@@ -142,6 +227,18 @@ final class DataSourceCsvHeaders
         foreach ($headerRow as $i => $h) {
             $slug = self::slugify((string) $h);
             if ($slug === 'p') {
+                return (int) $i;
+            }
+        }
+        foreach ($headerRow as $i => $h) {
+            $raw = (string) $h;
+            $norm = trim((string) preg_replace('/\s+/u', ' ', self::normalizeForMatch($raw)));
+            $slug = self::slugify($raw);
+            if ($slug === 'pitches'
+                || $slug === 'pitchcount'
+                || $slug === 'pitchcounts'
+                || $norm === 'pitch count'
+                || $norm === 'pitch counts') {
                 return (int) $i;
             }
         }
@@ -233,18 +330,24 @@ final class DataSourceCsvHeaders
             $slug = self::slugify($raw);
             if ($norm === 'rnds'
                 || $norm === 'rnd'
+                || $norm === 'drnd'
+                || $norm === 'drnds'
                 || $norm === 'rounds'
                 || $norm === 'round bucket'
                 || $slug === 'rnds'
                 || $slug === 'rounds'
-                || str_contains($norm, 'comp round')) {
+                || $slug === 'drnd'
+                || $slug === 'draftrnd'
+                || str_contains($norm, 'comp round')
+                || str_contains($norm, 'draft rnd')
+                || str_contains($norm, 'draft round')) {
                 return (int) $i;
             }
         }
 
         foreach ($headerRow as $i => $h) {
             $letters = strtolower((string) preg_replace('/[^a-z]/i', '', (string) $h));
-            if ($letters === 'rnds') {
+            if ($letters === 'rnds' || $letters === 'drnd' || $letters === 'drnds') {
                 return (int) $i;
             }
         }

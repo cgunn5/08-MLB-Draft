@@ -9,6 +9,7 @@ use App\Support\PlayerSheetPlaceholder;
 use Database\Factories\PlayerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -55,6 +56,37 @@ class Player extends Model
             'aggregate_score' => 'float',
             'age' => 'float',
         ];
+    }
+
+    /**
+     * Align with notes validation and scopes (legacy rows may store NCAA / HS casing).
+     *
+     * @return Attribute<string|null, string|null>
+     */
+    protected function playerPool(): Attribute
+    {
+        return Attribute::make(
+            get: function (?string $value): ?string {
+                if ($value === null) {
+                    return null;
+                }
+                if (trim($value) === '') {
+                    return $value;
+                }
+
+                return PlayerNoteFieldKeys::canonicalPoolForNotes($value);
+            },
+            set: function (?string $value): ?string {
+                if ($value === null) {
+                    return null;
+                }
+                if (trim($value) === '') {
+                    return $value;
+                }
+
+                return PlayerNoteFieldKeys::canonicalPoolForNotes($value);
+            },
+        );
     }
 
     /**

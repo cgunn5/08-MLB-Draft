@@ -39,7 +39,10 @@
                         {{ __('Notes/Grades') }}
                     </x-nav-link>
                     <x-nav-link :href="route('data-sources.index')" :active="request()->routeIs('data-sources.*')">
-                        {{ __('DATA') }}
+                        {{ __('HS DATA') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('ncaa-data-sources.index')" :active="request()->routeIs('ncaa-data-sources.*')">
+                        {{ __('NCAA DATA') }}
                     </x-nav-link>
                     @if (Auth::user()->is_admin)
                         <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.*')">
@@ -117,7 +120,10 @@
                 {{ __('Notes/Grades') }}
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('data-sources.index')" :active="request()->routeIs('data-sources.*')">
-                {{ __('DATA') }}
+                {{ __('HS DATA') }}
+            </x-responsive-nav-link>
+            <x-responsive-nav-link :href="route('ncaa-data-sources.index')" :active="request()->routeIs('ncaa-data-sources.*')">
+                {{ __('NCAA DATA') }}
             </x-responsive-nav-link>
             @if (Auth::user()->is_admin)
                 <x-responsive-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.*')">

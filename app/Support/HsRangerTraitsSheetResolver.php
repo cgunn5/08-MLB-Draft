@@ -48,6 +48,8 @@ final class HsRangerTraitsSheetResolver
         /** @var list<DataSourceUpload> $assigned */
         $assigned = DataSourceUpload::query()
             ->where('user_id', $user->id)
+            ->where('dataset_portal', DataSourceUpload::PORTAL_HS)
+            ->where('upload_kind', DataSourceUpload::UPLOAD_KIND_FILE)
             ->orderBy('id')
             ->get()
             ->filter(static function (DataSourceUpload $upload): bool {
@@ -62,6 +64,8 @@ final class HsRangerTraitsSheetResolver
             return $empty;
         }
 
+        $canonicalPerformancePgUploadId = CareerPgMasterUploadService::resolveCanonicalPerformancePgFileUploadId($user->id);
+
         $sourceNames = [];
         $anyHadRows = false;
         $out = $this->emptyPayload();
@@ -74,6 +78,11 @@ final class HsRangerTraitsSheetResolver
             $blockSet = [];
             foreach ($slots as $slot) {
                 if (! is_string($slot)) {
+                    continue;
+                }
+                if ($slot === 'performance_pg'
+                    && $canonicalPerformancePgUploadId !== null
+                    && $upload->id !== $canonicalPerformancePgUploadId) {
                     continue;
                 }
                 foreach (HsRangerTraitsSheetLayout::blockKeysForProfileSlot($slot) as $bk) {
@@ -195,7 +204,7 @@ final class HsRangerTraitsSheetResolver
             $rowsForCompHeatStats = [];
             foreach ($allDataRows as $r) {
                 $cell = trim((string) ($r[$compCol] ?? ''));
-                if (strcasecmp($cell, $compHeatScope) === 0) {
+                if (HsCompHeatScope::cellMatchesBucket($cell, $compHeatScope)) {
                     $rowsForCompHeatStats[] = $r;
                 }
             }
@@ -287,6 +296,7 @@ final class HsRangerTraitsSheetResolver
                 if ($blockKey === 'circuit_pg') {
                     $careerMaster = DataSourceUpload::query()
                         ->where('user_id', $upload->user_id)
+                        ->where('dataset_portal', DataSourceUpload::PORTAL_HS)
                         ->where('upload_kind', DataSourceUpload::UPLOAD_KIND_CAREER_PG_MASTER)
                         ->where('career_pg_source_upload_id', $upload->id)
                         ->first();
@@ -357,7 +367,7 @@ final class HsRangerTraitsSheetResolver
                         foreach ($allDataRows as $r) {
                             if ($compHeatScope !== null && $compCol !== null) {
                                 $cbc = trim((string) ($r[$compCol] ?? ''));
-                                if (strcasecmp($cbc, $compHeatScope) !== 0) {
+                                if (! HsCompHeatScope::cellMatchesBucket($cbc, $compHeatScope)) {
                                     continue;
                                 }
                             }
@@ -602,7 +612,7 @@ final class HsRangerTraitsSheetResolver
             $matchedRowsScoped = array_values(array_filter(
                 $matchedRows,
                 static function (array $r) use ($compCol, $compHeatScope): bool {
-                    return strcasecmp(trim((string) ($r[$compCol] ?? '')), $compHeatScope) === 0;
+                    return HsCompHeatScope::cellMatchesBucket(trim((string) ($r[$compCol] ?? '')), $compHeatScope);
                 },
             ));
             if ($matchedRowsScoped !== []) {
@@ -615,7 +625,7 @@ final class HsRangerTraitsSheetResolver
             $rowsForRadar = [];
             foreach ($allDataRows as $r) {
                 $cell = trim((string) ($r[$compCol] ?? ''));
-                if (strcasecmp($cell, $compHeatScope) === 0) {
+                if (HsCompHeatScope::cellMatchesBucket($cell, $compHeatScope)) {
                     $rowsForRadar[] = $r;
                 }
             }

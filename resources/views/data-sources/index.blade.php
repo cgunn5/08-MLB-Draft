@@ -133,27 +133,16 @@
                 </div>
             @else
                 @php
-                    $dataSourceLibraryConfig = [
+                    $dataSourceLibraryConfig = array_merge([
                         'initialActiveId' => $initialActiveId,
                         'blankGroupTabLabel' => __('(blank)'),
+                        'libraryIndexPath' => '/data-sources',
                         'tableDataBase' => '/data-sources/uploads',
                         'readOnlyById' => $uploads->mapWithKeys(static fn (\App\Models\DataSourceUpload $u): array => [
                             (string) $u->id => $u->isCareerPgMaster(),
                         ])->all(),
-                        'uploadSummaries' => $uploads->map(static function ($u) use ($uploads) {
-                            $browse = $u->dataset_browse_settings;
-
-                            return [
-                                'id' => $u->id,
-                                'name' => $u->name,
-                                'upload_kind' => $u->upload_kind ?? \App\Models\DataSourceUpload::UPLOAD_KIND_FILE,
-                                'dataset_read_only' => $u->isCareerPgMaster(),
-                                'career_pg_source_upload_id' => $u->career_pg_source_upload_id,
-                                'hs_profile_feed_slots' => $u->resolvedHsProfileFeedSlotsForUi($uploads),
-                                'dataset_browse_settings' => is_array($browse) ? $browse : null,
-                            ];
-                        })->values()->all(),
-                    ];
+                        'uploadSummaries' => $uploadSummaries,
+                    ], $dataSourceLibraryProfileFeed);
                 @endphp
                 <div
                     class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
@@ -206,6 +195,39 @@
                     </div>
 
                     <div
+                        class="border-b border-gray-100 bg-gray-50/90 px-4 py-2.5 sm:px-6"
+                        x-show="activeId && !activeUploadReadOnly"
+                        x-cloak
+                    >
+                        <div class="flex flex-wrap items-end gap-2">
+                            <div class="min-w-0 flex-1 sm:max-w-md">
+                                <label for="dataset_display_name" class="block text-[10px] font-semibold uppercase tracking-wide text-gray-600">
+                                    {{ __('DISPLAY NAME') }}
+                                </label>
+                                <input
+                                    id="dataset_display_name"
+                                    type="text"
+                                    x-model="renameDraft"
+                                    autocomplete="off"
+                                    class="mt-0.5 block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                />
+                            </div>
+                            <button
+                                type="button"
+                                class="inline-flex items-center rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 disabled:cursor-not-allowed disabled:opacity-50"
+                                x-bind:disabled="loading || renameBusy || !activeId"
+                                @click="saveDatasetName()"
+                            >
+                                {{ __('SAVE NAME') }}
+                            </button>
+                        </div>
+                        <p class="mt-1 text-[11px] font-medium normal-case text-gray-500">
+                            {{ __('Renames this dataset in your library only. The stored CSV filename on disk does not change.') }}
+                        </p>
+                        <p class="mt-1 text-[11px] font-medium normal-case text-red-700" x-show="renameError" x-text="renameError" x-cloak></p>
+                    </div>
+
+                    <div
                         class="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-100 bg-emerald-50/50 px-4 py-2 sm:px-6"
                         x-show="activeId && !activeUploadReadOnly"
                         x-cloak
@@ -248,8 +270,8 @@
                                                             <input
                                                                 type="checkbox"
                                                                 class="shrink-0 rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500 disabled:opacity-50"
-                                                                value="{{ $t['key'] }}"
-                                                                x-model="hsProfileFeedDraft"
+                                                                :checked="profileFeedSlotChecked('{{ $t['key'] }}')"
+                                                                @change="toggleProfileFeedSlot('{{ $t['key'] }}', $event.target.checked)"
                                                                 x-bind:disabled="activeUploadReadOnly"
                                                             />
                                                             <span class="leading-tight">{{ $t['label'] }}</span>

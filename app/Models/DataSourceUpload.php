@@ -9,6 +9,7 @@ use Illuminate\Support\Collection;
 
 #[Fillable([
     'user_id',
+    'dataset_portal',
     'upload_kind',
     'name',
     'original_filename',
@@ -21,10 +22,15 @@ use Illuminate\Support\Collection;
     'heat_rules',
     'heat_column_stats',
     'hs_profile_feed_slots',
+    'ncaa_profile_feed_slots',
     'dataset_browse_settings',
 ])]
 class DataSourceUpload extends Model
 {
+    public const PORTAL_HS = 'hs';
+
+    public const PORTAL_NCAA = 'ncaa';
+
     public const UPLOAD_KIND_FILE = 'file';
 
     public const UPLOAD_KIND_CAREER_PG_MASTER = 'career_pg_master';
@@ -87,6 +93,22 @@ class DataSourceUpload extends Model
     }
 
     /**
+     * @return list<string>
+     */
+    public static function normalizeNcaaProfileFeedSlotList(?array $slots): array
+    {
+        return self::normalizeHsProfileFeedSlotList($slots);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function resolvedNcaaProfileFeedSlotsForUi(): array
+    {
+        return self::normalizeNcaaProfileFeedSlotList($this->ncaa_profile_feed_slots);
+    }
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
@@ -97,6 +119,7 @@ class DataSourceUpload extends Model
             'heat_rules' => 'array',
             'heat_column_stats' => 'array',
             'hs_profile_feed_slots' => 'array',
+            'ncaa_profile_feed_slots' => 'array',
             'dataset_browse_settings' => 'array',
         ];
     }

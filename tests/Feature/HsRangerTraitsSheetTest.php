@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\DataSourceUpload;
 use App\Models\Player;
 use App\Models\User;
+use App\Support\CareerPgMasterUploadService;
 use App\Support\HsRangerTraitsSheetResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -456,6 +457,66 @@ class HsRangerTraitsSheetTest extends TestCase
         $this->assertSame('28.0%', $cp[0]['k_pct'] ?? null);
         $this->assertSame('2024', $cp[1]['year'] ?? null);
         $this->assertSame('2023', $cp[2]['year'] ?? null);
+    }
+
+    public function test_circuit_pg_prefers_canonical_year_pg_upload_when_multiple_have_performance_pg_slot(): void
+    {
+        $user = User::factory()->create();
+        $player = Player::factory()->create([
+            'player_pool' => 'hs',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+        ]);
+
+        $hdr = 'PLAYER,YEAR,PA,1B,2B,3B,HR,BB,K,OPS,AVG,OBP,SLG,ISO,BB%,K%';
+        $pathFull = 'data-source-uploads/hs-pg-full-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($pathFull, implode("\n", [
+            $hdr,
+            '"DOE, JANE",2024,30,15,0,0,0,6,9,.900,.500,.700,.500,.000,0.200,0.300',
+            '"DOE, JANE",2023,20,10,0,0,0,4,5,.800,.500,.700,.500,.000,0.200,0.250',
+        ]));
+
+        DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'upload_kind' => DataSourceUpload::UPLOAD_KIND_FILE,
+            'name' => 'HS Stats - Perfect Game',
+            'original_filename' => 'pg-full.csv',
+            'disk' => 'local',
+            'path' => $pathFull,
+            'header_row' => explode(',', $hdr),
+            'row_count' => 2,
+            'hs_profile_feed_slots' => ['performance_pg'],
+        ]);
+
+        CareerPgMasterUploadService::syncForUser($user);
+
+        $pathSummary = 'data-source-uploads/hs-pg-summary-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($pathSummary, implode("\n", [
+            $hdr,
+            '"DOE, JANE",2024,5,2,0,0,0,1,1,.500,.400,.400,.400,.000,0.200,0.200',
+        ]));
+
+        DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'upload_kind' => DataSourceUpload::UPLOAD_KIND_FILE,
+            'name' => 'HS Stats - Perfect Game Summary',
+            'original_filename' => 'pg-summary.csv',
+            'disk' => 'local',
+            'path' => $pathSummary,
+            'header_row' => explode(',', $hdr),
+            'row_count' => 1,
+            'hs_profile_feed_slots' => ['performance_pg'],
+        ]);
+
+        $sheet = app(HsRangerTraitsSheetResolver::class)->resolve($player, $user);
+        $cp = $sheet['circuit_pg'] ?? [];
+        $this->assertCount(3, $cp);
+        $this->assertSame('Career', $cp[0]['year'] ?? null);
+        $this->assertSame('50', $cp[0]['pa'] ?? null);
+        $this->assertSame('2024', $cp[1]['year'] ?? null);
+        $this->assertSame('30', $cp[1]['pa'] ?? null);
+        $this->assertSame('2023', $cp[2]['year'] ?? null);
+        $this->assertSame('20', $cp[2]['pa'] ?? null);
     }
 
     public function test_circuit_pg_maps_k_pct_column_not_strikeout_count_k(): void

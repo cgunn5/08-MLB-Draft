@@ -16,6 +16,13 @@ class PlayerNotesBulkUpdateRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        if ($this->has('player_pool')) {
+            $raw = (string) $this->input('player_pool');
+            if (trim($raw) !== '') {
+                $this->merge(['player_pool' => PlayerNoteFieldKeys::canonicalPoolForNotes($raw)]);
+            }
+        }
+
         $grades = $this->input('grades', []);
         if (! is_array($grades)) {
             return;

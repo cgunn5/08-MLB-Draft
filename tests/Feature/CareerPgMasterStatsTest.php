@@ -221,4 +221,117 @@ class CareerPgMasterStatsTest extends TestCase
         $this->assertSame(2, $expected);
         $this->assertSame($expected, $career->row_count);
     }
+
+    public function test_hs_data_index_sets_perfect_game_yearly_tab_label_for_generic_source_names(): void
+    {
+        $user = User::factory()->create();
+        $path = 'data-source-uploads/pg-tab-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($path, implode("\n", [
+            'PLAYER,YEAR,G,PA,AB,1B,2B,3B,HR,BB,K,AVG,OBP,SLG,OPS,ISO,BB%,K%',
+            '"DOE, JANE",2024,1,10,8,2,0,0,0,1,2,0.250,0.350,0.400,0.750,0.150,0.100,0.200',
+        ]));
+
+        DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'upload_kind' => DataSourceUpload::UPLOAD_KIND_FILE,
+            'name' => 'HS Stats - Perfect Game',
+            'original_filename' => 'pg.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => ['PLAYER', 'YEAR', 'G', 'PA', 'AB', '1B', '2B', '3B', 'HR', 'BB', 'K', 'AVG', 'OBP', 'SLG', 'OPS', 'ISO', 'BB%', 'K%'],
+            'row_count' => 1,
+            'hs_profile_feed_slots' => ['performance_pg'],
+        ]);
+
+        $this->actingAs($user)->get(route('data-sources.index'))->assertOk();
+
+        $source = DataSourceUpload::query()
+            ->where('user_id', $user->id)
+            ->where('upload_kind', DataSourceUpload::UPLOAD_KIND_FILE)
+            ->first();
+        $this->assertNotNull($source);
+        $this->assertSame(CareerPgMasterUploadService::YEARLY_DISPLAY_NAME, $source->name);
+    }
+
+    public function test_hs_data_index_preserves_custom_pg_source_display_name(): void
+    {
+        $user = User::factory()->create();
+        $path = 'data-source-uploads/pg-custom-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($path, implode("\n", [
+            'PLAYER,YEAR,G,PA,AB,1B,2B,3B,HR,BB,K,AVG,OBP,SLG,OPS,ISO,BB%,K%',
+            '"DOE, JANE",2024,1,10,8,2,0,0,0,1,2,0.250,0.350,0.400,0.750,0.150,0.100,0.200',
+        ]));
+
+        $custom = 'Club PG Export 2024';
+        DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'upload_kind' => DataSourceUpload::UPLOAD_KIND_FILE,
+            'name' => $custom,
+            'original_filename' => 'pg.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => ['PLAYER', 'YEAR', 'G', 'PA', 'AB', '1B', '2B', '3B', 'HR', 'BB', 'K', 'AVG', 'OBP', 'SLG', 'OPS', 'ISO', 'BB%', 'K%'],
+            'row_count' => 1,
+            'hs_profile_feed_slots' => ['performance_pg'],
+        ]);
+
+        $this->actingAs($user)->get(route('data-sources.index'))->assertOk();
+
+        $source = DataSourceUpload::query()
+            ->where('user_id', $user->id)
+            ->where('upload_kind', DataSourceUpload::UPLOAD_KIND_FILE)
+            ->first();
+        $this->assertNotNull($source);
+        $this->assertSame($custom, $source->name);
+    }
+
+    public function test_hs_data_sources_index_html_lists_career_tab_before_yearly_tab(): void
+    {
+        $user = User::factory()->create();
+        $hdr = 'PLAYER,YEAR,G,PA,AB,1B,2B,3B,HR,BB,K,AVG,OBP,SLG,OPS,ISO,BB%,K%';
+
+        $pathYearly = 'data-source-uploads/pg-order-yearly-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($pathYearly, implode("\n", [
+            $hdr,
+            '"DOE, JANE",2024,1,10,8,2,0,0,0,1,2,0.250,0.350,0.400,0.750,0.150,0.100,0.200',
+        ]));
+        DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'upload_kind' => DataSourceUpload::UPLOAD_KIND_FILE,
+            'name' => 'HS Stats - Perfect Game',
+            'original_filename' => 'y.csv',
+            'disk' => 'local',
+            'path' => $pathYearly,
+            'header_row' => explode(',', $hdr),
+            'row_count' => 1,
+            'hs_profile_feed_slots' => ['performance_pg'],
+        ]);
+
+        $pathOther = 'data-source-uploads/pg-order-other-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($pathOther, implode("\n", [
+            'PLAYER,YEAR,G,PA',
+            '"X, Y",2024,1,1',
+        ]));
+        DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'upload_kind' => DataSourceUpload::UPLOAD_KIND_FILE,
+            'name' => 'ZZZ Later Upload',
+            'original_filename' => 'z.csv',
+            'disk' => 'local',
+            'path' => $pathOther,
+            'header_row' => ['PLAYER', 'YEAR', 'G', 'PA'],
+            'row_count' => 1,
+            'hs_profile_feed_slots' => ['performance_overall'],
+        ]);
+
+        $html = $this->actingAs($user)->get(route('data-sources.index'))->assertOk()->getContent();
+        $posCareer = strpos((string) $html, CareerPgMasterUploadService::CAREER_DISPLAY_NAME);
+        $posYearly = strpos((string) $html, CareerPgMasterUploadService::YEARLY_DISPLAY_NAME);
+        $posOther = strpos((string) $html, 'ZZZ Later Upload');
+        $this->assertNotFalse($posCareer);
+        $this->assertNotFalse($posYearly);
+        $this->assertNotFalse($posOther);
+        $this->assertLessThan($posYearly, $posCareer, 'Career tab should appear before yearly PG tab.');
+        $this->assertLessThan($posOther, $posYearly, 'Yearly PG tab should appear before unrelated datasets.');
+    }
 }

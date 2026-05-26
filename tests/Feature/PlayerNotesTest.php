@@ -6,6 +6,7 @@ use App\Models\Player;
 use App\Models\User;
 use App\Support\PlayerNoteFieldKeys;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class PlayerNotesTest extends TestCase
@@ -299,6 +300,35 @@ class PlayerNotesTest extends TestCase
                 'grade' => 4.25,
             ])
             ->assertSessionHasErrors('grade');
+    }
+
+    public function test_notes_index_renders_sections_when_player_pool_has_legacy_uppercase_in_database(): void
+    {
+        $user = User::factory()->create();
+        $player = Player::factory()->create(['player_pool' => 'ncaa']);
+        DB::table('players')->where('id', $player->id)->update(['player_pool' => 'NCAA']);
+
+        $this->actingAs($user)
+            ->get(route('notes.index', ['player' => $player->id]))
+            ->assertOk()
+            ->assertSee('id="notes-edit-master_take"', false);
+    }
+
+    public function test_bulk_update_accepts_uppercase_player_pool_in_request(): void
+    {
+        $user = User::factory()->create();
+        $player = Player::factory()->create(['player_pool' => 'ncaa', 'master_take' => 'A']);
+        $values = $this->noteValuesPayload($player, ['master_take' => 'B']);
+
+        $this->actingAs($user)
+            ->patch(route('notes.update-all'), [
+                'player_pool' => 'NCAA',
+                'player_id' => $player->id,
+                'values' => $values,
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame('B', $player->fresh()->master_take);
     }
 
     /**

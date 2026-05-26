@@ -69,6 +69,23 @@
 
     if ($hasDynamicRadar) {
         $chartValues = array_map(static fn ($v) => (float) $v, array_slice($radar['values'], 0, $nAxes));
+        $avgChart = count($chartValues) > 0 ? array_sum($chartValues) / count($chartValues) : 50.0;
+        /** 0 = blue (weak vs comp), 1 = red (strong); aligns with table heat “good → red”. */
+        $tGood = min(1.0, max(0.0, ($avgChart - 10.0) / 90.0));
+        $redR = 220;
+        $redG = 38;
+        $redB = 38;
+        $blueR = 90;
+        $blueG = 125;
+        $blueB = 188;
+        $fillR = (int) round($blueR + ($redR - $blueR) * $tGood);
+        $fillG = (int) round($blueG + ($redG - $blueG) * $tGood);
+        $fillB = (int) round($blueB + ($redB - $blueB) * $tGood);
+        $strokeR = (int) round(max(0, $fillR - 25));
+        $strokeG = (int) round(max(0, $fillG - 8));
+        $strokeB = (int) round(max(0, $fillB - 12));
+        $radarFillRgb = $fillR.' '.$fillG.' '.$fillB;
+        $radarStrokeHex = sprintf('#%02x%02x%02x', $strokeR, $strokeG, $strokeB);
         /** @var list<array<string, mixed>> $axisMeta */
         $axisMeta = isset($radar['axes']) && is_array($radar['axes']) ? $radar['axes'] : [];
         $labels = [];
@@ -160,9 +177,9 @@
         @if ($hasDynamicRadar)
             <polygon
                 points="{{ $polyFromValues($chartValues) }}"
-                fill="rgb(220 38 38)"
-                fill-opacity="0.22"
-                stroke="#dc2626"
+                fill="rgb({{ $radarFillRgb }})"
+                fill-opacity="0.24"
+                stroke="{{ $radarStrokeHex }}"
                 stroke-width="1.8"
                 stroke-linejoin="round"
             />

@@ -161,8 +161,38 @@ document.addEventListener('alpine:init', () => {
         },
     }));
 
-    Alpine.data('dataSourceLibrary', (config) => ({
-        tableDataBase: (config.tableDataBase ?? '').replace(/\/?$/, ''),
+    Alpine.data('dataSourceLibrary', (config) => {
+        const normalizedTableBase = (config.tableDataBase ?? '').replace(/\/?$/, '');
+        /*
+         * NCAA portal URLs contain "data-sources" as a substring ("ncaa-data-sources"), so never infer
+         * HS vs NCAA from that alone. If Blade @js() ever omits profile-feed keys, wrong defaults would
+         * PATCH hs_profile_feed_slots with NCAA slot keys → 422 and nothing persists.
+         */
+        const isNcaaPortal = normalizedTableBase.includes('ncaa-data-sources');
+        const profileFeedDefaults = isNcaaPortal
+            ? {
+                  summary: 'ncaa_profile_feed_slots',
+                  payload: 'ncaa_profile_feed_slots',
+                  assignmentsResp: 'ncaa_profile_feed_assignments',
+                  assignmentsEach: 'ncaa_profile_feed_slots',
+              }
+            : {
+                  summary: 'hs_profile_feed_slots',
+                  payload: 'hs_profile_feed_slots',
+                  assignmentsResp: 'hs_profile_feed_assignments',
+                  assignmentsEach: 'hs_profile_feed_slots',
+              };
+
+        return {
+        tableDataBase: normalizedTableBase,
+        libraryIndexPath: (config.libraryIndexPath ?? '/data-sources').replace(/\/?$/, ''),
+        profileFeedSlotsSummaryField:
+            config.profileFeedSlotsSummaryField ?? profileFeedDefaults.summary,
+        profileFeedSlotsPayloadKey: config.profileFeedSlotsPayloadKey ?? profileFeedDefaults.payload,
+        profileFeedAssignmentsResponseKey:
+            config.profileFeedAssignmentsResponseKey ?? profileFeedDefaults.assignmentsResp,
+        profileFeedAssignmentsEachSlotField:
+            config.profileFeedAssignmentsEachSlotField ?? profileFeedDefaults.assignmentsEach,
         blankGroupTabLabel:
             typeof config.blankGroupTabLabel === 'string' ? config.blankGroupTabLabel : '(blank)',
         uploadSummaries: Array.isArray(config.uploadSummaries) ? config.uploadSummaries : [],
@@ -215,14 +245,14 @@ document.addEventListener('alpine:init', () => {
         _tableLoadSeq: 0,
         newRowCells: [],
         appendRowBusy: false,
+        renameDraft: '',
+        renameBusy: false,
+        renameError: '',
 
         init() {
-            queueMicrotask(async () => {
-                if (!this.activeId) {
-                    return;
-                }
-                this.applyBrowseSettingsFromSummary();
-                await this.loadPage(this.page);
+            this.syncRenameDraft();
+            this.$watch('activeId', () => {
+                this.syncRenameDraft();
             });
         },
 
@@ -350,6 +380,11 @@ document.addEventListener('alpine:init', () => {
             return row?.name ?? '';
         },
 
+        syncRenameDraft() {
+            this.renameDraft = String(this.activeUploadName() ?? '');
+            this.renameError = '';
+        },
+
         heatVolumeKindColumnPresent(kind) {
             const k = String(kind ?? '').trim().toUpperCase();
             if (k === 'P') {
@@ -453,6 +488,27 @@ document.addEventListener('alpine:init', () => {
                     return i;
                 }
             }
+            for (let j = 0; j < list.length; j++) {
+                const slug = this.headerSlugForHeatVolume(list[j]);
+                if (
+                    slug === 'pitches' ||
+                    slug === 'pitchcount' ||
+                    slug === 'pitchcounts'
+                ) {
+                    return j;
+                }
+                const raw = String(list[j] ?? '');
+                const norm = raw
+                    .replace(/^\ufeff/, '')
+                    .replace(/[\u00a0\u2007\u202f\u3000]/g, ' ')
+                    .trim()
+                    .toLowerCase()
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                if (norm === 'pitch count' || norm === 'pitch counts') {
+                    return j;
+                }
+            }
 
             return null;
         },
@@ -479,8 +535,30 @@ document.addEventListener('alpine:init', () => {
 
                 return;
             }
-            const slots = row.hs_profile_feed_slots;
+            const field = this.profileFeedSlotsSummaryField;
+            const slots = row[field];
             this.hsProfileFeedDraft = Array.isArray(slots) ? [...slots] : [];
+        },
+
+        profileFeedSlotChecked(slotKey) {
+            const k = String(slotKey ?? '');
+
+            return Array.isArray(this.hsProfileFeedDraft) && this.hsProfileFeedDraft.includes(k);
+        },
+
+        toggleProfileFeedSlot(slotKey, checked) {
+            const k = String(slotKey ?? '');
+            if (k === '') {
+                return;
+            }
+            const cur = Array.isArray(this.hsProfileFeedDraft) ? [...this.hsProfileFeedDraft] : [];
+            const set = new Set(cur);
+            if (checked) {
+                set.add(k);
+            } else {
+                set.delete(k);
+            }
+            this.hsProfileFeedDraft = Array.from(set);
         },
 
         applyBrowseSettingsFromSummary() {
@@ -539,19 +617,27 @@ document.addEventListener('alpine:init', () => {
         },
 
         applyHsProfileFeedAssignments(data) {
-            if (!data?.hs_profile_feed_assignments || !Array.isArray(data.hs_profile_feed_assignments)) {
+            const respKey = this.profileFeedAssignmentsResponseKey;
+            const slotKey = this.profileFeedAssignmentsEachSlotField;
+            const list = data?.[respKey];
+            if (!list || !Array.isArray(list)) {
                 return;
             }
             const slotMap = new Map(
-                data.hs_profile_feed_assignments.map((s) => [
-                    Number(s.id),
-                    Array.isArray(s.hs_profile_feed_slots) ? s.hs_profile_feed_slots : [],
-                ]),
+                list.map((s) => [Number(s.id), Array.isArray(s[slotKey]) ? s[slotKey] : []]),
             );
-            this.uploadSummaries = this.uploadSummaries.map((u) => ({
-                ...u,
-                hs_profile_feed_slots: slotMap.has(Number(u.id)) ? slotMap.get(Number(u.id)) : [],
-            }));
+            const summaryField = this.profileFeedSlotsSummaryField;
+            this.uploadSummaries = this.uploadSummaries.map((u) => {
+                const id = Number(u.id);
+                if (!slotMap.has(id)) {
+                    return u;
+                }
+
+                return {
+                    ...u,
+                    [summaryField]: slotMap.get(id) ?? [],
+                };
+            });
             this.syncHsProfileFeedDraft();
         },
 
@@ -587,10 +673,17 @@ document.addEventListener('alpine:init', () => {
                     heat_volume_header,
                 };
                 const payload = { dataset_browse_settings: browse };
-                if (!this.activeUploadReadOnly) {
-                    payload.hs_profile_feed_slots = this.hsProfileFeedDraft;
-                }
-                const { data } = await window.axios.patch(this.settingsUrl(), payload);
+                /*
+                 * Always send slot assignments: they are upload metadata (which profile tables this CSV
+                 * feeds), not row edits. Read-only datasets still need slots saved; the server ignores slot
+                 * payloads for HS Career PG master rows only.
+                 */
+                payload[this.profileFeedSlotsPayloadKey] = Array.isArray(this.hsProfileFeedDraft)
+                    ? [...this.hsProfileFeedDraft]
+                    : [];
+                const { data } = await window.axios.patch(this.settingsUrl(), payload, {
+                    headers: { Accept: 'application/json' },
+                });
                 this.applyHsProfileFeedAssignments(data);
                 this.applyDatasetBrowseToSummary(data);
                 this.syncHsProfileFeedDraft();
@@ -598,6 +691,45 @@ document.addEventListener('alpine:init', () => {
                 await this.loadPage(this.page);
             } catch {
                 this.loadError = 'Could not save dataset settings.';
+            }
+        },
+
+        async saveDatasetName() {
+            if (!this.activeId || this.activeUploadReadOnly || this.renameBusy) {
+                return;
+            }
+            const name = String(this.renameDraft ?? '').trim();
+            if (name === '') {
+                this.renameError = 'Display name cannot be empty.';
+
+                return;
+            }
+            this.renameBusy = true;
+            this.renameError = '';
+            try {
+                const { data } = await window.axios.patch(
+                    this.settingsUrl(),
+                    { name },
+                    { headers: { Accept: 'application/json' } },
+                );
+                const id = Number(this.activeId);
+                const finalName = typeof data?.name === 'string' ? data.name : name;
+                this.uploadSummaries = this.uploadSummaries.map((u) =>
+                    Number(u.id) === id ? { ...u, name: finalName } : u,
+                );
+                this.syncRenameDraft();
+            } catch (err) {
+                const status = err?.response?.status;
+                const body = err?.response?.data;
+                const errs = body?.errors;
+                if (status === 422 && errs?.name?.[0]) {
+                    this.renameError = String(errs.name[0]);
+                } else {
+                    this.renameError =
+                        typeof body?.message === 'string' ? body.message : 'Could not save display name.';
+                }
+            } finally {
+                this.renameBusy = false;
             }
         },
 
@@ -761,7 +893,7 @@ document.addEventListener('alpine:init', () => {
                 const { data } = await window.axios.delete(`${this.tableDataBase}/${this.activeId}`, {
                     headers: { Accept: 'application/json' },
                 });
-                const url = data?.redirect ?? '/data-sources';
+                const url = data?.redirect ?? this.libraryIndexPath;
                 window.location.assign(url);
             } catch {
                 this.loadError = 'Could not delete this dataset.';
@@ -777,6 +909,7 @@ document.addEventListener('alpine:init', () => {
             await this.loadPlayerNames();
             await this.$nextTick();
             await this.loadPage(1);
+            this.syncHsProfileFeedDraft();
         },
 
         get filteredPlayerPickerOptions() {
@@ -1540,14 +1673,93 @@ document.addEventListener('alpine:init', () => {
             this.activeGroupValue = value === null || value === undefined ? null : String(value);
             this.loadPage(1);
         },
-    }));
+        };
+    });
 
     Alpine.data('playerListTable', (config) => ({
         rows: config.rows,
         deleteConfirm: config.deleteConfirm ?? '',
+        playersPatchBase: String(config.playersPatchBase ?? '/players').replace(/\/$/, ''),
         filterQuery: '',
         sortKey: 'rk',
         sortDir: 'asc',
+        editingId: null,
+        editDraft: {},
+        editFieldErrors: {},
+        saving: false,
+
+        nullIfEmptyRank(v) {
+            if (v === null || v === undefined || v === '') {
+                return null;
+            }
+            const n = Number(v);
+
+            return Number.isNaN(n) ? null : n;
+        },
+
+        startEdit(row) {
+            this.editFieldErrors = {};
+            this.editingId = row.id;
+            this.editDraft = {
+                first_name: row.first_name,
+                last_name: row.last_name,
+                mdl: row.mdl ?? '',
+                mlb: row.mlb ?? '',
+                espn: row.espn ?? '',
+                law: row.law ?? '',
+                fb: row.fb ?? '',
+                ba: row.ba ?? '',
+            };
+        },
+
+        firstError(field) {
+            const e = this.editFieldErrors[field];
+
+            return Array.isArray(e) && e.length ? e[0] : '';
+        },
+
+        cancelEdit() {
+            this.editingId = null;
+            this.editDraft = {};
+            this.editFieldErrors = {};
+        },
+
+        async saveEdit(rowId) {
+            if (this.saving) {
+                return;
+            }
+            this.saving = true;
+            this.editFieldErrors = {};
+            const d = this.editDraft;
+            const payload = {
+                first_name: d.first_name,
+                last_name: d.last_name,
+                source_mdl: this.nullIfEmptyRank(d.mdl),
+                source_mlb: this.nullIfEmptyRank(d.mlb),
+                source_espn: this.nullIfEmptyRank(d.espn),
+                source_law: this.nullIfEmptyRank(d.law),
+                source_fb: this.nullIfEmptyRank(d.fb),
+                source_ba: this.nullIfEmptyRank(d.ba),
+            };
+            try {
+                const { data } = await window.axios.patch(`${this.playersPatchBase}/${rowId}`, payload, {
+                    headers: { Accept: 'application/json' },
+                });
+                const idx = this.rows.findIndex((r) => r.id === rowId);
+                if (idx !== -1 && data.row) {
+                    this.rows[idx] = data.row;
+                }
+                this.cancelEdit();
+            } catch (e) {
+                if (e.response?.status === 422 && e.response.data?.errors) {
+                    this.editFieldErrors = e.response.data.errors;
+                } else {
+                    window.alert('Could not save changes.');
+                }
+            } finally {
+                this.saving = false;
+            }
+        },
 
         sortField(key) {
             const map = {
@@ -1561,7 +1773,7 @@ document.addEventListener('alpine:init', () => {
                 mlb: 'mlb',
                 espn: 'espn',
                 law: 'law',
-                fg: 'fg',
+                fb: 'fb',
                 ba: 'ba',
                 profile: 'profile_url',
             };
@@ -1570,7 +1782,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         isNumericSortKey(key) {
-            return ['rk', 'agg', 'mdl', 'mlb', 'espn', 'law', 'fg', 'ba'].includes(key);
+            return ['rk', 'agg', 'mdl', 'mlb', 'espn', 'law', 'fb', 'ba'].includes(key);
         },
 
         compareNum(a, b, asc) {
@@ -1657,7 +1869,7 @@ document.addEventListener('alpine:init', () => {
                 ['mlb', 'mlb'],
                 ['espn', 'espn'],
                 ['law', 'law'],
-                ['fg', 'fg'],
+                ['fb', 'fb'],
                 ['ba', 'ba'],
             ];
             const out = {};
@@ -1837,6 +2049,287 @@ document.addEventListener('alpine:init', () => {
         choose(p) {
             if (p.url) {
                 window.location.href = p.url;
+            }
+        },
+    }));
+
+    Alpine.data('workingBoard', (config) => ({
+        roundKeys: Array.isArray(config.roundKeys) ? config.roundKeys : [],
+        confidenceOptions: Array.isArray(config.confidenceOptions) ? config.confidenceOptions : [],
+        riskOptions: Array.isArray(config.riskOptions) ? config.riskOptions : [],
+        rounds: {},
+        pool: Array.isArray(config.playerPool) ? config.playerPool : [],
+        updateUrl: config.updateUrl ?? '',
+        hsPlayerBaseUrl: String(config.hsPlayerBaseUrl ?? '').replace(/\/$/, ''),
+        nextAddByRound: {},
+        saving: false,
+        saveError: '',
+        _saveT: null,
+
+        init() {
+            const init = config.initialRounds && typeof config.initialRounds === 'object' ? config.initialRounds : {};
+            this.rounds = JSON.parse(JSON.stringify(init));
+            const nk = {};
+            for (const k of this.roundKeys) {
+                nk[k] = '';
+                if (!Array.isArray(this.rounds[k])) {
+                    this.rounds[k] = [];
+                }
+            }
+            this.nextAddByRound = nk;
+        },
+
+        hsPlayerUrl(id) {
+            return `${this.hsPlayerBaseUrl}/${encodeURIComponent(String(id))}`;
+        },
+
+        boardName(card) {
+            const ln = String(card?.last_name ?? '').trim();
+            const fn = String(card?.first_name ?? '').trim();
+            if (ln === '' && fn === '') {
+                return '—';
+            }
+
+            return `${ln.toUpperCase()}, ${fn.toUpperCase()}`;
+        },
+
+        gradeFmt(v) {
+            if (v === null || v === undefined || v === '') {
+                return '—';
+            }
+            const n = Number(v);
+
+            return Number.isNaN(n) ? '—' : n.toFixed(1);
+        },
+
+        gradeHeatClass(v) {
+            if (v === null || v === undefined || v === '') {
+                return '';
+            }
+            const n = Number(v);
+            if (Number.isNaN(n)) {
+                return '';
+            }
+            if (n >= 6) {
+                return 'cf-value-high';
+            }
+            if (n <= 4) {
+                return 'cf-value-low';
+            }
+
+            return '';
+        },
+
+        confidenceLabel(v) {
+            if (v === '' || v === null) {
+                return '—';
+            }
+
+            return String(v);
+        },
+
+        riskLabel(v) {
+            if (v === '' || v === null) {
+                return '—';
+            }
+
+            return String(v);
+        },
+
+        confidenceSelectClass(v) {
+            const s = String(v ?? '');
+            if (s === 'HIGH' || s === 'STRONG') {
+                return 'bg-emerald-200 text-emerald-950 border-emerald-400';
+            }
+            if (s === 'AVERAGE') {
+                return 'bg-amber-100 text-amber-950 border-amber-300';
+            }
+            if (s === 'WEAK' || s === 'TBD') {
+                return 'bg-slate-100 text-slate-800 border-slate-300';
+            }
+
+            return 'bg-white text-slate-900';
+        },
+
+        riskSelectClass(v) {
+            const s = String(v ?? '');
+            if (s === 'LOW') {
+                return 'text-emerald-800 border-emerald-400 bg-emerald-50';
+            }
+            if (s === 'MEDIUM') {
+                return 'text-amber-800 border-amber-400 bg-amber-50';
+            }
+            if (s === 'MED-HIGH') {
+                return 'text-orange-900 border-orange-400 bg-orange-50';
+            }
+            if (s === 'HIGH' || s === 'EXTREME') {
+                return 'text-red-900 border-red-400 bg-red-50';
+            }
+
+            return 'text-slate-900 bg-white';
+        },
+
+        isPlayerOnBoard(pid) {
+            const id = Number(pid);
+            for (const rk of this.roundKeys) {
+                const list = this.rounds[rk] ?? [];
+                for (const c of list) {
+                    if (Number(c.player_id) === id) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        },
+
+        poolOptions() {
+            return this.pool
+                .filter((p) => !this.isPlayerOnBoard(p.player_id))
+                .map((p) => ({
+                    player_id: p.player_id,
+                    label: this.boardName(p),
+                }));
+        },
+
+        addPlayerToRound(rk) {
+            const raw = this.nextAddByRound[rk];
+            const id = Number(raw);
+            this.nextAddByRound[rk] = '';
+            if (!id || Number.isNaN(id)) {
+                return;
+            }
+            const template = this.pool.find((p) => Number(p.player_id) === id);
+            if (!template) {
+                return;
+            }
+            const card = {
+                ...template,
+                confidence: '',
+                risk: '',
+            };
+            if (!Array.isArray(this.rounds[rk])) {
+                this.rounds[rk] = [];
+            }
+            this.rounds[rk].push(card);
+            this.scheduleSave();
+        },
+
+        removeFromRound(rk, idx) {
+            if (!Array.isArray(this.rounds[rk])) {
+                return;
+            }
+            this.rounds[rk].splice(idx, 1);
+            this.scheduleSave();
+        },
+
+        onDragStart(ev, rk, idx) {
+            const list = this.rounds[rk];
+            if (!Array.isArray(list) || idx < 0 || idx >= list.length) {
+                return;
+            }
+            const payload = JSON.stringify({ rk, idx });
+            ev.dataTransfer.setData('application/x-working-board', payload);
+            ev.dataTransfer.setData('text/plain', payload);
+            ev.dataTransfer.effectAllowed = 'move';
+        },
+
+        dropIndexFromEvent(ev) {
+            const tbody = ev.currentTarget;
+            const rows = [...tbody.querySelectorAll('tr[data-player-row]')];
+            if (rows.length === 0) {
+                return 0;
+            }
+            const y = ev.clientY;
+            for (let i = 0; i < rows.length; i++) {
+                const r = rows[i].getBoundingClientRect();
+                const mid = r.top + r.height / 2;
+                if (y < mid) {
+                    return i;
+                }
+            }
+
+            return rows.length;
+        },
+
+        onRoundDrop(ev, targetRk) {
+            let raw = ev.dataTransfer.getData('application/x-working-board');
+            if (!raw) {
+                raw = ev.dataTransfer.getData('text/plain');
+            }
+            if (!raw) {
+                return;
+            }
+            let payload;
+            try {
+                payload = JSON.parse(raw);
+            } catch {
+                return;
+            }
+            const fromRk = payload.rk;
+            const fromIdx = Number(payload.idx);
+            let insertAt = this.dropIndexFromEvent(ev);
+            const list = this.rounds[fromRk];
+            if (!Array.isArray(list) || fromIdx < 0 || fromIdx >= list.length) {
+                return;
+            }
+            const [card] = list.splice(fromIdx, 1);
+            if (fromRk === targetRk && insertAt > fromIdx) {
+                insertAt -= 1;
+            }
+            if (!Array.isArray(this.rounds[targetRk])) {
+                this.rounds[targetRk] = [];
+            }
+            insertAt = Math.max(0, Math.min(insertAt, this.rounds[targetRk].length));
+            this.rounds[targetRk].splice(insertAt, 0, card);
+            this.scheduleSave();
+        },
+
+        buildPayload() {
+            const rounds = {};
+            for (const rk of this.roundKeys) {
+                rounds[rk] = (this.rounds[rk] ?? []).map((c) => ({
+                    player_id: Number(c.player_id),
+                    confidence: c.confidence ?? '',
+                    risk: c.risk ?? '',
+                }));
+            }
+
+            return { rounds };
+        },
+
+        scheduleSave() {
+            this.saveError = '';
+            if (this._saveT) {
+                clearTimeout(this._saveT);
+            }
+            this._saveT = setTimeout(() => {
+                this.saveNow();
+            }, 400);
+        },
+
+        async saveNow() {
+            if (!this.updateUrl) {
+                return;
+            }
+            this.saving = true;
+            this.saveError = '';
+            try {
+                await window.axios.patch(this.updateUrl, this.buildPayload(), {
+                    headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+            } catch (e) {
+                const msg =
+                    e?.response?.data?.message ??
+                    e?.response?.data?.errors?.rounds?.[0] ??
+                    'Could not save board.';
+                this.saveError = typeof msg === 'string' ? msg : 'Could not save board.';
+            } finally {
+                this.saving = false;
             }
         },
     }));

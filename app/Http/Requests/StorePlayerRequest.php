@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\PlayerListSourceRanksInput;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -25,6 +26,6 @@ class StorePlayerRequest extends FormRequest
             'position' => ['nullable', 'string', 'max:32'],
             'aggregate_rank' => ['nullable', 'integer', 'min:1', 'max:65535'],
             'aggregate_score' => ['nullable', 'numeric'],
-        ];
+        ] + PlayerListSourceRanksInput::validationRules();
     }
 }

@@ -33,6 +33,33 @@ class DataSourceUploadBrowseTest extends TestCase
             ->assertRedirect(route('data-sources.index', ['dataset' => $upload->id]));
     }
 
+    public function test_can_rename_hs_upload_display_name(): void
+    {
+        $user = User::factory()->create();
+        $path = 'data-source-uploads/hs-rename-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($path, "PLAYER\nX\n");
+
+        $upload = DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'dataset_portal' => DataSourceUpload::PORTAL_HS,
+            'upload_kind' => DataSourceUpload::UPLOAD_KIND_FILE,
+            'name' => 'Before',
+            'original_filename' => 'f.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => ['PLAYER'],
+            'row_count' => 1,
+        ]);
+
+        $this->actingAs($user)
+            ->patchJson(route('data-sources.uploads.settings', $upload), ['name' => 'After'])
+            ->assertOk()
+            ->assertJsonPath('name', 'After');
+
+        $upload->refresh();
+        $this->assertSame('After', $upload->name);
+    }
+
     public function test_index_shows_dataset_tab_when_dataset_query_matches(): void
     {
         $user = User::factory()->create();
@@ -808,6 +835,47 @@ class DataSourceUploadBrowseTest extends TestCase
 
         $this->actingAs($user)->getJson($url)
             ->assertOk()
+            ->assertJsonPath('heat_column_stats.STAT.min', 10)
+            ->assertJsonPath('heat_column_stats.STAT.max', 20);
+    }
+
+    public function test_hs_pitch_types_gates_heat_on_pitches_header_when_volume_is_p(): void
+    {
+        $user = User::factory()->create();
+        $path = 'data-source-uploads/heat-pitches-col-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($path, "PLAYER,PA,PITCHES,STAT\nA,5,10,1\nB,200,900,10\nC,200,200,20\n");
+
+        $upload = DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Pitch PITCHES heat',
+            'original_filename' => 'p.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => ['PLAYER', 'PA', 'PITCHES', 'STAT'],
+            'row_count' => 3,
+            'dataset_browse_settings' => [
+                'players' => [],
+                'column_thresholds' => [],
+                'group_column' => null,
+                'group_value' => null,
+                'heat_min_pa' => 100,
+                'heat_volume_header' => 'P',
+            ],
+        ]);
+
+        $this->actingAs($user)->patchJson(route('data-sources.uploads.settings', $upload), [
+            'heat_rules' => [
+                'STAT' => ['enabled' => true, 'higher_is_better' => true],
+            ],
+        ])->assertOk();
+
+        $this->actingAs($user)->getJson(route('data-sources.uploads.table-data', $upload))
+            ->assertOk()
+            ->assertJsonPath('heat_pa_qualifier.min', 100)
+            ->assertJsonPath('heat_pa_qualifier.column_index', 2)
+            ->assertJsonPath('heat_row_pa_ok.0', false)
+            ->assertJsonPath('heat_row_pa_ok.1', true)
+            ->assertJsonPath('heat_row_pa_ok.2', true)
             ->assertJsonPath('heat_column_stats.STAT.min', 10)
             ->assertJsonPath('heat_column_stats.STAT.max', 20);
     }

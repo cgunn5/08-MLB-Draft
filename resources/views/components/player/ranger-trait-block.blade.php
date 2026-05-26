@@ -7,11 +7,14 @@
     'tightStack' => false,
     /** When set with tightStack, increases gaps between stacked tables (~15%). HS dashboard only. */
     'widerTableStack' => false,
+    /** Dense wide pane: less padding above the section title row (NCAA Performance / K-Zone / Adjustability). */
+    'trimHeaderTop' => false,
 ])
 
 @php
     $tightStack = $dense && filter_var($tightStack, FILTER_VALIDATE_BOOLEAN);
     $widerTableStack = $tightStack && filter_var($widerTableStack, FILTER_VALIDATE_BOOLEAN);
+    $trimHeaderTop = $dense && $tightStack && $widerTableStack && filter_var($trimHeaderTop, FILTER_VALIDATE_BOOLEAN);
     $titleClass = $comfortable
         ? 'text-xs sm:text-sm md:text-base'
         : ($dense
@@ -20,14 +23,19 @@
             : 'text-[calc(0.72rem/2)] sm:text-[calc(0.8rem/2)]');
     if ($dense) {
         /* Take strip heights: .dense-ranger-traits-take / .ncaa-ranger-traits-take in app.css (px; Tailwind often omits min-h from PHP-only Blade strings). */
+        /* Vertical padding scales with .ncaa-ranger-traits-take / .dense-ranger-traits-take heights in app.css. */
         $noteDensePad = $tightStack
-            ? 'px-1 py-2 sm:px-1 sm:py-2.5 md:px-1.5 md:py-3 '
-            : 'px-1 py-px sm:px-1 sm:py-0.5 md:px-1.5 md:py-1 ';
+            ? ($widerTableStack
+                ? 'px-1 py-0 sm:px-1 sm:py-px md:px-1.5 md:py-px '
+                : 'px-1 py-[10px] sm:px-1 sm:py-[0.609375rem] md:px-1.5 md:py-[0.73125rem] ')
+            : 'px-1 py-px sm:px-1 sm:py-px md:px-1.5 md:py-[1.5px] ';
         $noteDenseTakeClass = $tightStack ? ' ncaa-ranger-traits-take' : ' dense-ranger-traits-take';
+        /* No min-h-0 here: it must not compete with strip min-heights (unlayered app.css).
+         * items-center + justify-center: short takes sit centered; long takes scroll inside max-height. */
         $noteWrapClass =
-            'shrink-0 flex items-center justify-center app-outline-soft bg-[#f2f6f9] '.
+            'flex w-full min-w-0 shrink-0 items-center justify-center app-outline-soft bg-[#f2f6f9] '.
             $noteDensePad.
-            'text-center font-sans font-[700] leading-snug text-black'.
+            'text-center font-sans font-[700] text-black'.
             $noteDenseTakeClass;
     } else {
         $noteClass = $comfortable
@@ -59,7 +67,9 @@
     /* HS dense: bottom padding ≈ pt + title-row mb; stepped ×0.9 again. */
     if ($dense && $tightStack) {
         $sectionPad = $widerTableStack
-            ? ' gap-2.5 px-1.5 pt-2 pb-2 sm:gap-3 sm:px-2 sm:pt-2.5 sm:pb-2.5 md:gap-3.5 md:pt-3 md:pb-2.5'
+            ? ($trimHeaderTop
+                ? ' gap-2.5 px-1.5 pt-0 pb-2 sm:gap-3 sm:px-2 sm:pt-0.5 sm:pb-2.5 md:gap-3.5 md:pt-1 md:pb-2.5'
+                : ' gap-2.5 px-1.5 pt-2 pb-2 sm:gap-3 sm:px-2 sm:pt-2.5 sm:pb-2.5 md:gap-3.5 md:pt-3 md:pb-2.5')
             : ' gap-2 px-1.5 pt-2 pb-2 sm:gap-2.5 sm:px-2 sm:pt-2.5 sm:pb-2.5 md:gap-3 md:pt-3 md:pb-2.5';
     } elseif ($dense) {
         $sectionPad =
@@ -117,8 +127,25 @@
     </div>
 
     <div class="{{ $noteWrapClass }}">
-        <p class="ranger-trait-take-text max-w-full break-words">{{ $note ? $note : '-' }}</p>
+        <p
+            @class([
+                'ranger-trait-take-text break-words',
+                'w-full min-w-0 max-w-full' => $dense,
+                'max-w-full' => ! $dense,
+            ])
+        >{{ $note ? $note : '-' }}</p>
     </div>
+
+    @isset($compHeatNav)
+        @if (! $compHeatNav->isEmpty())
+            {{-- Zero layout height: horizontal pane on the seam between take strip and tables (NCAA K-Zone comp bucket links). --}}
+            <div class="pointer-events-none relative z-[5] h-0 w-full shrink-0 overflow-visible">
+                <div class="pointer-events-auto absolute inset-x-1.5 top-0 flex -translate-y-1/2 justify-center sm:inset-x-2">
+                    {{ $compHeatNav }}
+                </div>
+            </div>
+        @endif
+    @endisset
 
     @if (! $slot->isEmpty())
         <div class="{{ $slotWrapClass }}">

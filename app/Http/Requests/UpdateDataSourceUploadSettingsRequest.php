@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\DataSourceUpload;
 use App\Support\HsRangerTraitsSheetLayout;
+use App\Support\NcaaRangerTraitsSheetLayout;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -24,11 +25,14 @@ class UpdateDataSourceUploadSettingsRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'name' => ['sometimes', 'string', 'min:1', 'max:255'],
             'column_order' => ['sometimes', 'array'],
             'column_order.*' => ['integer', 'min:0'],
             'heat_rules' => ['sometimes', 'array'],
             'hs_profile_feed_slots' => ['sometimes', 'array'],
             'hs_profile_feed_slots.*' => ['string', Rule::in(HsRangerTraitsSheetLayout::hsProfileSlotKeys())],
+            'ncaa_profile_feed_slots' => ['sometimes', 'array'],
+            'ncaa_profile_feed_slots.*' => ['string', Rule::in(NcaaRangerTraitsSheetLayout::ncaaProfileSlotKeys())],
             'dataset_browse_settings' => ['sometimes', 'array'],
             'dataset_browse_settings.players' => ['sometimes', 'array'],
             'dataset_browse_settings.players.*' => ['string', 'max:500'],
@@ -52,6 +56,12 @@ class UpdateDataSourceUploadSettingsRequest extends FormRequest
 
             /** @var DataSourceUpload $upload */
             $upload = $this->route('dataSourceUpload');
+            if ($this->has('name') && $upload->isCareerPgMaster()) {
+                $validator->errors()->add('name', __('This dataset name is managed automatically.'));
+
+                return;
+            }
+
             $n = count($upload->header_row);
 
             if ($this->has('column_order')) {

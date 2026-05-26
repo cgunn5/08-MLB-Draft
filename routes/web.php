@@ -5,6 +5,7 @@ use App\Http\Controllers\DataSourceController;
 use App\Http\Controllers\HsDashboardController;
 use App\Http\Controllers\HsPlayerController;
 use App\Http\Controllers\NcaaDashboardController;
+use App\Http\Controllers\NcaaDataSourceController;
 use App\Http\Controllers\NcaaPlayerController;
 use App\Http\Controllers\NoteInputController;
 use App\Http\Controllers\PlayerListController;
@@ -24,8 +25,10 @@ Route::get('/dashboard', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/board', [WorkingBoardController::class, 'index'])->name('board.index');
+    Route::patch('/board', [WorkingBoardController::class, 'update'])->name('board.update');
     Route::get('/players', [PlayerListController::class, 'index'])->name('players.index');
     Route::post('/players', [PlayerListController::class, 'store'])->name('players.store');
+    Route::patch('/players/{player}', [PlayerListController::class, 'update'])->name('players.update');
     Route::delete('/players/{player}', [PlayerListController::class, 'destroy'])->name('players.destroy');
     Route::get('/ncaa', [NcaaDashboardController::class, 'index'])->name('ncaa.index');
     Route::get('/ncaa/players/{player}', [NcaaPlayerController::class, 'show'])->name('ncaa.players.show');
@@ -46,6 +49,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/data-sources/uploads/{dataSourceUpload}/rows/{ordinal}', [DataSourceController::class, 'destroyRow'])->name('data-sources.uploads.rows.destroy')->whereNumber('ordinal');
     Route::delete('/data-sources/uploads/{dataSourceUpload}', [DataSourceController::class, 'destroyUpload'])->name('data-sources.uploads.delete');
     Route::get('/data-sources/uploads/{dataSourceUpload}', [DataSourceController::class, 'show'])->name('data-sources.uploads.show');
+
+    Route::get('/ncaa-data-sources', [NcaaDataSourceController::class, 'index'])->name('ncaa-data-sources.index');
+    Route::post('/ncaa-data-sources', [NcaaDataSourceController::class, 'store'])->name('ncaa-data-sources.store');
+    Route::get('/ncaa-data-sources/uploads/{dataSourceUpload}/player-names', [NcaaDataSourceController::class, 'playerNames'])->name('ncaa-data-sources.uploads.player-names');
+    Route::get('/ncaa-data-sources/uploads/{dataSourceUpload}/table-data', [NcaaDataSourceController::class, 'tableData'])->name('ncaa-data-sources.uploads.table-data');
+    Route::get('/ncaa-data-sources/uploads/{dataSourceUpload}/group-values', [NcaaDataSourceController::class, 'groupColumnValues'])->name('ncaa-data-sources.uploads.group-values');
+    Route::patch('/ncaa-data-sources/uploads/{dataSourceUpload}/settings', [NcaaDataSourceController::class, 'updateSettings'])->name('ncaa-data-sources.uploads.settings');
+    Route::post('/ncaa-data-sources/uploads/{dataSourceUpload}/rows', [NcaaDataSourceController::class, 'storeRow'])->name('ncaa-data-sources.uploads.rows.store');
+    Route::patch('/ncaa-data-sources/uploads/{dataSourceUpload}/rows/{ordinal}', [NcaaDataSourceController::class, 'updateRow'])->name('ncaa-data-sources.uploads.rows.update')->whereNumber('ordinal');
+    Route::delete('/ncaa-data-sources/uploads/{dataSourceUpload}/rows/{ordinal}', [NcaaDataSourceController::class, 'destroyRow'])->name('ncaa-data-sources.uploads.rows.destroy')->whereNumber('ordinal');
+    Route::delete('/ncaa-data-sources/uploads/{dataSourceUpload}', [NcaaDataSourceController::class, 'destroyUpload'])->name('ncaa-data-sources.uploads.delete');
+    Route::get('/ncaa-data-sources/uploads/{dataSourceUpload}', [NcaaDataSourceController::class, 'show'])->name('ncaa-data-sources.uploads.show');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

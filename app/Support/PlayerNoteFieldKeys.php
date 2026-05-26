@@ -5,11 +5,19 @@ namespace App\Support;
 final class PlayerNoteFieldKeys
 {
     /**
+     * Notes UI and validation use lowercase pool keys; tolerate legacy casing/whitespace in DB.
+     */
+    public static function canonicalPoolForNotes(string $pool): string
+    {
+        return strtolower(trim($pool));
+    }
+
+    /**
      * @return list<string>
      */
     public static function forPool(string $pool): array
     {
-        return match ($pool) {
+        return match (self::canonicalPoolForNotes($pool)) {
             'ncaa' => [
                 'master_take',
                 'note_performance',
@@ -36,14 +44,14 @@ final class PlayerNoteFieldKeys
      */
     public static function sectionsForPool(string $pool): array
     {
-        return match ($pool) {
+        return match (self::canonicalPoolForNotes($pool)) {
             'ncaa' => [
                 ['key' => 'master_take', 'label' => 'Player Summary'],
                 ['key' => 'note_performance', 'label' => 'Performance'],
-                ['key' => 'note_approach_miss', 'label' => 'Approach / Miss'],
+                ['key' => 'note_approach_miss', 'label' => 'K-Zone Control'],
                 ['key' => 'note_pitch_coverage', 'label' => 'Pitch Coverage'],
                 ['key' => 'note_engine', 'label' => 'Engine'],
-                ['key' => 'note_left_right', 'label' => 'Left / Right'],
+                ['key' => 'note_left_right', 'label' => 'Platoon'],
                 ['key' => 'note_swing', 'label' => 'Swing'],
             ],
             'hs' => [
@@ -63,6 +71,8 @@ final class PlayerNoteFieldKeys
      */
     public static function gradeAttributeForNoteField(string $field, string $pool): ?string
     {
+        $poolKey = self::canonicalPoolForNotes($pool);
+
         if ($field === 'master_take') {
             return 'grade_role';
         }
@@ -70,7 +80,7 @@ final class PlayerNoteFieldKeys
         return match ($field) {
             'note_performance' => 'grade_perf',
             'note_approach_miss' => 'grade_approach',
-            'note_pitch_coverage' => $pool === 'ncaa' ? 'grade_adj' : 'grade_contact',
+            'note_pitch_coverage' => $poolKey === 'ncaa' ? 'grade_adj' : 'grade_contact',
             'note_engine' => 'grade_damage',
             'note_left_right' => 'grade_contact',
             'note_swing' => 'grade_swing',

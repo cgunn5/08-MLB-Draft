@@ -53,11 +53,24 @@ php artisan serve
 
 Change the admin email and password immediately in production. Use HTTPS, strong `APP_KEY`, and set `APP_DEBUG=false`. For production hardening, also configure your web server, rate limiting, and backups.
 
-**If login fails after setup:** use the same host as `APP_URL` in `.env` (e.g. open `http://127.0.0.1:8000`, not `http://localhost:8000`, when `APP_URL` is `http://127.0.0.1:8000`). Recreate the admin with:
+**If login fails after setup:** use the same host as `APP_URL` in `.env` (e.g. open `http://127.0.0.1:8000`, not `http://localhost:8000`, when `APP_URL` is `http://127.0.0.1:8000`).
 
-```bash
-php artisan migrate:fresh --seed
-```
+**Backups (notes, grades, and all app DB state):** Player **notes and grades** live in the database (`players` columns and related tables), not in uploaded CSV files. Git does **not** back up the database.
+
+1. **Automated (recommended)** — The app ships `php artisan app:backup-database`, which copies the SQLite file (default) into `storage/app/database-backups/` with a timestamped name, then deletes backups older than `APP_DB_BACKUP_RETENTION_DAYS` (default 30). A daily run is registered at `APP_DB_BACKUP_DAILY_AT` (default `03:15`). **You must run the Laravel scheduler in production**, for example:
+   - Cron (every minute): `* * * * * cd /path/to/08-MLB-Draft && php artisan schedule:run >> /dev/null 2>&1`
+   - Or a supervisor/systemd service running `php artisan schedule:work`
+   - Manual anytime: `php artisan app:backup-database` or `composer backup-db` (add `--dry-run` to inspect paths only; `--no-prune` to skip deleting old files)
+2. **Off-server copy** — Sync or copy `storage/app/database-backups/` (and/or `database/database.sqlite`) to another disk, cloud object storage, or your host’s backup system so a server failure does not take everything with it.
+3. **MySQL / MariaDB** — If `DB_CONNECTION` is `mysql` or `mariadb`, the same command runs `mysqldump` when the client binary is on `PATH` (override with `MYSQLDUMP_PATH`) and writes a gzipped `.sql.gz` into the same backup directory. Large DBs are held in memory during gzip; for huge databases prefer your host’s native backup tools.
+
+Set `APP_DB_BACKUP_SCHEDULE_ENABLED=false` in CI or local environments where the DB is in-memory only.
+
+**After a DB reset, orphan CSVs:** persisted uploads use a UUID filename under `storage/app/private/data-source-uploads/`. To recreate `data_source_uploads` rows from those files only, run `php artisan app:recover-orphan-data-source-uploads` (use `--dry-run` first). That does **not** restore heat rules, browse settings, profile-feed slot checkboxes, or any player notes/grades—only a SQLite backup can.
+
+**Perfect Game / HS Stats – Performance:** the “Perfect Game” profile tables and the derived **HS Stats - Perfect Game Career** dataset only appear when an HS upload has the **Performance → Perfect Game** checkbox (`performance_pg`) saved on it. After a reset, run `php artisan app:recover-hs-perfect-game-performance-slot` (optional `--dry-run`) to auto-detect PG-style yearly CSVs (headers with YEAR + slash-line columns + ISO or BB%/K%), assign that slot to the **largest** matching upload by stored `row_count`, then rebuild the career master. If recovery attached the wrong sheet (e.g. a small “overall” file) so you see career stats but not full yearly PG rows, run again with **`--reassign`** to clear the slot from every HS file upload and re-pick the largest PG-shaped CSV. If your sheet uses unusual headers, re-check **Performance → Perfect Game** manually on HS Data for the right file.
+
+**Do not use `php artisan migrate:fresh` to fix login problems** unless you accept **complete loss** of all app data (players, notes, uploads, board state). `migrate:fresh` drops every table and rebuilds an empty schema. To restore only the bundled aggregate player list after a reset, run `php artisan db:seed --class=AggregatesPlayerSeeder` (that does not recover uploads or in-app notes). Prefer `php artisan tinker` or a password reset flow to fix credentials.
 
 (Local dev uses `SESSION_DRIVER=file` in `.env` by default in this project so sessions do not depend on the DB.)
 
@@ -67,4 +80,4 @@ Carbon Regular is loaded from `public/fonts/Carbon-Regular.ttf` (bundled in this
 
 ---
 
-*Last updated: April 2026*
+*Last updated: May 2026*
