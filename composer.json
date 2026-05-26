@@ -51,6 +51,9 @@
         "backup-db": [
             "@php artisan app:backup-database"
         ],
+        "export-bundle": [
+            "@php artisan app:export-application-bundle --ansi"
+        ],
         "deploy": [
             "composer install --no-dev --optimize-autoloader",
             "@php artisan optimize:clear --ansi",

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ApplicationBundleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\DataSourceController;
 use App\Http\Controllers\HsDashboardController;
@@ -74,6 +75,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/restore-data', [ApplicationBundleController::class, 'show'])->name('application-bundle.show');
+        Route::get('/restore-data/download', [ApplicationBundleController::class, 'download'])->name('application-bundle.download');
+        Route::post('/restore-data', [ApplicationBundleController::class, 'store'])->name('application-bundle.store');
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');

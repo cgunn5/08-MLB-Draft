@@ -46,7 +46,10 @@
                         {{ __('NCAA DATA') }}
                     </x-nav-link>
                     @if (Auth::user()->is_admin)
-                        <x-nav-link :href="url('/admin/users')" :active="request()->is('admin*')">
+                        <x-nav-link :href="url('/admin/restore-data')" :active="request()->is('admin/restore-data*')">
+                            {{ __('SYNC') }}
+                        </x-nav-link>
+                        <x-nav-link :href="url('/admin/users')" :active="request()->is('admin/users*')">
                             {{ __('USERS') }}
                         </x-nav-link>
                     @endif
@@ -127,7 +130,10 @@
                 {{ __('NCAA DATA') }}
             </x-responsive-nav-link>
             @if (Auth::user()->is_admin)
-                <x-responsive-nav-link :href="url('/admin/users')" :active="request()->is('admin*')">
+                <x-responsive-nav-link :href="url('/admin/restore-data')" :active="request()->is('admin/restore-data*')">
+                    {{ __('SYNC') }}
+                </x-responsive-nav-link>
+                <x-responsive-nav-link :href="url('/admin/users')" :active="request()->is('admin/users*')">
                     {{ __('USERS') }}
                 </x-responsive-nav-link>
             @endif
