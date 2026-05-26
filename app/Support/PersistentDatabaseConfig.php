@@ -17,6 +17,10 @@ final class PersistentDatabaseConfig
             return;
         }
 
+        if (HostedEnvironment::isLaravelCloud()) {
+            return;
+        }
+
         $persistent = PersistentStorage::databasePath();
         $configured = SqliteDatabaseBootstrap::resolvePath(
             (string) config('database.connections.sqlite.database')

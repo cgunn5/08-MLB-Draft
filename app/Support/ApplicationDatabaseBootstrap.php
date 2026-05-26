@@ -16,9 +16,17 @@ final class ApplicationDatabaseBootstrap
             return;
         }
 
+        if (HostedEnvironment::laravelCloudSqliteMisconfiguration()) {
+            return;
+        }
+
         self::$ran = true;
 
-        if (config('database.default') !== 'sqlite') {
+        $driver = config('database.default');
+
+        if ($driver !== 'sqlite') {
+            self::ensureManagedDatabaseMigrated();
+
             return;
         }
 
@@ -40,8 +48,17 @@ final class ApplicationDatabaseBootstrap
         self::recoverEmptyDatabaseFromBackupIfNeeded($path);
     }
 
+    public static function laravelCloudSqliteMisconfiguration(): bool
+    {
+        return HostedEnvironment::laravelCloudSqliteMisconfiguration();
+    }
+
     public static function needsFirstRunSetup(): bool
     {
+        if (self::laravelCloudSqliteMisconfiguration()) {
+            return true;
+        }
+
         self::ensureReady();
 
         if (self::hasUsers()) {
@@ -114,6 +131,17 @@ final class ApplicationDatabaseBootstrap
     public static function resetBootstrappedForTesting(): void
     {
         self::$ran = false;
+    }
+
+    private static function ensureManagedDatabaseMigrated(): void
+    {
+        try {
+            if (! Schema::hasTable('migrations')) {
+                self::runMigrationsOnce();
+            }
+        } catch (\Throwable) {
+            // Connection misconfigured — surfaced by setup/login flows.
+        }
     }
 
     private static function hasUsers(): bool

@@ -63,6 +63,12 @@
             "@php artisan app:forge-persistence-doctor --ansi",
             "@php artisan app:production-doctor --ansi"
         ],
+        "laravel-cloud-deploy": [
+            "@php artisan app:laravel-cloud-bootstrap --ansi",
+            "npm ci --ignore-scripts",
+            "npm run build",
+            "@php artisan optimize:clear --ansi"
+        ],
         "recover-login": [
             "@php artisan optimize:clear --ansi",
             "@php artisan config:clear --ansi",

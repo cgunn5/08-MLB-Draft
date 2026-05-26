@@ -29,7 +29,7 @@
         </div>
     @elseif (! $installationPreviouslyCompleted)
         <div class="mb-4 rounded-md bg-amber-50 p-3 text-sm text-amber-900 normal-case">
-            {{ __('First time only: after this, you will always use the login page. Data is stored on the server under storage/app/ and survives redeploys when Forge is configured correctly (see FORGE.md).') }}
+            {{ __('First time only: after this, you will always use the login page.') }}
         </div>
     @endif
 

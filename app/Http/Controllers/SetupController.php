@@ -17,6 +17,10 @@ class SetupController extends Controller
 {
     public function create(): View|RedirectResponse
     {
+        if (ApplicationDatabaseBootstrap::laravelCloudSqliteMisconfiguration()) {
+            return view('auth.laravel-cloud-database-required');
+        }
+
         if (! ApplicationDatabaseBootstrap::needsFirstRunSetup()) {
             return redirect()->route('login');
         }
@@ -29,6 +33,10 @@ class SetupController extends Controller
 
     public function restoreFromBackup(): RedirectResponse
     {
+        if (ApplicationDatabaseBootstrap::laravelCloudSqliteMisconfiguration()) {
+            return redirect()->route('setup');
+        }
+
         if (! ApplicationDatabaseBootstrap::needsFirstRunSetup()) {
             return redirect()->route('login');
         }
@@ -60,6 +68,10 @@ class SetupController extends Controller
 
     public function store(SetupAdminRequest $request): RedirectResponse
     {
+        if (ApplicationDatabaseBootstrap::laravelCloudSqliteMisconfiguration()) {
+            return redirect()->route('setup');
+        }
+
         if (! ApplicationDatabaseBootstrap::needsFirstRunSetup()) {
             return redirect()->route('login');
         }

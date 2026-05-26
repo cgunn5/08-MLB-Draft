@@ -17,8 +17,18 @@ class EnsureAdminUserCommand extends Command
 
     public function handle(): int
     {
-        $email = (string) $this->option('email');
-        $password = (string) ($this->option('password') ?: $this->secret('Admin password (min 8 chars)'));
+        $email = (string) ($this->option('email') ?: env('ADMIN_EMAIL', 'admin@example.com'));
+        $password = (string) ($this->option('password') ?: env('ADMIN_PASSWORD', ''));
+
+        if ($password === '') {
+            if ($this->input->isInteractive()) {
+                $password = (string) $this->secret('Admin password (min 8 chars)');
+            } else {
+                $this->components->error('Password required. Pass --password= or set ADMIN_PASSWORD.');
+
+                return self::FAILURE;
+            }
+        }
 
         if (strlen($password) < 8) {
             $this->components->error('Password must be at least 8 characters.');
