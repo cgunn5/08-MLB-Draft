@@ -1,10 +1,13 @@
 <?php
 
 use App\Http\Middleware\EnsureUserIsAdmin;
+use App\Support\StaleRouteCacheGuard;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+
+StaleRouteCacheGuard::invalidateIfStale(dirname(__DIR__));
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
