@@ -5,8 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Support\ApplicationDatabaseBackupTrigger;
-use App\Support\ApplicationDatabaseBootstrap;
-use App\Support\ApplicationInstallationMarker;
+use App\Support\LoginPageContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -19,12 +18,7 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(): View
     {
-        return view('auth.login', [
-            'needsFirstRunSetup' => ApplicationDatabaseBootstrap::needsFirstRunSetup(),
-            'laravelCloudSqliteMisconfiguration' => ApplicationDatabaseBootstrap::laravelCloudSqliteMisconfiguration(),
-            'recoverableBackup' => ApplicationDatabaseBootstrap::latestRecoverableBackupSummary(),
-            'installationPreviouslyCompleted' => ApplicationInstallationMarker::exists(),
-        ]);
+        return view('auth.login', LoginPageContext::forView());
     }
 
     /**

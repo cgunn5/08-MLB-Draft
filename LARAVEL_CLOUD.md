@@ -25,8 +25,10 @@ In **Environment** → **Environment variables**:
 | **Add** | `ADMIN_EMAIL=cgunn@texasrangers.com` |
 | **Add** | `ADMIN_PASSWORD=your-password` |
 | **Add** | `ADMIN_NAME=C. Gunn` |
-| **Recommended** | `SESSION_DRIVER=database` |
-| **Recommended** | `CACHE_STORE=database` |
+| **Leave unset for now** | `SESSION_DRIVER` (defaults to `file` — safe before migrations) |
+| **Leave unset for now** | `CACHE_STORE` (defaults to `file`) |
+
+After the first successful deploy with a database attached, you may set `SESSION_DRIVER=database` and `CACHE_STORE=database` if you want sessions in MySQL (optional).
 
 Do **not** commit passwords to GitHub — only set them in Laravel Cloud.
 

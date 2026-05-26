@@ -41,11 +41,15 @@ final class ApplicationDatabaseBootstrap
 
         $createdFile = SqliteDatabaseBootstrap::ensureFileExists($path);
 
-        if ($createdFile || ! Schema::hasTable('migrations')) {
-            self::runMigrationsOnce();
-        }
+        try {
+            if ($createdFile || ! Schema::hasTable('migrations')) {
+                self::runMigrationsOnce();
+            }
 
-        self::recoverEmptyDatabaseFromBackupIfNeeded($path);
+            self::recoverEmptyDatabaseFromBackupIfNeeded($path);
+        } catch (\Throwable) {
+            // Avoid 500 on login when SQLite/migrations are misconfigured.
+        }
     }
 
     public static function laravelCloudSqliteMisconfiguration(): bool
@@ -190,6 +194,8 @@ final class ApplicationDatabaseBootstrap
                 }
                 flock($handle, LOCK_UN);
             }
+        } catch (\Throwable) {
+            // Migration failure is surfaced by production-doctor / deploy command.
         } finally {
             fclose($handle);
         }

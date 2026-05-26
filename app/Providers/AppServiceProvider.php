@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Support\ApplicationDatabaseBootstrap;
 use App\Support\PersistentDatabaseConfig;
+use App\Support\ProductionDriverGuard;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -22,6 +23,13 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         PersistentDatabaseConfig::apply();
-        ApplicationDatabaseBootstrap::ensureReady();
+
+        try {
+            ApplicationDatabaseBootstrap::ensureReady();
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        ProductionDriverGuard::apply();
     }
 }
