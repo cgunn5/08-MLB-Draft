@@ -42,6 +42,20 @@ npm install
 npm run dev
 ```
 
+### First time on a live server (no SSH required)
+
+After your host deploys the latest code from GitHub (git pull / auto-deploy):
+
+1. Open your app URL in the browser (e.g. `https://your-domain.com/`).
+2. You should see **one-time setup** — enter your name, email, and password.
+3. Click **Create account & continue**. You land on the home page, logged in.
+
+The app creates `database/database.sqlite` and runs migrations automatically on that first visit. You do **not** need SSH or artisan commands unless something still fails.
+
+If you see a generic 500 instead of setup, your host must run **`composer install`**, **`npm run build`**, and allow the web server to write to `storage/` and `database/`. Ask your host to redeploy from the latest `main` branch, or run `composer run deploy` once if they can do that for you.
+
+### Local development
+
 In another terminal, run the app:
 
 ```bash

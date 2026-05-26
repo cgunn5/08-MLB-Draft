@@ -11,12 +11,19 @@ use App\Http\Controllers\NoteInputController;
 use App\Http\Controllers\PlayerListController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\WorkingBoardController;
+use App\Support\ApplicationDatabaseBootstrap;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return auth()->check()
-        ? redirect()->route('dashboard')
-        : redirect()->route('login');
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+
+    if (ApplicationDatabaseBootstrap::needsFirstRunSetup()) {
+        return redirect()->route('setup');
+    }
+
+    return redirect()->route('login');
 });
 
 Route::get('/dashboard', function () {
