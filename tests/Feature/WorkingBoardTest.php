@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Player;
 use App\Models\User;
 use App\Models\WorkingBoardEntry;
+use App\Support\PlayerProfileCompleteness;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -21,6 +22,43 @@ class WorkingBoardTest extends TestCase
     {
         $user = User::factory()->create();
         $this->actingAs($user)->get(route('board.index'))->assertOk()->assertSee('HS BOARD', false);
+    }
+
+    public function test_board_player_pool_only_includes_complete_profiles(): void
+    {
+        $user = User::factory()->create();
+        $complete = Player::factory()->create([
+            'player_pool' => 'hs',
+            'first_name' => 'Will',
+            'last_name' => 'Brick',
+            'school' => 'Test HS (TX)',
+            'position' => 'C',
+            'master_take' => 'High-end catcher prospect.',
+            'note_performance' => 'Strong summer.',
+            'note_approach_miss' => 'Advanced approach.',
+            'note_pitch_coverage' => 'Adjusts to pitches.',
+            'note_engine' => 'Plus damage.',
+            'note_swing' => 'Compact.',
+            'grade_role' => 6,
+            'grade_perf' => 5.5,
+            'grade_approach' => 6,
+            'grade_contact' => 5.5,
+            'grade_damage' => 6,
+            'grade_swing' => 5.5,
+        ]);
+        $incomplete = Player::factory()->create([
+            'player_pool' => 'hs',
+            'first_name' => 'Incomplete',
+            'last_name' => 'Player',
+        ]);
+
+        $this->assertTrue(PlayerProfileCompleteness::isComplete($complete));
+        $this->assertFalse(PlayerProfileCompleteness::isComplete($incomplete));
+
+        $res = $this->actingAs($user)->get(route('board.index'));
+        $res->assertOk();
+        $res->assertSee('"player_id":'.$complete->id, false);
+        $res->assertDontSee('"player_id":'.$incomplete->id, false);
     }
 
     public function test_board_patch_persists_rounds(): void

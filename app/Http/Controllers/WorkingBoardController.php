@@ -6,6 +6,7 @@ use App\Http\Requests\UpdateWorkingBoardRequest;
 use App\Models\Player;
 use App\Models\User;
 use App\Models\WorkingBoardEntry;
+use App\Support\PlayerProfileCompleteness;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -29,7 +30,12 @@ class WorkingBoardController extends Controller
             ])
             ->values();
 
-        $hsPlayers = Player::query()->hs()->orderedByName()->get();
+        $hsPlayers = Player::query()
+            ->hs()
+            ->orderedByName()
+            ->get()
+            ->filter(fn (Player $p): bool => PlayerProfileCompleteness::isComplete($p))
+            ->values();
 
         $rounds = [];
         foreach (WorkingBoardEntry::ROUND_KEYS as $rk) {
