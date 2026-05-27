@@ -9,28 +9,156 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('working_board_entries', function (Blueprint $table) {
-            $table->string('board_type', 16)->default('hs')->after('user_id');
-        });
+        if (! Schema::hasColumn('working_board_entries', 'board_type')) {
+            Schema::table('working_board_entries', function (Blueprint $table) {
+                $table->string('board_type', 16)->default('hs')->after('user_id');
+            });
+        }
 
         DB::table('working_board_entries')->update(['board_type' => 'hs']);
 
-        Schema::table('working_board_entries', function (Blueprint $table) {
-            $table->dropUnique(['user_id', 'player_id']);
-            $table->dropIndex(['user_id', 'round_key', 'sort_order']);
-            $table->unique(['user_id', 'board_type', 'player_id']);
-            $table->index(['user_id', 'board_type', 'round_key', 'sort_order']);
-        });
+        if ($this->usesMysql()) {
+            $this->upMysql();
+        } else {
+            $this->rebuildIndexes();
+        }
     }
 
     public function down(): void
     {
-        Schema::table('working_board_entries', function (Blueprint $table) {
-            $table->dropIndex(['user_id', 'board_type', 'round_key', 'sort_order']);
-            $table->dropUnique(['user_id', 'board_type', 'player_id']);
-            $table->unique(['user_id', 'player_id']);
-            $table->index(['user_id', 'round_key', 'sort_order']);
-            $table->dropColumn('board_type');
+        if ($this->usesMysql()) {
+            $this->downMysql();
+        } else {
+            $this->rebuildIndexes(down: true);
+        }
+
+        if (Schema::hasColumn('working_board_entries', 'board_type')) {
+            Schema::table('working_board_entries', function (Blueprint $table) {
+                $table->dropColumn('board_type');
+            });
+        }
+    }
+
+    private function upMysql(): void
+    {
+        if ($this->foreignKeyExists('user_id')) {
+            Schema::table('working_board_entries', function (Blueprint $table) {
+                $table->dropForeign(['user_id']);
+            });
+        }
+
+        if ($this->foreignKeyExists('player_id')) {
+            Schema::table('working_board_entries', function (Blueprint $table) {
+                $table->dropForeign(['player_id']);
+            });
+        }
+
+        $this->rebuildIndexes();
+
+        if (! $this->foreignKeyExists('user_id')) {
+            Schema::table('working_board_entries', function (Blueprint $table) {
+                $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            });
+        }
+
+        if (! $this->foreignKeyExists('player_id')) {
+            Schema::table('working_board_entries', function (Blueprint $table) {
+                $table->foreign('player_id')->references('id')->on('players')->cascadeOnDelete();
+            });
+        }
+    }
+
+    private function downMysql(): void
+    {
+        if ($this->foreignKeyExists('user_id')) {
+            Schema::table('working_board_entries', function (Blueprint $table) {
+                $table->dropForeign(['user_id']);
+            });
+        }
+
+        if ($this->foreignKeyExists('player_id')) {
+            Schema::table('working_board_entries', function (Blueprint $table) {
+                $table->dropForeign(['player_id']);
+            });
+        }
+
+        $this->rebuildIndexes(down: true);
+
+        if (! $this->foreignKeyExists('user_id')) {
+            Schema::table('working_board_entries', function (Blueprint $table) {
+                $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            });
+        }
+
+        if (! $this->foreignKeyExists('player_id')) {
+            Schema::table('working_board_entries', function (Blueprint $table) {
+                $table->foreign('player_id')->references('id')->on('players')->cascadeOnDelete();
+            });
+        }
+    }
+
+    private function rebuildIndexes(bool $down = false): void
+    {
+        Schema::table('working_board_entries', function (Blueprint $table) use ($down) {
+            if ($down) {
+                if (! $this->usesMysql() || $this->indexExists('working_board_entries_user_id_board_type_round_key_sort_order_index')) {
+                    $table->dropIndex(['user_id', 'board_type', 'round_key', 'sort_order']);
+                }
+
+                if (! $this->usesMysql() || $this->indexExists('working_board_entries_user_id_board_type_player_id_unique')) {
+                    $table->dropUnique(['user_id', 'board_type', 'player_id']);
+                }
+
+                if (! $this->usesMysql() || ! $this->indexExists('working_board_entries_user_id_player_id_unique')) {
+                    $table->unique(['user_id', 'player_id']);
+                }
+
+                if (! $this->usesMysql() || ! $this->indexExists('working_board_entries_user_id_round_key_sort_order_index')) {
+                    $table->index(['user_id', 'round_key', 'sort_order']);
+                }
+
+                return;
+            }
+
+            if (! $this->usesMysql() || $this->indexExists('working_board_entries_user_id_player_id_unique')) {
+                $table->dropUnique(['user_id', 'player_id']);
+            }
+
+            if (! $this->usesMysql() || $this->indexExists('working_board_entries_user_id_round_key_sort_order_index')) {
+                $table->dropIndex(['user_id', 'round_key', 'sort_order']);
+            }
+
+            if (! $this->usesMysql() || ! $this->indexExists('working_board_entries_user_id_board_type_player_id_unique')) {
+                $table->unique(['user_id', 'board_type', 'player_id']);
+            }
+
+            if (! $this->usesMysql() || ! $this->indexExists('working_board_entries_user_id_board_type_round_key_sort_order_index')) {
+                $table->index(['user_id', 'board_type', 'round_key', 'sort_order']);
+            }
         });
+    }
+
+    private function usesMysql(): bool
+    {
+        return in_array(Schema::getConnection()->getDriverName(), ['mysql', 'mariadb'], true);
+    }
+
+    private function indexExists(string $indexName): bool
+    {
+        return DB::table('information_schema.statistics')
+            ->whereRaw('table_schema = DATABASE()')
+            ->where('table_name', 'working_board_entries')
+            ->where('index_name', $indexName)
+            ->exists();
+    }
+
+    private function foreignKeyExists(string $column): bool
+    {
+        return DB::table('information_schema.key_column_usage')
+            ->whereRaw('table_schema = DATABASE()')
+            ->where('table_name', 'working_board_entries')
+            ->where('column_name', $column)
+            ->whereNotNull('referenced_table_name')
+            ->exists();
     }
 };
