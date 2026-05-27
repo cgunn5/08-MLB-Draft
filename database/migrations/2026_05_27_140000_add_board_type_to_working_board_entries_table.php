@@ -7,6 +7,11 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /** MySQL identifier limit is 64 characters. */
+    private const UNIQUE_BOARD_PLAYER = 'wbe_user_board_player_unique';
+
+    private const INDEX_BOARD_ROUND_SORT = 'wbe_user_board_round_sort_idx';
+
     public function up(): void
     {
         if (! Schema::hasColumn('working_board_entries', 'board_type')) {
@@ -101,13 +106,7 @@ return new class extends Migration
     {
         Schema::table('working_board_entries', function (Blueprint $table) use ($down) {
             if ($down) {
-                if (! $this->usesMysql() || $this->indexExists('working_board_entries_user_id_board_type_round_key_sort_order_index')) {
-                    $table->dropIndex(['user_id', 'board_type', 'round_key', 'sort_order']);
-                }
-
-                if (! $this->usesMysql() || $this->indexExists('working_board_entries_user_id_board_type_player_id_unique')) {
-                    $table->dropUnique(['user_id', 'board_type', 'player_id']);
-                }
+                $this->dropBoardTypeIndexes($table);
 
                 if (! $this->usesMysql() || ! $this->indexExists('working_board_entries_user_id_player_id_unique')) {
                     $table->unique(['user_id', 'player_id']);
@@ -128,14 +127,47 @@ return new class extends Migration
                 $table->dropIndex(['user_id', 'round_key', 'sort_order']);
             }
 
-            if (! $this->usesMysql() || ! $this->indexExists('working_board_entries_user_id_board_type_player_id_unique')) {
-                $table->unique(['user_id', 'board_type', 'player_id']);
+            if ($this->usesMysql()) {
+                $this->dropBoardTypeIndexes($table);
             }
 
-            if (! $this->usesMysql() || ! $this->indexExists('working_board_entries_user_id_board_type_round_key_sort_order_index')) {
-                $table->index(['user_id', 'board_type', 'round_key', 'sort_order']);
+            if (! $this->usesMysql() || ! $this->indexExists(self::UNIQUE_BOARD_PLAYER)) {
+                $table->unique(['user_id', 'board_type', 'player_id'], self::UNIQUE_BOARD_PLAYER);
+            }
+
+            if (! $this->usesMysql() || ! $this->indexExists(self::INDEX_BOARD_ROUND_SORT)) {
+                $table->index(
+                    ['user_id', 'board_type', 'round_key', 'sort_order'],
+                    self::INDEX_BOARD_ROUND_SORT
+                );
             }
         });
+    }
+
+    private function dropBoardTypeIndexes(Blueprint $table): void
+    {
+        if (! $this->usesMysql()) {
+            $table->dropIndex(self::INDEX_BOARD_ROUND_SORT);
+            $table->dropUnique(self::UNIQUE_BOARD_PLAYER);
+
+            return;
+        }
+
+        if ($this->indexExists(self::INDEX_BOARD_ROUND_SORT)) {
+            $table->dropIndex(self::INDEX_BOARD_ROUND_SORT);
+        }
+
+        if ($this->indexExists('working_board_entries_user_id_board_type_round_key_sort_order_index')) {
+            $table->dropIndex('working_board_entries_user_id_board_type_round_key_sort_order_index');
+        }
+
+        if ($this->indexExists(self::UNIQUE_BOARD_PLAYER)) {
+            $table->dropUnique(self::UNIQUE_BOARD_PLAYER);
+        }
+
+        if ($this->indexExists('working_board_entries_user_id_board_type_player_id_unique')) {
+            $table->dropUnique('working_board_entries_user_id_board_type_player_id_unique');
+        }
     }
 
     private function usesMysql(): bool
