@@ -24,6 +24,7 @@ use Illuminate\Support\Collection;
     'hs_profile_feed_slots',
     'ncaa_profile_feed_slots',
     'dataset_browse_settings',
+    'pitch_type_feed',
 ])]
 class DataSourceUpload extends Model
 {

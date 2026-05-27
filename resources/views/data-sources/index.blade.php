@@ -281,6 +281,29 @@
                                             </div>
                                         @endforeach
                                     </div>
+                                    <div
+                                        class="mt-3 border-t border-gray-200/90 pt-3"
+                                        x-show="profileFeedSlotChecked('adjustability_pitch') || String(pitchTypeFeedDraft ?? '') !== ''"
+                                        x-cloak
+                                    >
+                                        <label for="pitch_type_feed" class="block text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                            {{ __('Pitch type feed') }}
+                                        </label>
+                                        <p class="mt-0.5 text-[10px] normal-case text-gray-500">
+                                            {{ __('Use when this CSV has no TYPE column — one upload per pitch type (FB, BB, OS).') }}
+                                        </p>
+                                        <select
+                                            id="pitch_type_feed"
+                                            class="mt-1.5 block w-full max-w-xs rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:opacity-50"
+                                            x-model="pitchTypeFeedDraft"
+                                            x-bind:disabled="activeUploadReadOnly"
+                                        >
+                                            <option value="">{{ __('Auto (TYPE column)') }}</option>
+                                            <option value="FB">{{ __('FB — Fastballs') }}</option>
+                                            <option value="BB">{{ __('BB — Breaking balls') }}</option>
+                                            <option value="OS">{{ __('OS — Off-speed') }}</option>
+                                        </select>
+                                    </div>
                                 </div>
 
                                 {{-- Right: Filter Players, Set Thresholds, and Group By in one pane --}}

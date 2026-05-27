@@ -241,6 +241,7 @@ document.addEventListener('alpine:init', () => {
         activeGroupValue: null,
         _groupColumnSelectSyncing: false,
         hsProfileFeedDraft: [],
+        pitchTypeFeedDraft: '',
         _pendingBrowseThresholds: null,
         _tableLoadSeq: 0,
         newRowCells: [],
@@ -532,12 +533,17 @@ document.addEventListener('alpine:init', () => {
             const row = this.uploadSummaries.find((u) => Number(u.id) === Number(this.activeId));
             if (!row) {
                 this.hsProfileFeedDraft = [];
+                this.pitchTypeFeedDraft = '';
 
                 return;
             }
             const field = this.profileFeedSlotsSummaryField;
             const slots = row[field];
             this.hsProfileFeedDraft = Array.isArray(slots) ? [...slots] : [];
+            this.pitchTypeFeedDraft =
+                typeof row.pitch_type_feed === 'string' && row.pitch_type_feed !== ''
+                    ? row.pitch_type_feed
+                    : '';
         },
 
         profileFeedSlotChecked(slotKey) {
@@ -616,6 +622,22 @@ document.addEventListener('alpine:init', () => {
             );
         },
 
+        applyPitchTypeFeedToSummary(data) {
+            if (!Object.prototype.hasOwnProperty.call(data ?? {}, 'pitch_type_feed')) {
+                return;
+            }
+            const feed = data.pitch_type_feed;
+            this.uploadSummaries = this.uploadSummaries.map((u) =>
+                Number(u.id) === Number(this.activeId)
+                    ? {
+                          ...u,
+                          pitch_type_feed:
+                              typeof feed === 'string' && feed !== '' ? feed : null,
+                      }
+                    : u,
+            );
+        },
+
         applyHsProfileFeedAssignments(data) {
             const respKey = this.profileFeedAssignmentsResponseKey;
             const slotKey = this.profileFeedAssignmentsEachSlotField;
@@ -681,11 +703,15 @@ document.addEventListener('alpine:init', () => {
                 payload[this.profileFeedSlotsPayloadKey] = Array.isArray(this.hsProfileFeedDraft)
                     ? [...this.hsProfileFeedDraft]
                     : [];
+                const rawPitchFeed = String(this.pitchTypeFeedDraft ?? '').trim().toUpperCase();
+                payload.pitch_type_feed =
+                    rawPitchFeed === 'FB' || rawPitchFeed === 'BB' || rawPitchFeed === 'OS' ? rawPitchFeed : null;
                 const { data } = await window.axios.patch(this.settingsUrl(), payload, {
                     headers: { Accept: 'application/json' },
                 });
                 this.applyHsProfileFeedAssignments(data);
                 this.applyDatasetBrowseToSummary(data);
+                this.applyPitchTypeFeedToSummary(data);
                 this.syncHsProfileFeedDraft();
                 this.loadError = '';
                 await this.loadPage(this.page);

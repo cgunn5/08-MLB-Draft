@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\DataSourceUpload;
+use App\Support\DataSourcePitchTypeFeed;
 use App\Support\HsRangerTraitsSheetLayout;
 use App\Support\NcaaRangerTraitsSheetLayout;
 use Illuminate\Foundation\Http\FormRequest;
@@ -44,6 +45,7 @@ class UpdateDataSourceUploadSettingsRequest extends FormRequest
             'dataset_browse_settings.group_value' => ['sometimes', 'nullable', 'string', 'max:2000'],
             'dataset_browse_settings.heat_min_pa' => ['sometimes', 'nullable', 'numeric', 'min:0'],
             'dataset_browse_settings.heat_volume_header' => ['sometimes', 'nullable', 'string', 'max:200'],
+            'pitch_type_feed' => ['sometimes', 'nullable', 'string', Rule::in(DataSourcePitchTypeFeed::allowed())],
         ];
     }
 

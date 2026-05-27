@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\DataSourceUpload;
 use App\Models\Player;
 use App\Models\User;
+use App\Support\DataSourcePitchTypeFeed;
 use Illuminate\Support\Facades\Storage;
 
 final class HsRangerTraitsSheetResolver
@@ -54,8 +55,11 @@ final class HsRangerTraitsSheetResolver
             ->get()
             ->filter(static function (DataSourceUpload $upload): bool {
                 $slots = $upload->hs_profile_feed_slots;
+                if (is_array($slots) && $slots !== []) {
+                    return true;
+                }
 
-                return is_array($slots) && $slots !== [];
+                return DataSourcePitchTypeFeed::fromUpload($upload) !== null;
             })
             ->values()
             ->all();
@@ -73,7 +77,7 @@ final class HsRangerTraitsSheetResolver
         foreach ($assigned as $upload) {
             $slots = $upload->hs_profile_feed_slots;
             if (! is_array($slots)) {
-                continue;
+                $slots = [];
             }
             $blockSet = [];
             foreach ($slots as $slot) {
@@ -86,6 +90,11 @@ final class HsRangerTraitsSheetResolver
                     continue;
                 }
                 foreach (HsRangerTraitsSheetLayout::blockKeysForProfileSlot($slot) as $bk) {
+                    $blockSet[$bk] = true;
+                }
+            }
+            if (DataSourcePitchTypeFeed::fromUpload($upload) !== null) {
+                foreach (HsRangerTraitsSheetLayout::blockKeysForProfileSlot(DataSourcePitchTypeFeed::PROFILE_SLOT) as $bk) {
                     $blockSet[$bk] = true;
                 }
             }
@@ -345,7 +354,8 @@ final class HsRangerTraitsSheetResolver
 
             if ($type === 'pitch_rows') {
                 $defSlugs = $def['slugs'];
-                if ($pitchCol === null) {
+                $uploadPitchFeed = DataSourcePitchTypeFeed::fromUpload($upload);
+                if ($pitchCol === null && $uploadPitchFeed === null) {
                     $pitchRows = [];
                     $heatPitch = [];
                     foreach ($def['pitches'] ?? [] as $pitchLabel) {
@@ -371,7 +381,7 @@ final class HsRangerTraitsSheetResolver
                                     continue;
                                 }
                             }
-                            if ($this->pitchBucket($pitchCol, $r) === $pitchLabel) {
+                            if ($this->rowMatchesPitchLabel($pitchCol, $r, $pitchLabel, $uploadPitchFeed)) {
                                 $groupRows[] = $r;
                             }
                         }
@@ -386,7 +396,7 @@ final class HsRangerTraitsSheetResolver
                             : null;
                         $found = null;
                         foreach ($sorted as $r) {
-                            if ($this->pitchBucket($pitchCol, $r) === $pitchLabel) {
+                            if ($this->rowMatchesPitchLabel($pitchCol, $r, $pitchLabel, $uploadPitchFeed)) {
                                 $found = $r;
 
                                 break;
@@ -438,14 +448,117 @@ final class HsRangerTraitsSheetResolver
     private function mergeMaterialized(array &$out, array $material): void
     {
         foreach ($material['partial'] as $key => $value) {
-            $out[$key] = $value;
+            if ($key === 'adjust_pitch' && is_array($value)) {
+                $existing = is_array($out[$key] ?? null) ? $out[$key] : [];
+                $out[$key] = $this->mergeHsAdjustPitchRows($existing, $value);
+            } else {
+                $out[$key] = $value;
+            }
         }
         foreach ($material['partial_heat'] as $key => $value) {
-            $out['cell_heat'][$key] = $value;
+            if ($key === 'adjust_pitch' && is_array($value)) {
+                $existing = is_array($out['cell_heat'][$key] ?? null) ? $out['cell_heat'][$key] : [];
+                $out['cell_heat'][$key] = $this->mergeHsAdjustPitchHeat($existing, $value);
+            } else {
+                $out['cell_heat'][$key] = $value;
+            }
         }
         if ($material['demographics'] !== null) {
             $out['overall_demographics'] = $material['demographics'];
         }
+    }
+
+    /**
+     * @param  list<array<string, string>>  $existing
+     * @param  list<array<string, string>>  $incoming
+     * @return list<array<string, string>>
+     */
+    private function mergeHsAdjustPitchRows(array $existing, array $incoming): array
+    {
+        /** @var array<string, array<string, string>> $byPitch */
+        $byPitch = [];
+        foreach ($existing as $row) {
+            if (isset($row['pitch'])) {
+                $byPitch[(string) $row['pitch']] = $row;
+            }
+        }
+        foreach ($incoming as $row) {
+            if (! isset($row['pitch'])) {
+                continue;
+            }
+            $pitch = (string) $row['pitch'];
+            if ($this->hsAdjustPitchRowHasStats($row)) {
+                $byPitch[$pitch] = $row;
+            } elseif (! isset($byPitch[$pitch])) {
+                $byPitch[$pitch] = $row;
+            }
+        }
+
+        $out = [];
+        foreach (DataSourcePitchTypeFeed::allowed() as $pitch) {
+            if (isset($byPitch[$pitch])) {
+                $out[] = $byPitch[$pitch];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  list<array<string, string>>  $existing
+     * @param  list<array<string, string>>  $incoming
+     * @return list<array<string, string>>
+     */
+    private function mergeHsAdjustPitchHeat(array $existing, array $incoming): array
+    {
+        /** @var array<string, array<string, string>> $byPitch */
+        $byPitch = [];
+        foreach (DataSourcePitchTypeFeed::allowed() as $i => $pitch) {
+            if (isset($existing[$i]) && is_array($existing[$i]) && $existing[$i] !== []) {
+                $byPitch[$pitch] = $existing[$i];
+            }
+        }
+        foreach (DataSourcePitchTypeFeed::allowed() as $i => $pitch) {
+            if (isset($incoming[$i]) && is_array($incoming[$i]) && $incoming[$i] !== []) {
+                $byPitch[$pitch] = $incoming[$i];
+            }
+        }
+
+        $out = [];
+        foreach (DataSourcePitchTypeFeed::allowed() as $pitch) {
+            $out[] = $byPitch[$pitch] ?? [];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<string, string>  $row
+     */
+    private function hsAdjustPitchRowHasStats(array $row): bool
+    {
+        foreach ($row as $key => $value) {
+            if ($key === 'pitch') {
+                continue;
+            }
+            if (! PlayerSheetPlaceholder::isEmptyDisplay((string) $value)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  list<string|null>  $row
+     */
+    private function rowMatchesPitchLabel(?int $pitchCol, array $row, string $pitchLabel, ?string $uploadPitchFeed): bool
+    {
+        if ($pitchCol !== null) {
+            return $this->pitchBucket($pitchCol, $row) === $pitchLabel;
+        }
+
+        return $uploadPitchFeed !== null && $uploadPitchFeed === $pitchLabel;
     }
 
     private function formatOverallDemographicAge(string $cell): string

@@ -64,7 +64,7 @@ class HsRangerTraitsSheetTest extends TestCase
             'path' => $pathA,
             'header_row' => ['PLAYER'],
             'row_count' => 1,
-            'hs_profile_feed_slots' => ['adjustability_pitch'],
+            'hs_profile_feed_slots' => ['performance_overall'],
         ]);
         $b = DataSourceUpload::query()->create([
             'user_id' => $user->id,
@@ -78,11 +78,51 @@ class HsRangerTraitsSheetTest extends TestCase
         ]);
 
         $this->actingAs($user)->patchJson(route('data-sources.uploads.settings', $b), [
-            'hs_profile_feed_slots' => ['adjustability_pitch'],
+            'hs_profile_feed_slots' => ['performance_overall'],
         ])->assertOk();
 
         $this->assertSame([], $a->fresh()->hs_profile_feed_slots ?? []);
+        $this->assertSame(['performance_overall'], $b->fresh()->hs_profile_feed_slots ?? []);
+    }
+
+    public function test_hs_adjustability_pitch_slot_allows_multiple_uploads(): void
+    {
+        $user = User::factory()->admin()->create();
+        $pathA = 'data-source-uploads/hs-pitch-a-'.uniqid('', true).'.csv';
+        $pathB = 'data-source-uploads/hs-pitch-b-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($pathA, "PLAYER\nX\n");
+        Storage::disk('local')->put($pathB, "PLAYER\nY\n");
+
+        $a = DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'name' => 'FB',
+            'original_filename' => 'fb.csv',
+            'disk' => 'local',
+            'path' => $pathA,
+            'header_row' => ['PLAYER'],
+            'row_count' => 1,
+            'hs_profile_feed_slots' => ['adjustability_pitch'],
+            'pitch_type_feed' => 'FB',
+        ]);
+        $b = DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'name' => 'BB',
+            'original_filename' => 'bb.csv',
+            'disk' => 'local',
+            'path' => $pathB,
+            'header_row' => ['PLAYER'],
+            'row_count' => 1,
+            'hs_profile_feed_slots' => [],
+        ]);
+
+        $this->actingAs($user)->patchJson(route('data-sources.uploads.settings', $b), [
+            'hs_profile_feed_slots' => ['adjustability_pitch'],
+            'pitch_type_feed' => 'BB',
+        ])->assertOk();
+
+        $this->assertSame(['adjustability_pitch'], $a->fresh()->hs_profile_feed_slots ?? []);
         $this->assertSame(['adjustability_pitch'], $b->fresh()->hs_profile_feed_slots ?? []);
+        $this->assertSame('BB', $b->fresh()->pitch_type_feed);
     }
 
     public function test_hs_settings_patch_returns_hs_profile_feed_assignments_for_all_datasets(): void
@@ -418,6 +458,66 @@ class HsRangerTraitsSheetTest extends TestCase
         $this->assertSame('77', $sheet['circuit_lonestar']['g'] ?? null);
         $this->assertSame('5', $sheet['adjust_pitch'][0]['p'] ?? null);
         $this->assertSame('FB', $sheet['adjust_pitch'][0]['pitch'] ?? null);
+    }
+
+    public function test_hs_adjustability_merges_split_pitch_csvs_via_pitch_type_feed(): void
+    {
+        $user = User::factory()->admin()->create();
+        $player = Player::factory()->create([
+            'player_pool' => 'hs',
+            'first_name' => 'Split',
+            'last_name' => 'Pitcher',
+        ]);
+
+        $pitchHeaders = ['PLAYER', 'YEAR', 'PA VS R', 'OPS VS R', 'PA VS L', 'OPS VS L', 'P', 'BIPx', 'OPS', 'ISO', 'EV95', 'GB%', 'SWM%', 'IZSWM%', 'CH%'];
+        $tailFb = ['75', '.886', '28', '1.036', '200', '100', '.900', '.250', '98', '35', '12', '18', '25'];
+        $tailBb = ['75', '.886', '28', '1.036', '50', '40', '.700', '.150', '92', '38', '14', '20', '22'];
+        $tailOs = ['75', '.886', '28', '1.036', '120', '60', '.650', '.120', '88', '42', '16', '24', '28'];
+
+        $pathFb = 'data-source-uploads/hs-split-fb-'.uniqid('', true).'.csv';
+        $pathBb = 'data-source-uploads/hs-split-bb-'.uniqid('', true).'.csv';
+        $pathOs = 'data-source-uploads/hs-split-os-'.uniqid('', true).'.csv';
+
+        Storage::disk('local')->put($pathFb, implode("\n", [
+            implode(',', $pitchHeaders),
+            '"PITCHER, SPLIT",2024,'.implode(',', $tailFb),
+        ]));
+        Storage::disk('local')->put($pathBb, implode("\n", [
+            implode(',', $pitchHeaders),
+            '"PITCHER, SPLIT",2024,'.implode(',', $tailBb),
+        ]));
+        Storage::disk('local')->put($pathOs, implode("\n", [
+            implode(',', $pitchHeaders),
+            '"PITCHER, SPLIT",2024,'.implode(',', $tailOs),
+        ]));
+
+        foreach ([
+            ['path' => $pathFb, 'name' => 'FB pitch', 'feed' => 'FB'],
+            ['path' => $pathBb, 'name' => 'BB pitch', 'feed' => 'BB'],
+            ['path' => $pathOs, 'name' => 'OS pitch', 'feed' => 'OS'],
+        ] as $spec) {
+            DataSourceUpload::query()->create([
+                'user_id' => $user->id,
+                'name' => $spec['name'],
+                'original_filename' => strtolower($spec['feed']).'.csv',
+                'disk' => 'local',
+                'path' => $spec['path'],
+                'header_row' => $pitchHeaders,
+                'row_count' => 1,
+                'hs_profile_feed_slots' => ['adjustability_pitch'],
+                'pitch_type_feed' => $spec['feed'],
+            ]);
+        }
+
+        $sheet = app(HsRangerTraitsSheetResolver::class)->resolve($player, $user);
+        $adj = $sheet['adjust_pitch'] ?? [];
+        $this->assertCount(3, $adj);
+        $this->assertSame('FB', $adj[0]['pitch'] ?? null);
+        $this->assertSame('.900', $adj[0]['ops'] ?? null);
+        $this->assertSame('BB', $adj[1]['pitch'] ?? null);
+        $this->assertSame('.700', $adj[1]['ops'] ?? null);
+        $this->assertSame('OS', $adj[2]['pitch'] ?? null);
+        $this->assertSame('.650', $adj[2]['ops'] ?? null);
     }
 
     public function test_hs_pg_chart_prepends_career_row_with_same_shape_as_season_rows(): void

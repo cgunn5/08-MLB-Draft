@@ -7,6 +7,7 @@ use App\Http\Requests\DataSourceRowUpdateRequest;
 use App\Http\Requests\StoreDataSourceUploadRequest;
 use App\Http\Requests\UpdateDataSourceUploadSettingsRequest;
 use App\Models\DataSourceUpload;
+use App\Support\DataSourcePitchTypeFeed;
 use App\Support\CareerPgMasterUploadService;
 use App\Support\CareerPgStatsAggregator;
 use App\Support\DataSourceCsvFileStats;
@@ -144,6 +145,7 @@ abstract class AbstractDataSourcePortalController extends Controller
                 'career_pg_source_upload_id' => $u->career_pg_source_upload_id,
                 $slotField => $this->resolvedProfileFeedSlotsForUpload($u, $uploads),
                 'dataset_browse_settings' => is_array($browse) ? $browse : null,
+                'pitch_type_feed' => DataSourcePitchTypeFeed::fromUpload($u),
             ];
         })->values()->all();
     }
@@ -927,6 +929,13 @@ abstract class AbstractDataSourcePortalController extends Controller
             $dataSourceUpload->dataset_browse_settings = $normalizedBrowse;
         }
 
+        if ($request->has('pitch_type_feed') && ! $dataSourceUpload->isCareerPgMaster()) {
+            $rawPitchFeed = $request->input('pitch_type_feed');
+            $dataSourceUpload->pitch_type_feed = is_string($rawPitchFeed) && trim($rawPitchFeed) !== ''
+                ? DataSourcePitchTypeFeed::normalize($rawPitchFeed)
+                : null;
+        }
+
         $profileSlotRequestKey = $this->profileFeedSlotsRequestKey();
         $profileSlotColumn = $this->profileFeedSlotsColumn();
         if ($request->has($profileSlotRequestKey) && ! $dataSourceUpload->isCareerPgMaster()) {
@@ -942,19 +951,25 @@ abstract class AbstractDataSourcePortalController extends Controller
             $dataSourceUpload->{$profileSlotColumn} = $slots === [] ? null : $slots;
 
             if ($slots !== []) {
-                $others = DataSourceUpload::query()
-                    ->where('user_id', $dataSourceUpload->user_id)
-                    ->where('dataset_portal', $this->datasetPortal())
-                    ->whereKeyNot($dataSourceUpload->id)
-                    ->get();
-                foreach ($others as $other) {
-                    $cur = $other->{$profileSlotColumn};
-                    if (! is_array($cur) || $cur === []) {
-                        continue;
+                $exclusiveSlots = array_values(array_filter(
+                    $slots,
+                    static fn (string $slot): bool => $slot !== DataSourcePitchTypeFeed::PROFILE_SLOT,
+                ));
+                if ($exclusiveSlots !== []) {
+                    $others = DataSourceUpload::query()
+                        ->where('user_id', $dataSourceUpload->user_id)
+                        ->where('dataset_portal', $this->datasetPortal())
+                        ->whereKeyNot($dataSourceUpload->id)
+                        ->get();
+                    foreach ($others as $other) {
+                        $cur = $other->{$profileSlotColumn};
+                        if (! is_array($cur) || $cur === []) {
+                            continue;
+                        }
+                        $next = array_values(array_diff($cur, $exclusiveSlots));
+                        $other->{$profileSlotColumn} = $next === [] ? null : $next;
+                        $other->save();
                     }
-                    $next = array_values(array_diff($cur, $slots));
-                    $other->{$profileSlotColumn} = $next === [] ? null : $next;
-                    $other->save();
                 }
             }
         }
@@ -978,6 +993,10 @@ abstract class AbstractDataSourcePortalController extends Controller
 
         if ($request->has('dataset_browse_settings')) {
             $response['dataset_browse_settings'] = $dataSourceUpload->dataset_browse_settings;
+        }
+
+        if ($request->has('pitch_type_feed')) {
+            $response['pitch_type_feed'] = $dataSourceUpload->pitch_type_feed;
         }
 
         if ($request->has($profileSlotRequestKey)) {

@@ -53,8 +53,11 @@ class NcaaRangerTraitsSheetResolver
             ->get()
             ->filter(static function (DataSourceUpload $upload): bool {
                 $slots = $upload->ncaa_profile_feed_slots;
+                if (is_array($slots) && $slots !== []) {
+                    return true;
+                }
 
-                return is_array($slots) && $slots !== [];
+                return DataSourcePitchTypeFeed::fromUpload($upload) !== null;
             })
             ->values()
             ->all();
@@ -86,7 +89,7 @@ class NcaaRangerTraitsSheetResolver
         foreach ($assigned as $upload) {
             $slots = $upload->ncaa_profile_feed_slots;
             if (! is_array($slots)) {
-                continue;
+                $slots = [];
             }
             $blockSet = [];
             foreach ($slots as $slot) {
@@ -94,6 +97,11 @@ class NcaaRangerTraitsSheetResolver
                     continue;
                 }
                 foreach (NcaaRangerTraitsSheetLayout::blockKeysForProfileSlot($slot) as $bk) {
+                    $blockSet[$bk] = true;
+                }
+            }
+            if (DataSourcePitchTypeFeed::fromUpload($upload) !== null) {
+                foreach (NcaaRangerTraitsSheetLayout::blockKeysForProfileSlot(DataSourcePitchTypeFeed::PROFILE_SLOT) as $bk) {
                     $blockSet[$bk] = true;
                 }
             }
@@ -354,6 +362,7 @@ class NcaaRangerTraitsSheetResolver
 
             if ($type === 'pitch_rows') {
                 $defSlugs = $def['slugs'];
+                $uploadPitchFeed = DataSourcePitchTypeFeed::fromUpload($upload);
                 $wanted = array_map('strtoupper', $def['pitches'] ?? []);
                 $rulesForHeat = is_array($heatRules) && $heatRules !== [] ? $heatRules : null;
                 $heatBrowse = is_array($upload->dataset_browse_settings) ? $upload->dataset_browse_settings : null;
@@ -365,7 +374,7 @@ class NcaaRangerTraitsSheetResolver
 
                 $pitchBlocks = [];
                 foreach ($wanted as $pitchLabel) {
-                    if ($pitchCol === null) {
+                    if ($pitchCol === null && $uploadPitchFeed === null) {
                         $pitchBlocks[] = [
                             'pitch' => (string) $pitchLabel,
                             'rows' => [],
@@ -383,7 +392,7 @@ class NcaaRangerTraitsSheetResolver
                                 continue;
                             }
                         }
-                        if ($this->pitchBucket($pitchCol, $r) === $pitchLabel) {
+                        if ($this->rowMatchesPitchLabel($pitchCol, $r, $pitchLabel, $uploadPitchFeed)) {
                             $groupRows[] = $r;
                         }
                     }
@@ -395,7 +404,7 @@ class NcaaRangerTraitsSheetResolver
                     $selectedCsvRows = [];
                     $seenYearKeys = [];
                     foreach ($sorted as $r) {
-                        if ($this->pitchBucket($pitchCol, $r) !== $pitchLabel) {
+                        if (! $this->rowMatchesPitchLabel($pitchCol, $r, $pitchLabel, $uploadPitchFeed)) {
                             continue;
                         }
                         if ($yearCol !== null) {
@@ -468,7 +477,12 @@ class NcaaRangerTraitsSheetResolver
     private function mergeMaterialized(array &$out, array $material): void
     {
         foreach ($material['partial'] as $key => $value) {
-            $out[$key] = $value;
+            if ($key === 'ncaa_adjust_pitch' && is_array($value)) {
+                $existing = is_array($out[$key] ?? null) ? $out[$key] : [];
+                $out[$key] = $this->mergeNcaaAdjustPitchBlocks($existing, $value);
+            } else {
+                $out[$key] = $value;
+            }
         }
         foreach ($material['partial_heat'] as $key => $value) {
             $out['cell_heat'][$key] = $value;
@@ -476,6 +490,82 @@ class NcaaRangerTraitsSheetResolver
         if ($material['demographics'] !== null) {
             $out['overall_demographics'] = $material['demographics'];
         }
+    }
+
+    /**
+     * @param  list<array{pitch: string, rows: list<array<string, string>>, heat: list<array<string, string>>}>  $existing
+     * @param  list<array{pitch: string, rows: list<array<string, string>>, heat: list<array<string, string>>}>  $incoming
+     * @return list<array{pitch: string, rows: list<array<string, string>>, heat: list<array<string, string>>}>
+     */
+    private function mergeNcaaAdjustPitchBlocks(array $existing, array $incoming): array
+    {
+        /** @var array<string, array{pitch: string, rows: list<array<string, string>>, heat: list<array<string, string>>}> $byPitch */
+        $byPitch = [];
+        foreach ($existing as $block) {
+            if (isset($block['pitch'])) {
+                $byPitch[(string) $block['pitch']] = $block;
+            }
+        }
+        foreach ($incoming as $block) {
+            if (! isset($block['pitch'])) {
+                continue;
+            }
+            $pitch = (string) $block['pitch'];
+            $incomingRows = is_array($block['rows'] ?? null) ? $block['rows'] : [];
+            $existingBlock = $byPitch[$pitch] ?? null;
+            $existingRows = is_array($existingBlock['rows'] ?? null) ? $existingBlock['rows'] : [];
+
+            if ($this->ncaaAdjustPitchBlockHasStats($incomingRows)) {
+                $byPitch[$pitch] = $block;
+            } elseif ($incomingRows !== [] && ($existingBlock === null || $existingRows === [] || ! $this->ncaaAdjustPitchBlockHasStats($existingRows))) {
+                $byPitch[$pitch] = $block;
+            } elseif ($existingBlock === null) {
+                $byPitch[$pitch] = $block;
+            }
+        }
+
+        $out = [];
+        foreach (DataSourcePitchTypeFeed::allowed() as $pitch) {
+            if (isset($byPitch[$pitch])) {
+                $out[] = $byPitch[$pitch];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  list<array<string, string>>  $rows
+     */
+    private function ncaaAdjustPitchBlockHasStats(array $rows): bool
+    {
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            foreach ($row as $key => $value) {
+                if ($key === 'year') {
+                    continue;
+                }
+                if (! PlayerSheetPlaceholder::isEmptyDisplay((string) $value)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  list<string|null>  $row
+     */
+    private function rowMatchesPitchLabel(?int $pitchCol, array $row, string $pitchLabel, ?string $uploadPitchFeed): bool
+    {
+        if ($pitchCol !== null) {
+            return $this->pitchBucket($pitchCol, $row) === $pitchLabel;
+        }
+
+        return $uploadPitchFeed !== null && $uploadPitchFeed === $pitchLabel;
     }
 
     private function formatOverallDemographicAge(string $cell): string

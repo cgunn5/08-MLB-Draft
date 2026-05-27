@@ -347,6 +347,54 @@ class NcaaDataSourceSettingsTest extends TestCase
         $this->assertSame('2024-25', $fbRows[2]['year'] ?? '');
     }
 
+    public function test_ncaa_adjustability_merges_split_pitch_csvs_via_pitch_type_feed(): void
+    {
+        $user = User::factory()->admin()->create();
+        $player = Player::factory()->create([
+            'player_pool' => 'ncaa',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+        ]);
+
+        $headers = ['PLAYER', 'Year', 'P', 'BIPx', 'OPS', 'ISO', 'EV95', 'GB%', 'SwM%', 'IZSwM%', 'CH%'];
+        $specs = [
+            ['feed' => 'FB', 'ops' => '.900', 'p' => '200'],
+            ['feed' => 'BB', 'ops' => '.700', 'p' => '50'],
+            ['feed' => 'OS', 'ops' => '.650', 'p' => '120'],
+        ];
+
+        foreach ($specs as $spec) {
+            $path = 'data-source-uploads/ncaa-split-'.strtolower($spec['feed']).'-'.uniqid('', true).'.csv';
+            Storage::disk('local')->put($path, implode("\n", [
+                implode(',', $headers),
+                '"DOE, JANE",2026,'.$spec['p'].',100,'.$spec['ops'].',.200,95,40,10,20,30',
+            ]));
+            DataSourceUpload::query()->create([
+                'user_id' => $user->id,
+                'dataset_portal' => DataSourceUpload::PORTAL_NCAA,
+                'upload_kind' => DataSourceUpload::UPLOAD_KIND_FILE,
+                'name' => $spec['feed'].' pitch',
+                'original_filename' => strtolower($spec['feed']).'.csv',
+                'disk' => 'local',
+                'path' => $path,
+                'header_row' => $headers,
+                'row_count' => 1,
+                'ncaa_profile_feed_slots' => ['adjustability_pitch'],
+                'pitch_type_feed' => $spec['feed'],
+            ]);
+        }
+
+        $sheet = app(NcaaRangerTraitsSheetResolver::class)->resolve($player, $user, null);
+        $blocks = $sheet['ncaa_adjust_pitch'] ?? [];
+        $this->assertCount(3, $blocks);
+        $this->assertSame('FB', $blocks[0]['pitch'] ?? null);
+        $this->assertSame('.900', ($blocks[0]['rows'][0]['ops'] ?? null));
+        $this->assertSame('BB', $blocks[1]['pitch'] ?? null);
+        $this->assertSame('.700', ($blocks[1]['rows'][0]['ops'] ?? null));
+        $this->assertSame('OS', $blocks[2]['pitch'] ?? null);
+        $this->assertSame('.650', ($blocks[2]['rows'][0]['ops'] ?? null));
+    }
+
     public function test_ncaa_resolver_overall_radar_respects_comp_scope(): void
     {
         $user = User::factory()->admin()->create();
