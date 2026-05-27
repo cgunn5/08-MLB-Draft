@@ -136,17 +136,6 @@
         >{{ $note ? $note : '-' }}</p>
     </div>
 
-    @isset($compHeatNav)
-        @if (! $compHeatNav->isEmpty())
-            {{-- Zero layout height: horizontal pane on the seam between take strip and tables (NCAA K-Zone comp bucket links). --}}
-            <div class="pointer-events-none relative z-[5] h-0 w-full shrink-0 overflow-visible">
-                <div class="pointer-events-auto absolute inset-x-1.5 top-0 flex -translate-y-1/2 justify-center sm:inset-x-2">
-                    {{ $compHeatNav }}
-                </div>
-            </div>
-        @endif
-    @endisset
-
     @if (! $slot->isEmpty())
         <div class="{{ $slotWrapClass }}">
             {{ $slot }}

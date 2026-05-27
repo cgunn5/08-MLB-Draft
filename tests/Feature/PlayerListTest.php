@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Player;
 use App\Models\User;
+use App\Support\PlayerProfileCompleteness;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -77,6 +78,41 @@ class PlayerListTest extends TestCase
             'source_fb' => null,
             'source_ba' => null,
         ])->assertUnauthorized();
+    }
+
+    public function test_player_list_marks_profile_complete_when_notes_and_grades_are_filled(): void
+    {
+        $user = User::factory()->admin()->create();
+        Player::factory()->create([
+            'first_name' => 'Will',
+            'last_name' => 'Brick',
+            'player_pool' => 'hs',
+            'master_take' => 'High-end catcher prospect.',
+            'note_performance' => 'Strong summer.',
+            'note_approach_miss' => 'Advanced approach.',
+            'note_pitch_coverage' => 'Handles velo.',
+            'note_engine' => 'Plus power.',
+            'note_swing' => 'Compact.',
+            'grade_role' => 6,
+            'grade_perf' => 5.5,
+            'grade_approach' => 6,
+            'grade_contact' => 5.5,
+            'grade_damage' => 6,
+            'grade_swing' => 5.5,
+        ]);
+        Player::factory()->create([
+            'first_name' => 'Incomplete',
+            'last_name' => 'Player',
+            'player_pool' => 'hs',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('players.index'));
+
+        $response->assertOk();
+        $response->assertSee('playerListTable', false);
+        $this->assertTrue(PlayerProfileCompleteness::isComplete(
+            Player::query()->where('last_name', 'Brick')->firstOrFail(),
+        ));
     }
 
     public function test_authenticated_user_can_add_player_with_source_ranks(): void

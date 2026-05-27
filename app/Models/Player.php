@@ -90,25 +90,35 @@ class Player extends Model
     }
 
     /**
-     * Metrics table: UI label => grade/value attribute.
+     * NCAA profile grades table (7 rows; labels align with note sections).
      *
      * @return array<string, string>
      */
-    public static function gradeRowDefinitions(): array
+    public static function gradeRowDefinitionsNcaa(): array
     {
         return [
             'ROLE' => 'grade_role',
             'PERF' => 'grade_perf',
-            'APPROACH' => 'grade_approach',
-            'CONTACT' => 'grade_contact',
+            'K-Zone' => 'grade_approach',
             'DAMAGE' => 'grade_damage',
-            'ADJ' => 'grade_adj',
+            'Adj' => 'grade_adj',
+            'Platoon' => 'grade_contact',
             'SWING' => 'grade_swing',
         ];
     }
 
     /**
-     * HS profile grades table (no ADJ row; matches board layout).
+     * @deprecated Use {@see gradeRowDefinitionsNcaa()} or {@see gradeRowDefinitionsHs()} for pool-specific layouts.
+     *
+     * @return array<string, string>
+     */
+    public static function gradeRowDefinitions(): array
+    {
+        return self::gradeRowDefinitionsNcaa();
+    }
+
+    /**
+     * HS profile grades table (no ADJ row; K-Zone + Adjustability map to approach/miss and pitch-coverage notes).
      *
      * @return array<string, string>
      */
@@ -117,8 +127,8 @@ class Player extends Model
         return [
             'ROLE' => 'grade_role',
             'PERF' => 'grade_perf',
-            'APPROACH' => 'grade_approach',
-            'CONTACT' => 'grade_approach',
+            'K-Zone' => 'grade_approach',
+            'Adj' => 'grade_contact',
             'DAMAGE' => 'grade_damage',
             'SWING' => 'grade_swing',
         ];

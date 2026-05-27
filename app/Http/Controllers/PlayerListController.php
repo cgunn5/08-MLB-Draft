@@ -6,6 +6,7 @@ use App\Http\Requests\StorePlayerRequest;
 use App\Http\Requests\UpdatePlayerListEntryRequest;
 use App\Models\Player;
 use App\Support\PlayerListSourceRanksInput;
+use App\Support\PlayerProfileCompleteness;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -94,6 +95,7 @@ class PlayerListController extends Controller
                 'hs' => route('hs.players.show', $player),
                 default => null,
             },
+            'profile_complete' => PlayerProfileCompleteness::isComplete($player),
         ];
     }
 

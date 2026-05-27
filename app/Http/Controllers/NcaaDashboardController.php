@@ -17,17 +17,10 @@ class NcaaDashboardController extends Controller
         $user = auth()->user()->dataOwner();
         $rangerSheet = app(NcaaRangerTraitsSheetResolver::class)->resolve($placeholder, $user, null);
 
-        $ncaaCompHeatRoutePlayer = $ncaaPlayers->isNotEmpty()
-            ? ($placeholder->exists ? $placeholder : $ncaaPlayers->first())
-            : null;
-
         return view('ncaa.players.show', [
             'player' => $placeholder,
             'ncaaPlayers' => $ncaaPlayers,
             'rangerSheet' => $rangerSheet,
-            'ncaaCompHeatScope' => null,
-            'ncaaCompHeatRoutePlayer' => $ncaaCompHeatRoutePlayer,
-            'ncaaProfileRouteQuery' => [],
         ]);
     }
 }

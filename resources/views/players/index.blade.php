@@ -270,8 +270,29 @@
                                                             x-show="row.profile_url"
                                                             x-cloak
                                                             :href="row.profile_url"
-                                                            class="text-indigo-600 hover:text-indigo-800 font-[700]"
-                                                        >{{ __('OPEN') }}</a>
+                                                            class="inline-flex items-center gap-1 font-[700]"
+                                                            x-bind:class="{
+                                                                'player-list-profile-open--complete': row.profile_complete,
+                                                                'text-indigo-600 hover:text-indigo-800': !row.profile_complete,
+                                                            }"
+                                                            x-bind:style="row.profile_complete ? { color: '#059669', WebkitTextFillColor: '#059669' } : null"
+                                                        >
+                                                            <span>{{ __('OPEN') }}</span>
+                                                            <svg
+                                                                x-show="row.profile_complete"
+                                                                x-cloak
+                                                                class="h-3.5 w-3.5 shrink-0"
+                                                                viewBox="0 0 12 12"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                stroke-width="2"
+                                                                stroke-linecap="round"
+                                                                stroke-linejoin="round"
+                                                                aria-hidden="true"
+                                                            >
+                                                                <path d="M2.5 6.5l2.5 2.5 4.5-5" />
+                                                            </svg>
+                                                        </a>
                                                         <span x-show="!row.profile_url" class="text-gray-400">—</span>
                                                     </div>
                                                     <div class="flex min-w-0 items-center justify-center whitespace-nowrap transition-colors">

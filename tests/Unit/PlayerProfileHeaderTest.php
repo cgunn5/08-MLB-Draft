@@ -9,6 +9,35 @@ use Tests\TestCase;
 class PlayerProfileHeaderTest extends TestCase
 {
     #[Test]
+    public function ncaa_grade_row_definitions_use_k_zone_adj_and_platoon_labels(): void
+    {
+        $defs = Player::gradeRowDefinitionsNcaa();
+
+        $this->assertSame(
+            [
+                'ROLE' => 'grade_role',
+                'PERF' => 'grade_perf',
+                'K-Zone' => 'grade_approach',
+                'DAMAGE' => 'grade_damage',
+                'Adj' => 'grade_adj',
+                'Platoon' => 'grade_contact',
+                'SWING' => 'grade_swing',
+            ],
+            $defs,
+        );
+    }
+
+    #[Test]
+    public function hs_grade_row_definitions_map_k_zone_and_adjustability_to_distinct_grades(): void
+    {
+        $defs = Player::gradeRowDefinitionsHs();
+
+        $this->assertSame('grade_approach', $defs['K-Zone']);
+        $this->assertSame('grade_contact', $defs['Adj']);
+        $this->assertNotSame($defs['K-Zone'], $defs['Adj']);
+    }
+
+    #[Test]
     public function profile_header_bio_line_includes_school_position_bats_throws_age(): void
     {
         $player = new Player([

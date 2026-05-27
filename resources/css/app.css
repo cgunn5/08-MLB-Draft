@@ -715,3 +715,20 @@ input[type='number'].notes-grade-score-input {
     font-size: clamp(3.75px, 1.65cqw, 6px) !important;
     line-height: 1.25 !important;
 }
+
+/*
+ * Player list: complete profile OPEN link — unlayered so Tailwind utilities / link inherit cannot win.
+ */
+a.player-list-profile-open--complete,
+a.player-list-profile-open--complete span,
+a.player-list-profile-open--complete svg {
+    color: #059669 !important;
+    -webkit-text-fill-color: #059669 !important;
+}
+
+a.player-list-profile-open--complete:hover,
+a.player-list-profile-open--complete:hover span,
+a.player-list-profile-open--complete:hover svg {
+    color: #047857 !important;
+    -webkit-text-fill-color: #047857 !important;
+}
