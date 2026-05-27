@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Player;
 use App\Models\User;
 use App\Models\WorkingBoardEntry;
-use App\Support\PlayerProfileCompleteness;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -21,30 +20,43 @@ class WorkingBoardTest extends TestCase
     public function test_authenticated_user_can_view_board(): void
     {
         $user = User::factory()->create();
-        $this->actingAs($user)->get(route('board.index'))->assertOk()->assertSee('HS BOARD', false);
+        $this->actingAs($user)
+            ->get(route('board.index'))
+            ->assertOk()
+            ->assertSee('MASTER BOARD', false)
+            ->assertSee('NCAA BOARD', false)
+            ->assertSee('HS BOARD', false)
+            ->assertSee('⚰️', false);
     }
 
-    public function test_board_player_pool_only_includes_complete_profiles(): void
+    public function test_board_player_pool_includes_bat_grade_fields(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
+        Player::factory()->create([
+            'player_pool' => 'hs',
+            'first_name' => 'Bat',
+            'last_name' => 'Avg',
+            'grade_perf' => 6,
+            'grade_approach' => 4,
+            'grade_contact' => 5,
+            'grade_damage' => 6,
+            'grade_swing' => 5,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('board.index'))
+            ->assertOk()
+            ->assertSee('BAT', false)
+            ->assertSee('"bat_grade":5.2', false);
+    }
+
+    public function test_board_player_pool_includes_all_players_from_players_list(): void
+    {
+        $user = User::factory()->admin()->create();
         $complete = Player::factory()->create([
             'player_pool' => 'hs',
             'first_name' => 'Will',
             'last_name' => 'Brick',
-            'school' => 'Test HS (TX)',
-            'position' => 'C',
-            'master_take' => 'High-end catcher prospect.',
-            'note_performance' => 'Strong summer.',
-            'note_approach_miss' => 'Advanced approach.',
-            'note_pitch_coverage' => 'Adjusts to pitches.',
-            'note_engine' => 'Plus damage.',
-            'note_swing' => 'Compact.',
-            'grade_role' => 6,
-            'grade_perf' => 5.5,
-            'grade_approach' => 6,
-            'grade_contact' => 5.5,
-            'grade_damage' => 6,
-            'grade_swing' => 5.5,
         ]);
         $incomplete = Player::factory()->create([
             'player_pool' => 'hs',
@@ -52,13 +64,18 @@ class WorkingBoardTest extends TestCase
             'last_name' => 'Player',
         ]);
 
-        $this->assertTrue(PlayerProfileCompleteness::isComplete($complete));
-        $this->assertFalse(PlayerProfileCompleteness::isComplete($incomplete));
-
         $res = $this->actingAs($user)->get(route('board.index'));
         $res->assertOk();
+        $res->assertSee('board-picker-input-hs', false);
+        $res->assertSee('board-picker-listbox-hs', false);
+        $res->assertSee('Type player name', false);
+        $res->assertSee('Add selected player to round', false);
         $res->assertSee('"player_id":'.$complete->id, false);
-        $res->assertDontSee('"player_id":'.$incomplete->id, false);
+        $res->assertSee('"player_id":'.$incomplete->id, false);
+        $res->assertSee('boardPlayerPicker', false);
+        $res->assertSee('working-boards-config', false);
+        $res->assertSee('"label":"BRICK, WILL"', false);
+        $res->assertSee('"label":"PLAYER, INCOMPLETE"', false);
     }
 
     public function test_board_patch_persists_rounds(): void
@@ -79,73 +96,134 @@ class WorkingBoardTest extends TestCase
             'first_name' => 'B',
         ]);
 
-        $payload = [
-            'rounds' => [
+        $payload = $this->boardsPayload([
+            WorkingBoardEntry::BOARD_HS => [
                 '1' => [
-                    ['player_id' => $a->id, 'confidence' => 'HIGH', 'risk' => 'LOW'],
+                    ['player_id' => $a->id, 'confidence' => '1', 'risk' => '1'],
                 ],
                 '2' => [
-                    ['player_id' => $b->id, 'confidence' => '', 'risk' => 'MEDIUM'],
+                    ['player_id' => $b->id, 'confidence' => '', 'risk' => '2'],
                 ],
-                '3' => [],
-                '4+' => [],
-                '10+' => [],
             ],
-        ];
+        ]);
 
         $this->actingAs($user)->patchJson(route('board.update'), $payload)->assertOk()->assertJson(['ok' => true]);
 
         $this->assertDatabaseHas('working_board_entries', [
             'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_HS,
             'player_id' => $a->id,
             'round_key' => '1',
             'sort_order' => 0,
-            'confidence' => 'HIGH',
-            'risk' => 'LOW',
+            'confidence' => '1',
+            'risk' => '1',
         ]);
         $this->assertDatabaseHas('working_board_entries', [
             'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_HS,
             'player_id' => $b->id,
             'round_key' => '2',
             'sort_order' => 0,
-            'risk' => 'MEDIUM',
+            'risk' => '2',
         ]);
         $this->assertSame(2, WorkingBoardEntry::query()->where('user_id', $user->id)->count());
     }
 
-    public function test_board_patch_rejects_duplicate_player(): void
+    public function test_board_patch_persists_coffin_round(): void
+    {
+        $user = User::factory()->admin()->create();
+        $player = Player::factory()->create(['player_pool' => 'hs']);
+
+        $payload = $this->boardsPayload([
+            WorkingBoardEntry::BOARD_HS => [
+                WorkingBoardEntry::ROUND_COFFIN => [
+                    ['player_id' => $player->id, 'confidence' => '', 'risk' => ''],
+                ],
+            ],
+        ]);
+
+        $this->actingAs($user)->patchJson(route('board.update'), $payload)->assertOk();
+
+        $this->assertDatabaseHas('working_board_entries', [
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_HS,
+            'player_id' => $player->id,
+            'round_key' => WorkingBoardEntry::ROUND_COFFIN,
+        ]);
+    }
+
+    public function test_board_patch_persists_ncaa_board(): void
+    {
+        $user = User::factory()->admin()->create();
+        $player = Player::factory()->create(['player_pool' => 'ncaa', 'last_name' => 'Collegiate', 'first_name' => 'Star']);
+
+        $payload = $this->boardsPayload([
+            WorkingBoardEntry::BOARD_NCAA => [
+                '1' => [
+                    ['player_id' => $player->id, 'confidence' => '5', 'risk' => '1'],
+                ],
+            ],
+        ]);
+
+        $this->actingAs($user)->patchJson(route('board.update'), $payload)->assertOk();
+
+        $this->assertDatabaseHas('working_board_entries', [
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_NCAA,
+            'player_id' => $player->id,
+            'round_key' => '1',
+        ]);
+    }
+
+    public function test_board_patch_rejects_duplicate_player_on_same_board(): void
     {
         $user = User::factory()->admin()->create();
         $a = Player::factory()->create(['player_pool' => 'hs']);
 
-        $payload = [
-            'rounds' => [
+        $payload = $this->boardsPayload([
+            WorkingBoardEntry::BOARD_HS => [
                 '1' => [['player_id' => $a->id, 'confidence' => '', 'risk' => '']],
                 '2' => [['player_id' => $a->id, 'confidence' => '', 'risk' => '']],
-                '3' => [],
-                '4+' => [],
-                '10+' => [],
             ],
-        ];
+        ]);
 
         $this->actingAs($user)->patchJson(route('board.update'), $payload)->assertStatus(422);
     }
 
-    public function test_board_patch_rejects_non_hs_player(): void
+    public function test_board_patch_rejects_non_hs_player_on_hs_board(): void
     {
         $user = User::factory()->admin()->create();
         $p = Player::factory()->create(['player_pool' => 'ncaa']);
 
-        $payload = [
-            'rounds' => [
+        $payload = $this->boardsPayload([
+            WorkingBoardEntry::BOARD_HS => [
                 '1' => [['player_id' => $p->id, 'confidence' => '', 'risk' => '']],
-                '2' => [],
-                '3' => [],
-                '4+' => [],
-                '10+' => [],
             ],
-        ];
+        ]);
 
         $this->actingAs($user)->patchJson(route('board.update'), $payload)->assertStatus(422);
+    }
+
+    /**
+     * @param  array<string, array<string, list<array<string, mixed>>>>  $roundOverrides
+     * @return array{boards: array<string, array{rounds: array<string, list<array<string, mixed>>>>}}
+     */
+    private function boardsPayload(array $roundOverrides = []): array
+    {
+        $boards = [];
+        foreach (WorkingBoardEntry::BOARD_TYPES as $boardType) {
+            $rounds = [];
+            foreach (WorkingBoardEntry::ROUND_KEYS as $rk) {
+                $rounds[$rk] = [];
+            }
+            if (isset($roundOverrides[$boardType])) {
+                foreach ($roundOverrides[$boardType] as $rk => $list) {
+                    $rounds[$rk] = $list;
+                }
+            }
+            $boards[$boardType] = ['rounds' => $rounds];
+        }
+
+        return ['boards' => $boards];
     }
 }

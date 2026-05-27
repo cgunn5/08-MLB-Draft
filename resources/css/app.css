@@ -532,6 +532,242 @@
     .working-board-table .working-board-th:last-child {
         @apply border-r-0;
     }
+
+    .working-boards-page {
+        font-family: Carbon, ui-sans-serif, system-ui, sans-serif;
+    }
+
+    .working-boards-row {
+        min-height: calc(100vh - 5.5rem);
+    }
+
+    .working-board-pane {
+        min-height: calc(100vh - 5.5rem);
+    }
+
+    .working-board-pane-header--logo {
+        border-bottom: none !important;
+        line-height: 0;
+        padding-top: calc(0.625rem * 1.65) !important;
+        padding-right: 0.5rem !important;
+        padding-bottom: calc(0.125rem * 1.15) !important;
+        padding-left: 0.5rem !important;
+        background: transparent !important;
+    }
+
+    .working-board-picker-section {
+        padding-top: calc(0.625rem * 1.65) !important;
+        padding-bottom: 0.625rem !important;
+    }
+
+    .working-board-picker-row {
+        display: flex;
+        align-items: stretch;
+        gap: 0.375rem;
+    }
+
+    .working-board-picker-row .working-board-picker-wrap {
+        flex: 7 1 0%;
+        min-width: 0;
+    }
+
+    .working-board-add-btn {
+        flex: 3 1 0%;
+        min-width: 0;
+        align-self: stretch;
+        min-height: calc(2.25rem * 0.7 * 1.15);
+        padding-top: calc(0.5rem * 0.7 * 1.15);
+        padding-bottom: calc(0.5rem * 0.7 * 1.15);
+        padding-left: 0.35rem;
+        padding-right: 0.35rem;
+        font-size: 7px;
+        line-height: 1.15;
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    .working-board-round-row {
+        margin-top: 0.125rem;
+    }
+
+    .working-board-round-btn {
+        padding-top: calc(0.125rem * 0.7 * 1.15);
+        padding-bottom: calc(0.125rem * 0.7 * 1.15);
+        font-size: calc(10px * 0.7);
+        line-height: 1.2;
+    }
+
+    .working-board-pane-header-logo {
+        display: block;
+        width: auto;
+        max-width: 100%;
+        height: 2.112rem;
+        object-fit: contain;
+    }
+
+    @media (min-width: 640px) {
+        .working-board-pane-header-logo {
+            height: 2.368rem;
+        }
+    }
+
+    .working-board-pane-title {
+        font-size: calc(0.72rem * 1.15) !important;
+    }
+
+    @media (min-width: 640px) {
+        .working-board-pane-title {
+            font-size: calc(0.8rem * 1.15) !important;
+        }
+    }
+
+    @media (min-width: 768px) {
+        .working-board-pane-title {
+            font-size: calc(0.875rem * 1.15) !important;
+        }
+    }
+
+    .working-board-table th,
+    .working-board-table td {
+        text-align: center !important;
+        font-weight: 700 !important;
+    }
+
+    .working-board-table .working-board-th {
+        vertical-align: middle;
+    }
+
+    .working-board-table thead tr {
+        background-color: #475b78 !important;
+    }
+
+    .working-board-table thead .working-board-th {
+        color: #ffffff !important;
+        border-color: #3d4f68 !important;
+        font-weight: 700 !important;
+    }
+
+    .working-board-round-divider {
+        background-color: #e5e7eb !important;
+    }
+
+    .working-board-round-divider td,
+    .working-board-round-divider .working-board-round-label {
+        color: #000000 !important;
+        font-weight: 700 !important;
+    }
+
+    .working-board-col-scale {
+        width: 2.75rem !important;
+        max-width: 2.75rem !important;
+        min-width: 2.75rem !important;
+    }
+
+    .working-board-scale-cell {
+        padding: 0 !important;
+        vertical-align: middle;
+        cursor: pointer;
+    }
+
+    .working-board-scale-select {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        display: block;
+        color: transparent !important;
+        background-color: transparent !important;
+        background-image: none !important;
+        padding: 0 !important;
+        margin: 0;
+        font-family: Carbon, ui-sans-serif, system-ui, sans-serif !important;
+        font-size: 11px !important;
+        line-height: 1 !important;
+    }
+
+    .working-board-scale-select::-ms-expand {
+        display: none;
+    }
+
+    .working-board-scale-select option {
+        color: #0f172a;
+        background-color: #ffffff;
+        font-weight: 700;
+        font-family: Carbon, ui-sans-serif, system-ui, sans-serif !important;
+        font-size: 11px !important;
+    }
+
+    .working-board-risk-cell {
+        background-color: #ffffff !important;
+    }
+
+    .working-board-risk-value {
+        font-family: Carbon, ui-sans-serif, system-ui, sans-serif;
+    }
+
+    .working-board-grade-cell {
+        font-weight: 700 !important;
+        color: #000000 !important;
+        padding: 0.125rem 0.375rem !important;
+        vertical-align: middle;
+    }
+
+    .working-board-player-name {
+        font-weight: 700 !important;
+        font-family: Carbon, ui-sans-serif, system-ui, sans-serif;
+    }
+
+    .working-board-name-cell {
+        font-weight: 700 !important;
+    }
+
+    .working-board-card-row {
+        background-color: #ffffff !important;
+    }
+
+    .working-board-card-row:hover {
+        background-color: #f8fafc !important;
+    }
+
+    .working-board-card-row .working-board-risk-cell {
+        background-color: #ffffff !important;
+    }
+
+    .working-board-picker-input {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        min-height: calc(2.25rem * 0.7 * 1.15);
+        padding-top: calc(0.5rem * 0.7 * 1.15);
+        padding-bottom: calc(0.5rem * 0.7 * 1.15);
+        font-size: calc(11px * 0.7);
+        line-height: 1.2;
+    }
+
+    .working-board-picker-clear {
+        width: calc(2.25rem * 0.7 * 1.15);
+    }
+
+    .working-board-picker-clear span {
+        font-size: calc(1.125rem * 0.7);
+    }
+
+    .working-board-picker-wrap {
+        overflow: visible !important;
+    }
+
+    .working-board-picker-list {
+        overflow: visible !important;
+    }
+
+    .working-board-pane > section {
+        overflow: visible !important;
+        isolation: isolate;
+    }
+
+    .working-board-pane .working-board-table-scroll {
+        position: relative;
+        z-index: 0;
+    }
 }
 
 /*

@@ -135,6 +135,41 @@ class Player extends Model
     }
 
     /**
+     * Working-board Bat column: trait average (HS ÷5, NCAA ÷6). Null if any trait is missing.
+     */
+    public function batGrade(): ?float
+    {
+        $fields = match ($this->player_pool) {
+            'ncaa' => [
+                'grade_perf',
+                'grade_approach',
+                'grade_damage',
+                'grade_adj',
+                'grade_contact',
+                'grade_swing',
+            ],
+            default => [
+                'grade_perf',
+                'grade_approach',
+                'grade_contact',
+                'grade_damage',
+                'grade_swing',
+            ],
+        };
+
+        $values = [];
+        foreach ($fields as $field) {
+            $v = $this->{$field};
+            if ($v === null || $v === '') {
+                return null;
+            }
+            $values[] = (float) $v;
+        }
+
+        return array_sum($values) / count($values);
+    }
+
+    /**
      * In-memory player for HS/NCAA dashboard landing: full profile shell with no persisted row.
      */
     public static function profilePlaceholder(string $playerPool): self

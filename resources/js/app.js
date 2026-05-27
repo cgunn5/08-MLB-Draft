@@ -70,6 +70,306 @@ function isBlankCsvRow(row) {
     return row.every((cell) => String(cell ?? '').trim() === '');
 }
 
+function readWorkingBoardConfig() {
+    const el = document.getElementById('working-boards-config');
+    if (!el?.textContent) {
+        return {};
+    }
+    try {
+        return JSON.parse(el.textContent);
+    } catch {
+        return {};
+    }
+}
+
+/** Mirrors App\Support\NoteGradeInputAppearance::summaryCellStyle (profile grade grid). */
+const GRADE_STYLE = {
+    NAVY: [12, 35, 64],
+    THREE: [106, 130, 193],
+    FIVE: [250, 218, 221],
+    SIX: [242, 128, 128],
+    RED: [233, 52, 35],
+};
+
+function gradeIsExactlyFive(value) {
+    return Math.abs(value - 5.0) < 1e-6;
+}
+
+function gradeRgbForValue(value, min, max) {
+    const mid = (min + max) / 2.0;
+
+    if (max <= min) {
+        return GRADE_STYLE.NAVY;
+    }
+
+    if (value > mid) {
+        if (min <= 6 && max >= 6 && mid < 6) {
+            if (value <= 6) {
+                const den = Math.max(1, 6 - mid);
+                const u = (value - mid) / den;
+
+                return [
+                    Math.round(GRADE_STYLE.FIVE[0] + (GRADE_STYLE.SIX[0] - GRADE_STYLE.FIVE[0]) * u),
+                    Math.round(GRADE_STYLE.FIVE[1] + (GRADE_STYLE.SIX[1] - GRADE_STYLE.FIVE[1]) * u),
+                    Math.round(GRADE_STYLE.FIVE[2] + (GRADE_STYLE.SIX[2] - GRADE_STYLE.FIVE[2]) * u),
+                ];
+            }
+
+            const den = Math.max(1, max - 6);
+            const u = (value - 6) / den;
+
+            return [
+                Math.round(GRADE_STYLE.SIX[0] + (GRADE_STYLE.RED[0] - GRADE_STYLE.SIX[0]) * u),
+                Math.round(GRADE_STYLE.SIX[1] + (GRADE_STYLE.RED[1] - GRADE_STYLE.SIX[1]) * u),
+                Math.round(GRADE_STYLE.SIX[2] + (GRADE_STYLE.RED[2] - GRADE_STYLE.SIX[2]) * u),
+            ];
+        }
+
+        const den = Math.max(1, max - mid);
+        const u = (value - mid) / den;
+
+        return [
+            Math.round(GRADE_STYLE.FIVE[0] + (GRADE_STYLE.RED[0] - GRADE_STYLE.FIVE[0]) * u),
+            Math.round(GRADE_STYLE.FIVE[1] + (GRADE_STYLE.RED[1] - GRADE_STYLE.FIVE[1]) * u),
+            Math.round(GRADE_STYLE.FIVE[2] + (GRADE_STYLE.RED[2] - GRADE_STYLE.FIVE[2]) * u),
+        ];
+    }
+
+    if (min <= 3 && mid >= 3) {
+        if (value <= 3) {
+            const den = Math.max(1, 3 - min);
+            const u = (value - min) / den;
+
+            return [
+                Math.round(GRADE_STYLE.NAVY[0] + (GRADE_STYLE.THREE[0] - GRADE_STYLE.NAVY[0]) * u),
+                Math.round(GRADE_STYLE.NAVY[1] + (GRADE_STYLE.THREE[1] - GRADE_STYLE.NAVY[1]) * u),
+                Math.round(GRADE_STYLE.NAVY[2] + (GRADE_STYLE.THREE[2] - GRADE_STYLE.NAVY[2]) * u),
+            ];
+        }
+
+        const den = Math.max(1, mid - 3);
+        const u = (value - 3) / den;
+
+        return [
+            Math.round(GRADE_STYLE.THREE[0] + (GRADE_STYLE.FIVE[0] - GRADE_STYLE.THREE[0]) * u),
+            Math.round(GRADE_STYLE.THREE[1] + (GRADE_STYLE.FIVE[1] - GRADE_STYLE.THREE[1]) * u),
+            Math.round(GRADE_STYLE.THREE[2] + (GRADE_STYLE.FIVE[2] - GRADE_STYLE.THREE[2]) * u),
+        ];
+    }
+
+    const den = Math.max(1, mid - min);
+    const u = (value - min) / den;
+
+    return [
+        Math.round(GRADE_STYLE.NAVY[0] + (GRADE_STYLE.FIVE[0] - GRADE_STYLE.NAVY[0]) * u),
+        Math.round(GRADE_STYLE.NAVY[1] + (GRADE_STYLE.FIVE[1] - GRADE_STYLE.NAVY[1]) * u),
+        Math.round(GRADE_STYLE.NAVY[2] + (GRADE_STYLE.FIVE[2] - GRADE_STYLE.NAVY[2]) * u),
+    ];
+}
+
+/** Conf / risk 1–5: red (1) → green (5). */
+const BOARD_SCALE_YELLOW = '#F2B705';
+
+const BOARD_SCALE_COLORS = {
+    1: '#ec7c77',
+    2: '#f7cac9',
+    3: '#FEE69C',
+    4: '#b8d68c',
+    5: '#7dbd7d',
+};
+
+function boardScaleFillStyle(value) {
+    if (value === '' || value === null || value === undefined) {
+        return 'background-color:#ffffff;';
+    }
+    const n = Number(value);
+    if (Number.isNaN(n)) {
+        return 'background-color:#ffffff;';
+    }
+    const clamped = Math.max(1, Math.min(5, Math.round(n)));
+    const color = BOARD_SCALE_COLORS[clamped] ?? '#ffffff';
+
+    return `background-color:${color};`;
+}
+
+/** Risk column text colors (labels H / M-H / M / L-M / L). */
+const BOARD_RISK_TEXT_COLORS = {
+    1: '#ec7c77',
+    2: '#f6b283',
+    3: BOARD_SCALE_YELLOW,
+    4: '#b8d68c',
+    5: '#7dbd7d',
+};
+
+/** Risk column: scale color on the label only (white cell). */
+function boardScaleTextStyle(value) {
+    if (value === '' || value === null || value === undefined) {
+        return 'color:#94a3b8;font-weight:700;';
+    }
+    const n = Number(value);
+    if (Number.isNaN(n)) {
+        return 'color:#94a3b8;font-weight:700;';
+    }
+    const clamped = Math.max(1, Math.min(5, Math.round(n)));
+    const color = BOARD_RISK_TEXT_COLORS[clamped] ?? '#0f172a';
+
+    return `color:${color};font-weight:700;`;
+}
+
+function gradeSummaryStyle(value, min = 2, max = 7) {
+    if (value === null || value === undefined || value === '') {
+        return 'background-color: #ffffff; color: #0f172a; font-weight: 700;';
+    }
+
+    const n = Number(value);
+    if (Number.isNaN(n)) {
+        return 'background-color: #ffffff; color: #0f172a; font-weight: 700;';
+    }
+
+    const clamped = Math.max(min, Math.min(max, n));
+    const [r, g, b] = gradeRgbForValue(clamped, min, max);
+    const textColor = gradeIsExactlyFive(clamped) ? '#0f172a' : '#ffffff';
+
+    return `background-color: rgb(${r},${g},${b}); color: ${textColor}; font-weight: 700;`;
+}
+
+/** Bat column: red (high) ↔ white (median) ↔ blue (low). */
+const BAT_COLOR_RED = [229, 115, 115];
+const BAT_COLOR_WHITE = [255, 255, 255];
+const BAT_COLOR_BLUE = [96, 130, 182];
+
+function lerpRgb(a, b, t) {
+    const u = Math.max(0, Math.min(1, t));
+
+    return [
+        Math.round(a[0] + (b[0] - a[0]) * u),
+        Math.round(a[1] + (b[1] - a[1]) * u),
+        Math.round(a[2] + (b[2] - a[2]) * u),
+    ];
+}
+
+function numericGrade(v) {
+    if (v === null || v === undefined || v === '') {
+        return null;
+    }
+    const n = Number(v);
+
+    return Number.isNaN(n) ? null : n;
+}
+
+/** HS: perf, k-zone, adj, damage, swing. NCAA: perf, k-zone, damage, adj, platoon, swing. */
+function batGradeForCard(card) {
+    const pool = card?.player_pool === 'ncaa' ? 'ncaa' : 'hs';
+    const fields =
+        pool === 'ncaa'
+            ? [
+                  card?.grade_perf,
+                  card?.grade_approach,
+                  card?.grade_damage,
+                  card?.grade_adj,
+                  card?.grade_contact,
+                  card?.grade_swing,
+              ]
+            : [
+                  card?.grade_perf,
+                  card?.grade_approach,
+                  card?.grade_contact,
+                  card?.grade_damage,
+                  card?.grade_swing,
+              ];
+    const nums = fields.map((f) => numericGrade(f));
+    if (nums.some((n) => n === null)) {
+        return null;
+    }
+
+    return nums.reduce((sum, n) => sum + n, 0) / nums.length;
+}
+
+function collectBatGradesOnBoard(boardRounds, boardType, roundKeys) {
+    const values = [];
+    for (const rk of roundKeys) {
+        const cards = boardRounds?.[boardType]?.[rk] ?? [];
+        for (const card of cards) {
+            const bat = batGradeForCard(card);
+            if (bat !== null) {
+                values.push(bat);
+            }
+        }
+    }
+
+    return values;
+}
+
+function collectGradeFieldOnBoard(boardRounds, boardType, roundKeys, field) {
+    const values = [];
+    for (const rk of roundKeys) {
+        const cards = boardRounds?.[boardType]?.[rk] ?? [];
+        for (const card of cards) {
+            const n = numericGrade(card?.[field]);
+            if (n !== null) {
+                values.push(n);
+            }
+        }
+    }
+
+    return values;
+}
+
+function percentileBoundsFromValues(values) {
+    if (values.length === 0) {
+        return { min: null, max: null, median: null };
+    }
+    const sorted = [...values].sort((a, b) => a - b);
+    const min = sorted[0];
+    const max = sorted[sorted.length - 1];
+    const mid = Math.floor(sorted.length / 2);
+    const median =
+        sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+
+    return { min, max, median };
+}
+
+function batPercentileBounds(boardRounds, boardType, roundKeys) {
+    return percentileBoundsFromValues(collectBatGradesOnBoard(boardRounds, boardType, roundKeys));
+}
+
+function gradeFieldPercentileBounds(boardRounds, boardType, roundKeys, field) {
+    return percentileBoundsFromValues(collectGradeFieldOnBoard(boardRounds, boardType, roundKeys, field));
+}
+
+function boardPercentileCellStyle(value, bounds) {
+    if (value === null || value === undefined) {
+        return 'background-color:#ffffff;color:#000000;font-weight:700;';
+    }
+
+    const { min, max, median } = bounds;
+    if (min === null || max === null || median === null) {
+        return 'background-color:#ffffff;color:#000000;font-weight:700;';
+    }
+
+    if (max === min) {
+        return 'background-color:#ffffff;color:#000000;font-weight:700;';
+    }
+
+    let rgb;
+    if (value >= median) {
+        const den = Math.max(1e-9, max - median);
+        const t = (value - median) / den;
+        rgb = lerpRgb(BAT_COLOR_WHITE, BAT_COLOR_RED, t);
+    } else {
+        const den = Math.max(1e-9, median - min);
+        const t = (value - min) / den;
+        rgb = lerpRgb(BAT_COLOR_BLUE, BAT_COLOR_WHITE, t);
+    }
+
+    return `background-color:rgb(${rgb[0]},${rgb[1]},${rgb[2]});color:#000000;font-weight:700;`;
+}
+
+/** @deprecated Use {@link boardPercentileCellStyle}. */
+function batCellStyle(value, bounds) {
+    return boardPercentileCellStyle(value, bounds);
+}
+
 document.addEventListener('alpine:init', () => {
     Alpine.data('csvUploadPreview', (config) => ({
         sourceName: config.oldName ?? '',
@@ -2079,35 +2379,271 @@ document.addEventListener('alpine:init', () => {
         },
     }));
 
-    Alpine.data('workingBoard', (config) => ({
-        roundKeys: Array.isArray(config.roundKeys) ? config.roundKeys : [],
-        confidenceOptions: Array.isArray(config.confidenceOptions) ? config.confidenceOptions : [],
-        riskOptions: Array.isArray(config.riskOptions) ? config.riskOptions : [],
-        rounds: {},
-        pool: Array.isArray(config.playerPool) ? config.playerPool : [],
-        updateUrl: config.updateUrl ?? '',
-        hsPlayerBaseUrl: String(config.hsPlayerBaseUrl ?? '').replace(/\/$/, ''),
-        readOnly: Boolean(config.readOnly),
-        nextAddByRound: {},
-        saving: false,
-        saveError: '',
-        _saveT: null,
-
-        init() {
-            const init = config.initialRounds && typeof config.initialRounds === 'object' ? config.initialRounds : {};
-            this.rounds = JSON.parse(JSON.stringify(init));
-            const nk = {};
-            for (const k of this.roundKeys) {
-                nk[k] = '';
-                if (!Array.isArray(this.rounds[k])) {
-                    this.rounds[k] = [];
-                }
+    Alpine.store('workingBoardBridge', {
+        addHandler: null,
+        register(handler) {
+            this.addHandler = handler;
+        },
+        add(detail) {
+            if (typeof this.addHandler === 'function') {
+                this.addHandler(detail);
             }
-            this.nextAddByRound = nk;
+        },
+    });
+
+    Alpine.data('boardPlayerPicker', (config) => ({
+        boardType: config.boardType ?? 'hs',
+        players: Array.isArray(config.players) ? config.players : [],
+        roundKeys: Array.isArray(config.roundKeys) ? config.roundKeys : ['1'],
+        round: Array.isArray(config.roundKeys) && config.roundKeys.length > 0 ? config.roundKeys[0] : '1',
+        readOnly: Boolean(config.readOnly),
+        open: false,
+        query: '',
+        selectedPlayerId: null,
+
+        pickerSubtitle(player) {
+            const pos = String(player?.position ?? '').trim();
+            const school = String(player?.school ?? '').trim();
+            const bits = [pos, school].filter((x) => x !== '');
+
+            return bits.length > 0 ? bits.join(' · ') : '—';
         },
 
-        hsPlayerUrl(id) {
-            return `${this.hsPlayerBaseUrl}/${encodeURIComponent(String(id))}`;
+        get filtered() {
+            const q = this.query.trim().toLowerCase();
+            if (q === '') {
+                return this.players;
+            }
+            const tokens = q.split(/[\s,]+/).filter((t) => t.length > 0);
+
+            return this.players.filter((p) => {
+                const hay = String(p.search_blob ?? p.label ?? '').toLowerCase();
+
+                return tokens.every((token) => hay.includes(token));
+            });
+        },
+
+        get selectedLabel() {
+            if (!this.selectedPlayerId) {
+                return '';
+            }
+            const p = this.players.find((row) => Number(row.player_id) === Number(this.selectedPlayerId));
+
+            return p?.label ?? '';
+        },
+
+        onFocus() {
+            if (this.readOnly) {
+                return;
+            }
+            this.open = true;
+        },
+
+        onInput(event) {
+            if (this.readOnly) {
+                return;
+            }
+            this.open = true;
+            this.query = event.target.value;
+            this.selectedPlayerId = null;
+        },
+
+        close() {
+            this.open = false;
+        },
+
+        clear() {
+            this.query = '';
+            this.selectedPlayerId = null;
+            this.open = false;
+        },
+
+        choose(player) {
+            this.selectedPlayerId = Number(player.player_id);
+            this.query = player.label ?? '';
+            this.open = false;
+        },
+
+        addSelected() {
+            if (this.readOnly || !this.selectedPlayerId) {
+                return;
+            }
+            const player = this.players.find((row) => Number(row.player_id) === Number(this.selectedPlayerId));
+            Alpine.store('workingBoardBridge').add({
+                boardType: this.boardType,
+                round: this.round,
+                playerId: this.selectedPlayerId,
+                player: player ?? null,
+            });
+            this.selectedPlayerId = null;
+            this.query = '';
+            this.open = false;
+        },
+    }));
+
+    Alpine.data('workingBoards', () => ({
+        boardTypes: [],
+        roundKeys: [],
+        roundLabels: {},
+        confidenceOptions: [],
+        riskOptions: [],
+        riskLabels: {},
+        boardRounds: {},
+        boardPools: {},
+        updateUrl: '',
+        hsPlayerBaseUrl: '',
+        ncaaPlayerBaseUrl: '',
+        readOnly: false,
+        saving: false,
+        saveError: '',
+        statusMessage: '',
+        statusIsError: false,
+        _saveT: null,
+        _statusT: null,
+        _savingNow: false,
+
+        init() {
+            const config = readWorkingBoardConfig();
+            this.boardTypes = Array.isArray(config.boardTypes) ? config.boardTypes : [];
+            this.roundKeys = Array.isArray(config.roundKeys) ? config.roundKeys : [];
+            this.roundLabels =
+                config.roundLabels && typeof config.roundLabels === 'object' ? config.roundLabels : {};
+            this.confidenceOptions = Array.isArray(config.confidenceOptions) ? config.confidenceOptions : [];
+            this.riskOptions = Array.isArray(config.riskOptions) ? config.riskOptions : [];
+            this.riskLabels =
+                config.riskLabels && typeof config.riskLabels === 'object' ? config.riskLabels : {};
+            this.updateUrl = config.updateUrl ?? '';
+            this.hsPlayerBaseUrl = String(config.hsPlayerBaseUrl ?? '').replace(/\/$/, '');
+            this.ncaaPlayerBaseUrl = String(config.ncaaPlayerBaseUrl ?? '').replace(/\/$/, '');
+            this.readOnly = Boolean(config.readOnly);
+
+            Alpine.store('workingBoardBridge').register((detail) => this.addPlayerFromPicker(detail));
+
+            const boardsIn = config.boards && typeof config.boards === 'object' ? config.boards : {};
+            this.boardRounds = {};
+            this.boardPools = {};
+
+            for (const boardType of this.boardTypes) {
+                const boardCfg = boardsIn[boardType] ?? {};
+                const init =
+                    boardCfg.initialRounds && typeof boardCfg.initialRounds === 'object'
+                        ? boardCfg.initialRounds
+                        : {};
+                this.boardRounds[boardType] = JSON.parse(JSON.stringify(init));
+                this.boardPools[boardType] = Array.isArray(boardCfg.playerPool) ? boardCfg.playerPool : [];
+
+                for (const rk of this.roundKeys) {
+                    if (!Array.isArray(this.boardRounds[boardType][rk])) {
+                        this.boardRounds[boardType][rk] = [];
+                    }
+                    this.boardRounds[boardType][rk] = this.boardRounds[boardType][rk].filter(
+                        (item) => item?.entry_type !== 'tier_divider' && item?.player_id,
+                    );
+                }
+            }
+
+            // Best-effort persistence when navigating away quickly.
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden') {
+                    this.saveNow({ keepalive: true, silentSuccess: true });
+                }
+            });
+            window.addEventListener('beforeunload', () => {
+                this.saveNow({ keepalive: true, silentSuccess: true });
+            });
+        },
+
+        setStatus(message, isError = false) {
+            this.statusMessage = message;
+            this.statusIsError = isError;
+            if (this._statusT) {
+                clearTimeout(this._statusT);
+            }
+            if (message) {
+                this._statusT = setTimeout(() => {
+                    this.statusMessage = '';
+                }, 5000);
+            }
+        },
+
+        roundCards(boardType, rk) {
+            return this.boardRounds?.[boardType]?.[rk] ?? [];
+        },
+
+        roundLabel(roundKey) {
+            return this.roundLabels?.[roundKey] ?? roundKey;
+        },
+
+        addPlayerFromPicker(detail) {
+            const boardType = detail?.boardType;
+            const round = detail?.round;
+            const player = detail?.player;
+            const playerId = detail?.playerId;
+
+            if (!boardType || !round) {
+                this.setStatus('Could not add player (missing board or round).', true);
+                return;
+            }
+
+            if (player) {
+                const added = this.addPlayerToRoundByTemplate(boardType, round, player);
+                if (added) {
+                    this.setStatus(`Added to round ${this.roundLabel(round)}.`);
+                }
+                return;
+            }
+
+            const id = Number(playerId);
+            if (!id || Number.isNaN(id)) {
+                this.setStatus('Could not add player (missing player id).', true);
+                return;
+            }
+
+            const pool = this.boardPools[boardType] ?? [];
+            const template = pool.find((p) => Number(p.player_id) === id);
+            if (!template) {
+                this.setStatus('Could not add player (not in pool).', true);
+                return;
+            }
+
+            const added = this.addPlayerToRoundByTemplate(boardType, round, template);
+            if (added) {
+                this.setStatus(`Added to round ${this.roundLabel(round)}.`);
+            }
+        },
+
+        addPlayerToRoundByTemplate(boardType, rk, template) {
+            const id = Number(template?.player_id);
+            if (!id || Number.isNaN(id)) {
+                this.setStatus('Invalid player.', true);
+                return false;
+            }
+            if (this.isPlayerOnBoard(boardType, id)) {
+                this.setStatus('Player is already on this board.', true);
+                return false;
+            }
+            const card = {
+                ...template,
+                confidence: '',
+                risk: '',
+            };
+            const rounds = { ...(this.boardRounds[boardType] ?? {}) };
+            rounds[rk] = [...(rounds[rk] ?? []), card];
+            this.boardRounds[boardType] = rounds;
+            this.boardRounds = { ...this.boardRounds };
+            // Save quickly so navigating away doesn't lose board state.
+            this.scheduleSave(50);
+            return true;
+        },
+
+        playerUrlForPool(pool, id) {
+            const base = pool === 'ncaa' ? this.ncaaPlayerBaseUrl : this.hsPlayerBaseUrl;
+
+            return `${base}/${encodeURIComponent(String(id))}`;
+        },
+
+        playerUrl(card) {
+            return this.playerUrlForPool(card?.player_pool ?? 'hs', card?.player_id);
         },
 
         boardName(card) {
@@ -2129,77 +2665,91 @@ document.addEventListener('alpine:init', () => {
             return Number.isNaN(n) ? '—' : n.toFixed(1);
         },
 
-        gradeHeatClass(v) {
-            if (v === null || v === undefined || v === '') {
-                return '';
-            }
-            const n = Number(v);
-            if (Number.isNaN(n)) {
-                return '';
-            }
-            if (n >= 6) {
-                return 'cf-value-high';
-            }
-            if (n <= 4) {
-                return 'cf-value-low';
+        gradeFieldBounds(boardType, field) {
+            return gradeFieldPercentileBounds(this.boardRounds, boardType, this.roundKeys, field);
+        },
+
+        roleCellStyle(card, boardType) {
+            return boardPercentileCellStyle(
+                numericGrade(card?.grade_role),
+                this.gradeFieldBounds(boardType, 'grade_role'),
+            );
+        },
+
+        swingCellStyle(card, boardType) {
+            return boardPercentileCellStyle(
+                numericGrade(card?.grade_swing),
+                this.gradeFieldBounds(boardType, 'grade_swing'),
+            );
+        },
+
+        batGrade(card) {
+            return batGradeForCard(card);
+        },
+
+        batBounds(boardType) {
+            return batPercentileBounds(this.boardRounds, boardType, this.roundKeys);
+        },
+
+        batCellStyle(card, boardType) {
+            const value = batGradeForCard(card);
+
+            return boardPercentileCellStyle(value, this.batBounds(boardType));
+        },
+
+        scaleLabel(v) {
+            if (v === '' || v === null || v === undefined) {
+                return '—';
             }
 
-            return '';
+            return String(v);
         },
 
         confidenceLabel(v) {
-            if (v === '' || v === null) {
-                return '—';
-            }
-
-            return String(v);
+            return this.scaleLabel(v);
         },
 
         riskLabel(v) {
-            if (v === '' || v === null) {
+            if (v === '' || v === null || v === undefined) {
                 return '—';
             }
 
-            return String(v);
+            return this.riskLabels?.[String(v)] ?? String(v);
         },
 
-        confidenceSelectClass(v) {
-            const s = String(v ?? '');
-            if (s === 'HIGH' || s === 'STRONG') {
-                return 'bg-emerald-200 text-emerald-950 border-emerald-400';
-            }
-            if (s === 'AVERAGE') {
-                return 'bg-amber-100 text-amber-950 border-amber-300';
-            }
-            if (s === 'WEAK' || s === 'TBD') {
-                return 'bg-slate-100 text-slate-800 border-slate-300';
-            }
-
-            return 'bg-white text-slate-900';
+        boardScaleFillStyle(v) {
+            return boardScaleFillStyle(v);
         },
 
-        riskSelectClass(v) {
-            const s = String(v ?? '');
-            if (s === 'LOW') {
-                return 'text-emerald-800 border-emerald-400 bg-emerald-50';
-            }
-            if (s === 'MEDIUM') {
-                return 'text-amber-800 border-amber-400 bg-amber-50';
-            }
-            if (s === 'MED-HIGH') {
-                return 'text-orange-900 border-orange-400 bg-orange-50';
-            }
-            if (s === 'HIGH' || s === 'EXTREME') {
-                return 'text-red-900 border-red-400 bg-red-50';
-            }
-
-            return 'text-slate-900 bg-white';
+        boardScaleTextStyle(v) {
+            return boardScaleTextStyle(v);
         },
 
-        isPlayerOnBoard(pid) {
+        openScaleSelect(event) {
+            if (this.readOnly) {
+                return;
+            }
+            const select = event.currentTarget?.querySelector?.('select');
+            if (!select || select.disabled) {
+                return;
+            }
+            if (typeof select.showPicker === 'function') {
+                try {
+                    select.showPicker();
+                    return;
+                } catch {
+                    // fall through
+                }
+            }
+            select.focus();
+            select.click();
+        },
+
+        isPlayerOnBoard(boardType, pid) {
             const id = Number(pid);
+            const rounds = this.boardRounds[boardType] ?? {};
             for (const rk of this.roundKeys) {
-                const list = this.rounds[rk] ?? [];
+                const list = rounds[rk] ?? [];
                 for (const c of list) {
                     if (Number(c.player_id) === id) {
                         return true;
@@ -2210,23 +2760,25 @@ document.addEventListener('alpine:init', () => {
             return false;
         },
 
-        poolOptions() {
-            return this.pool
-                .filter((p) => !this.isPlayerOnBoard(p.player_id))
+        poolOptions(boardType) {
+            const pool = this.boardPools[boardType] ?? [];
+
+            return pool
+                .filter((p) => !this.isPlayerOnBoard(boardType, p.player_id))
                 .map((p) => ({
                     player_id: p.player_id,
+                    player_pool: p.player_pool ?? 'hs',
                     label: this.boardName(p),
                 }));
         },
 
-        addPlayerToRound(rk) {
-            const raw = this.nextAddByRound[rk];
-            const id = Number(raw);
-            this.nextAddByRound[rk] = '';
-            if (!id || Number.isNaN(id)) {
+        addPlayerToRoundById(boardType, rk, playerId) {
+            const id = Number(playerId);
+            if (!id || Number.isNaN(id) || this.isPlayerOnBoard(boardType, id)) {
                 return;
             }
-            const template = this.pool.find((p) => Number(p.player_id) === id);
+            const pool = this.boardPools[boardType] ?? [];
+            const template = pool.find((p) => Number(p.player_id) === id);
             if (!template) {
                 return;
             }
@@ -2235,27 +2787,31 @@ document.addEventListener('alpine:init', () => {
                 confidence: '',
                 risk: '',
             };
-            if (!Array.isArray(this.rounds[rk])) {
-                this.rounds[rk] = [];
+            if (!Array.isArray(this.boardRounds[boardType][rk])) {
+                this.boardRounds[boardType][rk] = [];
             }
-            this.rounds[rk].push(card);
+            // Reassign array to ensure Alpine notices nested updates reliably.
+            this.boardRounds[boardType][rk] = [...this.boardRounds[boardType][rk], card];
             this.scheduleSave();
         },
 
-        removeFromRound(rk, idx) {
-            if (!Array.isArray(this.rounds[rk])) {
+        removeFromRound(boardType, rk, idx) {
+            if (!Array.isArray(this.boardRounds[boardType]?.[rk])) {
                 return;
             }
-            this.rounds[rk].splice(idx, 1);
+            this.boardRounds[boardType][rk].splice(idx, 1);
             this.scheduleSave();
         },
 
-        onDragStart(ev, rk, idx) {
-            const list = this.rounds[rk];
+        onDragStart(ev, boardType, rk, idx) {
+            if (this.readOnly) {
+                return;
+            }
+            const list = this.boardRounds[boardType]?.[rk];
             if (!Array.isArray(list) || idx < 0 || idx >= list.length) {
                 return;
             }
-            const payload = JSON.stringify({ rk, idx });
+            const payload = JSON.stringify({ boardType, rk, idx });
             ev.dataTransfer.setData('application/x-working-board', payload);
             ev.dataTransfer.setData('text/plain', payload);
             ev.dataTransfer.effectAllowed = 'move';
@@ -2279,7 +2835,7 @@ document.addEventListener('alpine:init', () => {
             return rows.length;
         },
 
-        onRoundDrop(ev, targetRk) {
+        onRoundDrop(ev, boardType, targetRk) {
             let raw = ev.dataTransfer.getData('application/x-working-board');
             if (!raw) {
                 raw = ev.dataTransfer.getData('text/plain');
@@ -2293,10 +2849,13 @@ document.addEventListener('alpine:init', () => {
             } catch {
                 return;
             }
+            if (payload.boardType !== boardType) {
+                return;
+            }
             const fromRk = payload.rk;
             const fromIdx = Number(payload.idx);
             let insertAt = this.dropIndexFromEvent(ev);
-            const list = this.rounds[fromRk];
+            const list = this.boardRounds[boardType]?.[fromRk];
             if (!Array.isArray(list) || fromIdx < 0 || fromIdx >= list.length) {
                 return;
             }
@@ -2304,28 +2863,32 @@ document.addEventListener('alpine:init', () => {
             if (fromRk === targetRk && insertAt > fromIdx) {
                 insertAt -= 1;
             }
-            if (!Array.isArray(this.rounds[targetRk])) {
-                this.rounds[targetRk] = [];
+            if (!Array.isArray(this.boardRounds[boardType][targetRk])) {
+                this.boardRounds[boardType][targetRk] = [];
             }
-            insertAt = Math.max(0, Math.min(insertAt, this.rounds[targetRk].length));
-            this.rounds[targetRk].splice(insertAt, 0, card);
+            insertAt = Math.max(0, Math.min(insertAt, this.boardRounds[boardType][targetRk].length));
+            this.boardRounds[boardType][targetRk].splice(insertAt, 0, card);
             this.scheduleSave();
         },
 
         buildPayload() {
-            const rounds = {};
-            for (const rk of this.roundKeys) {
-                rounds[rk] = (this.rounds[rk] ?? []).map((c) => ({
-                    player_id: Number(c.player_id),
-                    confidence: c.confidence ?? '',
-                    risk: c.risk ?? '',
-                }));
+            const boards = {};
+            for (const boardType of this.boardTypes) {
+                const rounds = {};
+                for (const rk of this.roundKeys) {
+                    rounds[rk] = (this.boardRounds[boardType]?.[rk] ?? []).map((c) => ({
+                        player_id: Number(c.player_id),
+                        confidence: c.confidence ?? '',
+                        risk: c.risk ?? '',
+                    }));
+                }
+                boards[boardType] = { rounds };
             }
 
-            return { rounds };
+            return { boards };
         },
 
-        scheduleSave() {
+        scheduleSave(delayMs = 400) {
             if (this.readOnly) {
                 return;
             }
@@ -2335,31 +2898,61 @@ document.addEventListener('alpine:init', () => {
             }
             this._saveT = setTimeout(() => {
                 this.saveNow();
-            }, 400);
+            }, delayMs);
         },
 
-        async saveNow() {
+        async saveNow(opts = {}) {
             if (!this.updateUrl) {
                 return;
             }
+            if (this._savingNow) {
+                return;
+            }
+            this._savingNow = true;
             this.saving = true;
             this.saveError = '';
             try {
-                await window.axios.patch(this.updateUrl, this.buildPayload(), {
-                    headers: {
-                        Accept: 'application/json',
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                });
+                const payload = this.buildPayload();
+                const keepalive = Boolean(opts.keepalive);
+
+                if (keepalive) {
+                    const token = document.querySelector('meta[name=\"csrf-token\"]')?.getAttribute('content') ?? '';
+                    await fetch(this.updateUrl, {
+                        method: 'PATCH',
+                        headers: {
+                            Accept: 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            ...(token ? { 'X-CSRF-TOKEN': token } : {}),
+                        },
+                        body: JSON.stringify(payload),
+                        keepalive: true,
+                        credentials: 'same-origin',
+                    });
+                } else {
+                    await window.axios.patch(this.updateUrl, payload, {
+                        headers: {
+                            Accept: 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    });
+                }
+
+                if (!opts.silentSuccess) {
+                    this.setStatus('Saved.', false);
+                }
             } catch (e) {
                 const msg =
                     e?.response?.data?.message ??
-                    e?.response?.data?.errors?.rounds?.[0] ??
+                    e?.response?.data?.errors?.['boards.hs.rounds']?.[0] ??
+                    e?.response?.data?.errors?.boards?.[0] ??
                     'Could not save board.';
                 this.saveError = typeof msg === 'string' ? msg : 'Could not save board.';
+                this.setStatus(this.saveError, true);
             } finally {
                 this.saving = false;
+                this._savingNow = false;
             }
         },
     }));

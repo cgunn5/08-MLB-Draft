@@ -20,27 +20,35 @@ class UpdateWorkingBoardRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'rounds' => ['required', 'array'],
+            'boards' => ['required', 'array'],
         ];
-        foreach (WorkingBoardEntry::ROUND_KEYS as $key) {
-            $rules["rounds.$key"] = ['sometimes', 'array'];
-            $rules["rounds.$key.*.player_id"] = [
-                'required',
-                'integer',
-                Rule::exists('players', 'id')->where('player_pool', 'hs'),
-            ];
-            $rules["rounds.$key.*.confidence"] = [
-                'nullable',
-                'string',
-                'max:32',
-                Rule::in(WorkingBoardEntry::CONFIDENCE_OPTIONS),
-            ];
-            $rules["rounds.$key.*.risk"] = [
-                'nullable',
-                'string',
-                'max:32',
-                Rule::in(WorkingBoardEntry::RISK_OPTIONS),
-            ];
+
+        foreach (WorkingBoardEntry::BOARD_TYPES as $boardType) {
+            $rules["boards.$boardType"] = ['required', 'array'];
+            $rules["boards.$boardType.rounds"] = ['required', 'array'];
+
+            foreach (WorkingBoardEntry::ROUND_KEYS as $key) {
+                $rules["boards.$boardType.rounds.$key"] = ['sometimes', 'array'];
+                $rules["boards.$boardType.rounds.$key.*.player_id"] = [
+                    'required',
+                    'integer',
+                    Rule::exists('players', 'id')->where(
+                        fn ($query) => $this->playerPoolConstraint($query, $boardType),
+                    ),
+                ];
+                $rules["boards.$boardType.rounds.$key.*.confidence"] = [
+                    'nullable',
+                    'string',
+                    'max:32',
+                    Rule::in(WorkingBoardEntry::CONFIDENCE_OPTIONS),
+                ];
+                $rules["boards.$boardType.rounds.$key.*.risk"] = [
+                    'nullable',
+                    'string',
+                    'max:32',
+                    Rule::in(WorkingBoardEntry::RISK_OPTIONS),
+                ];
+            }
         }
 
         return $rules;
@@ -49,26 +57,54 @@ class UpdateWorkingBoardRequest extends FormRequest
     public function withValidator(Validator $validator): void
     {
         $validator->after(function ($validator): void {
-            /** @var array<string, mixed>|null $rounds */
-            $rounds = $this->input('rounds');
-            if (! is_array($rounds)) {
+            /** @var array<string, mixed>|null $boards */
+            $boards = $this->input('boards');
+            if (! is_array($boards)) {
                 return;
             }
-            $ids = [];
-            foreach (WorkingBoardEntry::ROUND_KEYS as $rk) {
-                $list = $rounds[$rk] ?? [];
-                if (! is_array($list)) {
+
+            foreach (WorkingBoardEntry::BOARD_TYPES as $boardType) {
+                $board = $boards[$boardType] ?? null;
+                if (! is_array($board)) {
                     continue;
                 }
-                foreach ($list as $row) {
-                    if (is_array($row) && isset($row['player_id'])) {
-                        $ids[] = (int) $row['player_id'];
+                $rounds = $board['rounds'] ?? null;
+                if (! is_array($rounds)) {
+                    continue;
+                }
+
+                $ids = [];
+                foreach (WorkingBoardEntry::ROUND_KEYS as $rk) {
+                    $list = $rounds[$rk] ?? [];
+                    if (! is_array($list)) {
+                        continue;
+                    }
+                    foreach ($list as $row) {
+                        if (is_array($row) && isset($row['player_id'])) {
+                            $ids[] = (int) $row['player_id'];
+                        }
                     }
                 }
-            }
-            if (count($ids) !== count(array_unique($ids))) {
-                $validator->errors()->add('rounds', __('Each player may only appear once on the board.'));
+
+                if (count($ids) !== count(array_unique($ids))) {
+                    $validator->errors()->add(
+                        "boards.$boardType.rounds",
+                        __('Each player may only appear once on this board.'),
+                    );
+                }
             }
         });
+    }
+
+    /**
+     * @param  \Illuminate\Database\Query\Builder  $query
+     */
+    private function playerPoolConstraint($query, string $boardType): void
+    {
+        match ($boardType) {
+            WorkingBoardEntry::BOARD_HS => $query->where('player_pool', 'hs'),
+            WorkingBoardEntry::BOARD_NCAA => $query->where('player_pool', 'ncaa'),
+            default => $query->whereIn('player_pool', ['hs', 'ncaa']),
+        };
     }
 }
