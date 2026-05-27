@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\DataSourceUpload;
 use App\Models\User;
 use App\Support\CareerPgMasterUploadService;
+use App\Support\DataSourceUploadStorage;
 use App\Support\HsPerfectGamePerformanceUploadDetector;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
@@ -141,7 +142,7 @@ class RecoverHsPerfectGamePerformanceSlot extends Command
     {
         $out = [];
         foreach ($uploads as $upload) {
-            if ($upload->path === '' || ! is_file(Storage::disk($upload->disk)->path($upload->path))) {
+            if ($upload->path === '' || ! DataSourceUploadStorage::exists($upload->disk, $upload->path)) {
                 continue;
             }
             $headers = $upload->header_row;

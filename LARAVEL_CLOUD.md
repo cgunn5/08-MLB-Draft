@@ -55,9 +55,23 @@ Open your site → **Login** (not setup):
 
 After this, redeploys keep your account and data in the hosted database.
 
-## CSV uploads (stats files)
+## CSV stat files (HS DATA / NCAA DATA) — required for sheets
 
-Uploaded CSV files are stored on disk today. On Laravel Cloud that disk is also temporary. For long-term stat file storage, add **Object Storage** under Resources and set `FILESYSTEM_DISK` to the disk name Laravel Cloud injects. Notes and grades in the database will persist once step 1–3 are done.
+Player notes and grades live in **MySQL** and survive redeploys. **CSV stat files do not** unless you add object storage.
+
+Laravel Cloud wipes the server disk on every deploy. Dataset tabs stay in the app (names/settings in MySQL) but the actual `.csv` files disappear → **“That dataset file is missing on the server.”**
+
+### Fix (one time)
+
+1. **Resources** → **Add bucket** → **Laravel Object Storage** → **Private**
+2. Disk name: e.g. `r2` (remember this name)
+3. Check **Use as default filesystem disk** (or set `DATA_SOURCE_UPLOADS_DISK=r2` in environment variables)
+4. **Redeploy**
+5. Re-import your data:
+   - **SYNC DATA** → upload your bundle from your Mac, **or**
+   - Re-upload each CSV under HS DATA / NCAA DATA
+
+After this, new uploads and bundle imports are stored in the bucket and **persist permanently**.
 
 ## Local development
 

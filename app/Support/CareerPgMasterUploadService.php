@@ -151,7 +151,7 @@ final class CareerPgMasterUploadService
             || $source->dataset_portal !== DataSourceUpload::PORTAL_HS) {
             return null;
         }
-        if ($source->path === '' || ! is_file(Storage::disk($source->disk)->path($source->path))) {
+        if ($source->path === '' || ! DataSourceUploadStorage::exists($source->disk, $source->path)) {
             return null;
         }
 

@@ -11,6 +11,7 @@ use App\Support\CareerPgMasterUploadService;
 use App\Support\CareerPgStatsAggregator;
 use App\Support\DataSourceCsvFileStats;
 use App\Support\DataSourceCsvHeaders;
+use App\Support\DataSourceUploadStorage;
 use App\Support\DataSourceHeatColumnStats;
 use App\Support\DataSourcePortalMisplacementFixer;
 use Illuminate\Http\JsonResponse;
@@ -151,7 +152,8 @@ abstract class AbstractDataSourcePortalController extends Controller
     {
         $file = $request->file('file');
         $storedName = Str::uuid()->toString().'.csv';
-        $path = $file->storeAs('data-source-uploads', $storedName, 'local');
+        $disk = DataSourceUploadStorage::disk();
+        $path = $file->storeAs('data-source-uploads', $storedName, $disk);
 
         if ($path === false) {
             return back()
@@ -159,12 +161,12 @@ abstract class AbstractDataSourcePortalController extends Controller
                 ->withErrors(['file' => __('Could not store the file.')]);
         }
 
-        $absolutePath = Storage::disk('local')->path($path);
+        $absolutePath = DataSourceUploadStorage::localPath($disk, $path);
 
         try {
             $stats = DataSourceCsvFileStats::read($absolutePath);
         } catch (\Throwable) {
-            Storage::disk('local')->delete($path);
+            DataSourceUploadStorage::delete($disk, $path);
 
             return back()
                 ->withInput($request->except('file'))
@@ -177,7 +179,7 @@ abstract class AbstractDataSourcePortalController extends Controller
             'upload_kind' => DataSourceUpload::UPLOAD_KIND_FILE,
             'name' => $request->validated('name'),
             'original_filename' => $file->getClientOriginalName(),
-            'disk' => 'local',
+            'disk' => $disk,
             'path' => $path,
             'header_row' => $stats['header_row'],
             'row_count' => $stats['row_count'],
@@ -201,11 +203,8 @@ abstract class AbstractDataSourcePortalController extends Controller
     {
         $this->assertUploadAccess($request, $dataSourceUpload);
 
-        if (! $dataSourceUpload->isCareerPgMaster()) {
-            $disk = Storage::disk($dataSourceUpload->disk);
-            if ($dataSourceUpload->path !== '' && $disk->exists($dataSourceUpload->path)) {
-                $disk->delete($dataSourceUpload->path);
-            }
+        if (! $dataSourceUpload->isCareerPgMaster() && $dataSourceUpload->path !== '') {
+            DataSourceUploadStorage::delete($dataSourceUpload->disk, $dataSourceUpload->path);
         }
 
         $dataSourceUpload->delete();
@@ -253,10 +252,7 @@ abstract class AbstractDataSourcePortalController extends Controller
 
         $headers = $dataSourceUpload->header_row;
         $playerIdx = DataSourceCsvHeaders::playerColumnIndex($headers);
-        $absolutePath = Storage::disk($dataSourceUpload->disk)->path($dataSourceUpload->path);
-        if (! is_file($absolutePath)) {
-            abort(404);
-        }
+        $absolutePath = $this->csvPathOr404($dataSourceUpload);
 
         $handle = fopen($absolutePath, 'r');
         if ($handle === false) {
@@ -317,10 +313,7 @@ abstract class AbstractDataSourcePortalController extends Controller
             $playerTerms = [trim((string) $playersQuery)];
         }
 
-        $absolutePath = Storage::disk($dataSourceUpload->disk)->path($dataSourceUpload->path);
-        if (! is_file($absolutePath)) {
-            abort(404);
-        }
+        $absolutePath = $this->csvPathOr404($dataSourceUpload);
 
         $useExactPlayerMatch = $playerTerms !== [];
         $filterTerms = $useExactPlayerMatch ? $playerTerms : ($legacyFilter !== '' ? [$legacyFilter] : []);
@@ -548,10 +541,7 @@ abstract class AbstractDataSourcePortalController extends Controller
         $filterTerms = $useExactPlayerMatch ? $playerTerms : [];
         $playerFilterActive = $filterTerms !== [];
 
-        $absolutePath = Storage::disk($dataSourceUpload->disk)->path($dataSourceUpload->path);
-        if (! is_file($absolutePath)) {
-            abort(404);
-        }
+        $absolutePath = $this->csvPathOr404($dataSourceUpload);
 
         $order = $this->normalizeColumnOrder($dataSourceUpload->column_order, count($fileHeaders));
 
@@ -1022,10 +1012,7 @@ abstract class AbstractDataSourcePortalController extends Controller
             ]);
         }
 
-        $absolutePath = Storage::disk($dataSourceUpload->disk)->path($dataSourceUpload->path);
-        if (! is_file($absolutePath)) {
-            abort(404);
-        }
+        $absolutePath = $this->csvPathOr404($dataSourceUpload);
 
         $expectedN = count($dataSourceUpload->header_row);
         if ($expectedN === 0) {
@@ -1051,6 +1038,7 @@ abstract class AbstractDataSourcePortalController extends Controller
 
         $rows[] = $fileRow;
         $this->writeFullCsv($absolutePath, $diskHeader, $rows);
+        $this->persistCsv($dataSourceUpload, $absolutePath);
 
         $stats = DataSourceCsvFileStats::read($absolutePath);
         $dataSourceUpload->row_count = $stats['row_count'];
@@ -1078,13 +1066,11 @@ abstract class AbstractDataSourcePortalController extends Controller
             ]);
         }
 
-        $absolutePath = Storage::disk($dataSourceUpload->disk)->path($dataSourceUpload->path);
-        if (! is_file($absolutePath)) {
-            abort(404);
-        }
+        $absolutePath = $this->csvPathOr404($dataSourceUpload);
 
         $playerIdx = DataSourceCsvHeaders::playerColumnIndex($dataSourceUpload->header_row);
         $this->updateCsvPlayerByOrdinal($absolutePath, $playerIdx, $ordinal, $request->validated('player'));
+        $this->persistCsv($dataSourceUpload, $absolutePath);
         CareerPgMasterUploadService::syncForUser($request->user());
 
         return response()->json(['ok' => true]);
@@ -1100,12 +1086,10 @@ abstract class AbstractDataSourcePortalController extends Controller
             ]);
         }
 
-        $absolutePath = Storage::disk($dataSourceUpload->disk)->path($dataSourceUpload->path);
-        if (! is_file($absolutePath)) {
-            abort(404);
-        }
+        $absolutePath = $this->csvPathOr404($dataSourceUpload);
 
         $this->deleteCsvRowByOrdinal($absolutePath, $ordinal);
+        $this->persistCsv($dataSourceUpload, $absolutePath);
         $stats = DataSourceCsvFileStats::read($absolutePath);
         $dataSourceUpload->row_count = $stats['row_count'];
         $dataSourceUpload->save();
@@ -1277,7 +1261,7 @@ abstract class AbstractDataSourcePortalController extends Controller
                 }
             }
         } else {
-            $path = Storage::disk($upload->disk)->path($upload->path);
+            $path = DataSourceUploadStorage::localPath($upload->disk, $upload->path);
             $handle = fopen($path, 'r');
             if ($handle === false) {
                 return [];
@@ -1495,6 +1479,20 @@ abstract class AbstractDataSourcePortalController extends Controller
         }
 
         return (float) $t;
+    }
+
+    private function csvPathOr404(DataSourceUpload $dataSourceUpload): string
+    {
+        if (! DataSourceUploadStorage::exists($dataSourceUpload->disk, $dataSourceUpload->path)) {
+            abort(404);
+        }
+
+        return DataSourceUploadStorage::localPath($dataSourceUpload->disk, $dataSourceUpload->path);
+    }
+
+    private function persistCsv(DataSourceUpload $dataSourceUpload, string $localPath): void
+    {
+        DataSourceUploadStorage::persist($dataSourceUpload->disk, $dataSourceUpload->path, $localPath);
     }
 
     /**

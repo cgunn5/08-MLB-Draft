@@ -5,6 +5,7 @@ namespace App\Support;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use ZipArchive;
 
@@ -64,6 +65,7 @@ final class ApplicationBundleImporter
             }
 
             $this->restoreUploadFiles($tempDir.'/uploads');
+            DataSourceUploadStorage::retargetDatabaseUploadDisks();
 
             Artisan::call('optimize:clear');
             ApplicationDatabaseBackupTrigger::maybeRun();
@@ -107,24 +109,16 @@ final class ApplicationBundleImporter
 
     private function restoreUploadFiles(string $extractedUploadsDir): void
     {
-        $targetDir = ApplicationBundlePaths::uploadsDirectory();
-        File::ensureDirectoryExists($targetDir);
-
-        if (is_dir($targetDir)) {
-            foreach (File::files($targetDir) as $existing) {
-                File::delete($existing->getPathname());
-            }
-        }
-
         if (! is_dir($extractedUploadsDir)) {
             return;
         }
 
+        $disk = DataSourceUploadStorage::disk();
+        $storage = Storage::disk($disk);
+
         foreach (File::files($extractedUploadsDir) as $file) {
-            $dest = $targetDir.DIRECTORY_SEPARATOR.$file->getFilename();
-            if (! copy($file->getPathname(), $dest)) {
-                throw new RuntimeException("Could not copy upload file to {$dest}");
-            }
+            $relative = 'data-source-uploads/'.$file->getFilename();
+            $storage->put($relative, (string) file_get_contents($file->getPathname()));
         }
     }
 }

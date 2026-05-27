@@ -24,7 +24,7 @@ final class CareerPgStatsAggregator
             return ['headers' => [], 'rows' => [], 'row_count' => 0, 'player_column_index' => 0];
         }
 
-        $absolutePath = Storage::disk($source->disk)->path($source->path);
+        $absolutePath = DataSourceUploadStorage::localPath($source->disk, $source->path);
         if (! is_file($absolutePath)) {
             return ['headers' => $headers, 'rows' => [], 'row_count' => 0, 'player_column_index' => DataSourceCsvHeaders::playerColumnIndex($headers)];
         }

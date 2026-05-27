@@ -137,7 +137,7 @@ final class HsRangerTraitsSheetResolver
             'demographics' => null,
         ];
 
-        $absolutePath = Storage::disk($upload->disk)->path($upload->path);
+        $absolutePath = DataSourceUploadStorage::localPath($upload->disk, $upload->path);
         if (! is_file($absolutePath)) {
             return $emptyResult;
         }
@@ -539,7 +539,7 @@ final class HsRangerTraitsSheetResolver
             return null;
         }
 
-        $absolutePath = Storage::disk($upload->disk)->path($upload->path);
+        $absolutePath = DataSourceUploadStorage::localPath($upload->disk, $upload->path);
         if (! is_file($absolutePath)) {
             return null;
         }

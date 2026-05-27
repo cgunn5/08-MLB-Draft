@@ -10,6 +10,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ApplicationBundleTest extends TestCase
@@ -23,10 +24,12 @@ class ApplicationBundleTest extends TestCase
         parent::setUp();
 
         $this->fileDatabasePath = storage_path('app/testing-application-bundle-'.uniqid('', true).'.sqlite');
-        $this->uploadsDirectory = storage_path('app/testing-uploads-'.uniqid('', true));
+        $localDiskRoot = storage_path('app/testing-uploads-'.uniqid('', true));
+        $this->uploadsDirectory = $localDiskRoot.'/data-source-uploads';
 
         config([
             'database.connections.sqlite.database' => $this->fileDatabasePath,
+            'filesystems.disks.local.root' => $localDiskRoot,
             'application_bundle.uploads_directory' => $this->uploadsDirectory,
             'application_bundle.export_directory' => storage_path('app/testing-exports-'.uniqid('', true)),
         ]);
@@ -44,7 +47,7 @@ class ApplicationBundleTest extends TestCase
         }
 
         if (isset($this->uploadsDirectory)) {
-            File::deleteDirectory($this->uploadsDirectory);
+            File::deleteDirectory(dirname($this->uploadsDirectory));
         }
 
         File::deleteDirectory((string) config('application_bundle.export_directory'));
@@ -79,8 +82,8 @@ class ApplicationBundleTest extends TestCase
             'email' => $sourceUser->email,
             'name' => 'Source Admin',
         ]);
-        $this->assertFileExists($this->uploadsDirectory.'/sample-stats.csv');
-        $this->assertStringContainsString('Player One', (string) file_get_contents($this->uploadsDirectory.'/sample-stats.csv'));
+        $this->assertTrue(Storage::disk('local')->exists('data-source-uploads/sample-stats.csv'));
+        $this->assertStringContainsString('Player One', (string) Storage::disk('local')->get('data-source-uploads/sample-stats.csv'));
     }
 
     public function test_admin_can_download_bundle(): void
