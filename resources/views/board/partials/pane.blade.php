@@ -225,17 +225,17 @@
                             ></td>
                             <td
                                 class="working-board-grade-cell border-r border-slate-200 p-0 align-middle font-bold text-black"
-                                :style="roleCellStyle(card, '{{ $boardType }}')"
+                                :style="roleCellStyle(card)"
                                 x-text="gradeFmt(card.grade_role)"
                             ></td>
                             <td
                                 class="working-board-grade-cell border-r border-slate-200 p-0 align-middle font-bold text-black"
-                                :style="batCellStyle(card, '{{ $boardType }}')"
+                                :style="batCellStyle(card)"
                                 x-text="gradeFmt(batGrade(card))"
                             ></td>
                             <td
                                 class="working-board-grade-cell border-r border-slate-200 p-0 align-middle font-bold text-black"
-                                :style="swingCellStyle(card, '{{ $boardType }}')"
+                                :style="swingCellStyle(card)"
                                 x-text="gradeFmt(card.grade_swing)"
                             ></td>
                             <td

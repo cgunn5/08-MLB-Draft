@@ -13,9 +13,9 @@
                             <code class="rounded bg-amber-100/80 px-1 text-xs">php artisan migrate --seed</code>.
                         </p>
                     @endif
-                    {{-- Header: content-sized; comp-heat lives in its own full-width band below. --}}
+                    {{-- Header: z above comp-heat band so player combobox dropdown overlays bucket nav. --}}
                     <div
-                        class="relative z-10 flex min-h-0 w-full min-w-0 shrink-0 flex-col overflow-visible pb-2 sm:pb-3"
+                        class="relative z-30 flex min-h-0 w-full min-w-0 shrink-0 flex-col overflow-visible pb-2 sm:pb-3"
                     >
                         <div
                             class="flex min-h-0 min-w-0 w-full shrink-0 items-start justify-start overflow-visible"
@@ -44,7 +44,7 @@
                         @endphp
                         {{-- Full-width horizontal band inside the card: separates profile header from traits. --}}
                         <section
-                            class="relative z-20 mt-4 w-full min-w-0 shrink-0 rounded-md border border-gray-200 bg-gray-50 px-3 py-4 normal-case shadow-sm sm:mt-5 sm:px-4 sm:py-5 md:mt-6 md:py-6"
+                            class="relative z-0 mt-4 w-full min-w-0 shrink-0 rounded-md border border-gray-200 bg-gray-50 px-3 py-4 normal-case shadow-sm sm:mt-5 sm:px-4 sm:py-5 md:mt-6 md:py-6"
                             aria-label="{{ __('Draft comp bucket for table heat') }}"
                         >
                             <nav class="flex w-full flex-wrap justify-center gap-2 gap-y-2">

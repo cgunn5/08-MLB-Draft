@@ -90,14 +90,13 @@ class Player extends Model
     }
 
     /**
-     * NCAA profile grades table (7 rows; labels align with note sections).
+     * NCAA profile grades table (6 rows; labels align with note sections).
      *
      * @return array<string, string>
      */
     public static function gradeRowDefinitionsNcaa(): array
     {
         return [
-            'ROLE' => 'grade_role',
             'PERF' => 'grade_perf',
             'K-Zone' => 'grade_approach',
             'DAMAGE' => 'grade_damage',
@@ -125,7 +124,6 @@ class Player extends Model
     public static function gradeRowDefinitionsHs(): array
     {
         return [
-            'ROLE' => 'grade_role',
             'PERF' => 'grade_perf',
             'K-Zone' => 'grade_approach',
             'Adj' => 'grade_contact',
@@ -219,33 +217,14 @@ class Player extends Model
     }
 
     /**
-     * Profile header (omit-center layout): school · position · B · T · AGE.
-     *
-     * @param  array{bats?: string, throws?: string, age?: string}|null  $overallDemographics  From HS Stats — Overall row when present.
+     * Profile header (omit-center layout): school · position.
      */
-    public function profileHeaderBioLine(?array $overallDemographics = null): string
+    public function profileHeaderBioLine(): string
     {
         $school = filled($this->school) ? (string) $this->school : PlayerSheetPlaceholder::CELL;
         $pos = filled($this->position) ? (string) $this->position : PlayerSheetPlaceholder::CELL;
-        if ($overallDemographics !== null) {
-            $b = trim((string) ($overallDemographics['bats'] ?? PlayerSheetPlaceholder::CELL)) ?: PlayerSheetPlaceholder::CELL;
-            $t = trim((string) ($overallDemographics['throws'] ?? PlayerSheetPlaceholder::CELL)) ?: PlayerSheetPlaceholder::CELL;
-            $age = trim((string) ($overallDemographics['age'] ?? PlayerSheetPlaceholder::CELL)) ?: PlayerSheetPlaceholder::CELL;
-        } else {
-            $b = filled($this->bats) ? (string) $this->bats : PlayerSheetPlaceholder::CELL;
-            $t = filled($this->throws) ? (string) $this->throws : PlayerSheetPlaceholder::CELL;
-            $age = $this->age !== null
-                ? rtrim(rtrim(number_format((float) $this->age, 2, '.', ''), '0'), '.')
-                : PlayerSheetPlaceholder::CELL;
-        }
 
-        return implode(' · ', [
-            $school,
-            $pos,
-            'B '.$b,
-            'T '.$t,
-            'AGE '.$age,
-        ]);
+        return implode(' · ', [$school, $pos]);
     }
 
     /**

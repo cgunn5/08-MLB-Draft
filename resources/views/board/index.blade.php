@@ -7,6 +7,7 @@
         'riskOptions' => $boardRiskOptions,
         'riskLabels' => $boardRiskLabels,
         'boards' => $boardAlpineBoards,
+        'batGradeBounds' => $boardBatGradeBounds,
         'updateUrl' => route('board.update'),
         'hsPlayerBaseUrl' => url('/hs/players'),
         'ncaaPlayerBaseUrl' => url('/ncaa/players'),

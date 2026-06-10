@@ -64,21 +64,13 @@ final class NoteGradeInputAppearance
     }
 
     /**
-     * Profile grade summary cells: same fill/text contrast as {@see inputStyle} without a control border.
+     * Profile grade summary cells: fixed grade-scale anchors (see {@see GradeScaleAppearance}).
      */
     public static function summaryCellStyle(?float $value, int $min, int $max): string
     {
-        if ($value === null) {
-            return 'background-color: #ffffff; color: #0f172a; font-weight: 700;';
-        }
+        unset($min, $max);
 
-        $value = max((float) $min, min((float) $max, $value));
-
-        [$r, $g, $b] = self::rgbForValue($value, $min, $max);
-
-        $textColor = self::isExactlyFive($value) ? '#0f172a' : '#ffffff';
-
-        return "background-color: rgb({$r},{$g},{$b}); color: {$textColor}; font-weight: 700;";
+        return GradeScaleAppearance::summaryCellStyle($value);
     }
 
     private static function isExactlyFive(float $value): bool

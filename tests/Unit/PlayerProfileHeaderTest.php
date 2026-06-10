@@ -15,7 +15,6 @@ class PlayerProfileHeaderTest extends TestCase
 
         $this->assertSame(
             [
-                'ROLE' => 'grade_role',
                 'PERF' => 'grade_perf',
                 'K-Zone' => 'grade_approach',
                 'DAMAGE' => 'grade_damage',
@@ -38,7 +37,7 @@ class PlayerProfileHeaderTest extends TestCase
     }
 
     #[Test]
-    public function profile_header_bio_line_includes_school_position_bats_throws_age(): void
+    public function profile_header_bio_line_includes_school_and_position(): void
     {
         $player = new Player([
             'school' => 'Test High (CA)',
@@ -49,7 +48,7 @@ class PlayerProfileHeaderTest extends TestCase
         ]);
 
         $this->assertSame(
-            'Test High (CA) · SS · B R · T R · AGE 17.5',
+            'Test High (CA) · SS',
             $player->profileHeaderBioLine(),
         );
     }

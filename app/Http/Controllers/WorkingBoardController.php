@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateWorkingBoardRequest;
+use App\Support\BatGradeAppearance;
 use App\Models\Player;
 use App\Models\User;
 use App\Models\WorkingBoardEntry;
@@ -69,6 +70,7 @@ class WorkingBoardController extends Controller
             'boardPanels' => $boardPanels,
             'boardPanelOrder' => WorkingBoardEntry::BOARD_DISPLAY_ORDER,
             'boardAlpineBoards' => $boardAlpineBoards,
+            'boardBatGradeBounds' => BatGradeAppearance::appWideBounds(),
             'boardReadOnly' => ! auth()->user()->canManageApplicationData(),
         ]);
     }

@@ -40,11 +40,8 @@
     $rangerSheet = is_array($rangerSheet) ? $rangerSheet : [];
     $overallDemographics = $rangerSheet['overall_demographics'] ?? null;
     $overallDemographics = is_array($overallDemographics) ? $overallDemographics : null;
-    $aggregateRankBoardHeatStyle = (! $compactProfile && $omitCenterColumn)
-        ? $player->aggregateRankBoardHeatStyle()
-        : null;
-    $modelDraftListRankBoardHeatStyle = (! $compactProfile && $omitCenterColumn)
-        ? $player->modelDraftListRankBoardHeatStyle()
+    $profileBoardSummary = (! $compactProfile && $omitCenterColumn && auth()->check())
+        ? \App\Support\ProfileHeaderBoardSummary::forPlayer($player, auth()->user()->dataOwner())
         : null;
     $profileRouteQuery = is_array($profileRouteQuery) ? $profileRouteQuery : [];
     $comboboxPlayers = $playerList
@@ -69,6 +66,9 @@
     if ($compactProfile) {
         $summaryText =
             'line-clamp-1 max-h-[1.1em] text-[0.3rem] sm:text-[0.32rem] leading-none';
+        $profileBoardGradeText = 'text-[0.225rem] sm:text-[0.24rem] leading-none';
+        $profileBoardGradeBoxStyle =
+            'display:inline-flex;box-sizing:border-box;width:1.25rem;min-width:1.25rem;max-width:1.25rem;height:0.721875rem;flex:0 0 1.25rem;align-items:center;justify-content:center;overflow:hidden;padding-inline:0.25rem;line-height:1;';
         $comboBtn =
             'bg-[length:0.38rem] py-0 pr-4 text-[0.52rem] leading-none sm:bg-[right_0.22rem_center] sm:py-0 sm:pr-4 sm:text-[0.55rem]';
         $comboInput = 'text-[0.48rem] sm:text-[0.5rem]';
@@ -79,6 +79,9 @@
         $logoClass = 'max-h-[1.442rem] max-w-[1.24rem] sm:max-h-[1.594rem] sm:max-w-[1.366rem]';
     } elseif ($comfortable) {
         $summaryText = 'text-[0.625rem] sm:text-[0.75rem] md:text-[0.8125rem]';
+        $profileBoardGradeText = 'text-[0.47rem] sm:text-[0.5625rem] md:text-[0.61rem] leading-none';
+        $profileBoardGradeBoxStyle =
+            'display:inline-flex;box-sizing:border-box;width:2rem;min-width:2rem;max-width:2rem;height:0.984375rem;flex:0 0 2rem;align-items:center;justify-content:center;overflow:hidden;padding-inline:0.25rem;line-height:1;';
         $comboBtn =
             'text-sm sm:text-base md:text-lg 2xl:text-xl bg-[length:0.65rem] sm:bg-[length:0.72rem]';
         $comboInput = 'text-xs sm:text-sm';
@@ -91,6 +94,9 @@
             'max-h-[4.326rem] max-w-[3.795rem] sm:max-h-[5.541rem] sm:max-w-[4.782rem] md:max-h-[6.603rem] md:max-w-[5.693rem] lg:max-h-[7.362rem] lg:max-w-[6.3rem] 2xl:max-h-[9.33rem] 2xl:max-w-[8.577rem]';
     } else {
         $summaryText = 'text-[0.5rem] sm:text-[0.53125rem] md:text-[0.5625rem]';
+        $profileBoardGradeText = 'text-[0.375rem] sm:text-[0.4rem] md:text-[0.425rem] leading-none';
+        $profileBoardGradeBoxStyle =
+            'display:inline-flex;box-sizing:border-box;width:2rem;min-width:2rem;max-width:2rem;height:0.984375rem;flex:0 0 2rem;align-items:center;justify-content:center;overflow:hidden;padding-inline:0.25rem;line-height:1;';
         $comboBtn =
             'text-xs sm:text-sm md:text-base 2xl:text-lg bg-[length:0.55rem]';
         $comboInput = 'text-[0.65rem] sm:text-xs';
@@ -145,22 +151,28 @@
             </aside>
             <div
                 @class([
-                    'relative z-0 flex min-h-0 min-w-0 w-full max-w-full flex-col items-center justify-center self-stretch bg-white',
+                    'relative z-0 flex min-h-0 min-w-0 w-full max-w-full flex-col self-stretch bg-white',
                     'app-outline-soft' => true,
+                    'h-full' => ! $compactProfile,
                     'px-px py-0' => $compactProfile,
                     'px-0.5 py-0.5 sm:px-1 sm:py-1 md:px-1.5 md:py-1.5' => ! $compactProfile,
                 ])
             >
+                @if ($compactProfile)
                 <div
-                    @class([
-                        'flex min-h-0 w-full min-w-0 flex-col items-center justify-center',
-                        'gap-0 sm:gap-px' => $compactProfile,
-                        'gap-1 sm:gap-1.5' => ! $compactProfile,
-                    ])
+                    class="flex min-h-0 w-full min-w-0 flex-col items-center justify-center gap-0 sm:gap-px"
                 >
+                @else
+                <div
+                    class="profile-header-panel-stack grid h-full min-h-0 w-full min-w-0 grid-rows-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-y-1 sm:gap-y-1.5"
+                >
+                @endif
                         @if ($playerList->isNotEmpty())
                             <div
-                                class="relative z-30 w-full min-w-0 shrink-0"
+                                @class([
+                                    'relative z-30 w-full min-w-0 shrink-0',
+                                    'flex items-end justify-center' => ! $compactProfile,
+                                ])
                                 x-data="ncaaPlayerCombobox({
                                     players: {{ \Illuminate\Support\Js::from($comboboxPlayers) }},
                                     selectedId: {{ $comboboxSelectedIdJson }},
@@ -227,48 +239,66 @@
                             </div>
                         @else
                             <h1
-                                class="rangers-wordmark-text flex min-w-0 max-w-full shrink-0 items-center justify-center text-center font-sans leading-tight tracking-wide {{ $fallbackName }}"
+                                @class([
+                                    'rangers-wordmark-text flex min-w-0 max-w-full shrink-0 items-center justify-center text-center font-sans leading-tight tracking-wide',
+                                    $fallbackName,
+                                    'w-full' => ! $compactProfile,
+                                ])
                             >
                                 {{ $comboboxSelectedLabel }}
                             </h1>
                         @endif
                         @if (! $compactProfile)
                             <div
-                                class="flex max-w-full shrink-0 flex-col items-center gap-1 px-0.5 text-center font-sans font-[700] leading-snug text-gray-700 {{ $summaryText }}"
+                                class="profile-header-summary-text max-w-full shrink-0 px-0.5 text-center font-sans leading-snug {{ $summaryText }}"
                             >
                                 <p class="max-w-full break-words">
-                                    {{ $player->profileHeaderBioLine($overallDemographics) }}
+                                    {{ $player->profileHeaderBioLine() }}
+                                    @if ($profileBoardSummary !== null)
+                                        · {{ __('Target Round') }}: {{ $profileBoardSummary->targetRoundDisplay }}
+                                    @endif
                                 </p>
-                                <div
-                                    class="flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-0.5 sm:gap-x-3"
-                                >
-                                    <span class="inline-flex items-center gap-x-1 tabular-nums">
-                                        <span>RK</span>
-                                        <span
-                                            class="box-border inline-flex min-h-[1.125rem] min-w-[1.25rem] items-center justify-center rounded-sm px-0.5 py-px font-[700]"
-                                            @if ($aggregateRankBoardHeatStyle !== null)
-                                                style="{{ $aggregateRankBoardHeatStyle }}"
-                                            @endif
-                                        >{{ $player->aggregate_rank ?? '-' }}</span>
-                                    </span>
-                                    <span class="text-gray-300" aria-hidden="true">·</span>
-                                    <span class="inline-flex items-center gap-x-1 tabular-nums">
-                                        <span>MDL</span>
-                                        <span
-                                            class="box-border inline-flex min-h-[1.125rem] min-w-[1.25rem] items-center justify-center rounded-sm px-0.5 py-px font-[700]"
-                                            @if ($modelDraftListRankBoardHeatStyle !== null)
-                                                style="{{ $modelDraftListRankBoardHeatStyle }}"
-                                            @endif
-                                        >{{ ($player->modelDraftListRank()) ?? '-' }}</span>
-                                    </span>
-                                    <span class="text-gray-300" aria-hidden="true">·</span>
-                                    <span
-                                        class="rounded-md border border-dashed border-gray-300 bg-gray-50/90 px-2 py-0.5 tabular-nums text-gray-800"
-                                        title="{{ __('Personal rank') }}"
+                            </div>
+                            <div
+                                class="profile-header-summary-text flex w-full min-h-0 items-start justify-center px-0.5 text-center font-sans leading-snug {{ $summaryText }}"
+                            >
+                                @if ($profileBoardSummary !== null)
+                                    <div
+                                        class="flex max-w-full flex-wrap items-center justify-center gap-x-2 gap-y-0.5 sm:gap-x-3"
                                     >
-                                        CG {{ $player->personal_rank ?? '-' }}
-                                    </span>
-                                </div>
+                                        <span class="inline-flex items-center gap-x-1 tabular-nums">
+                                            <span>{{ __('Role') }}</span>
+                                            <span
+                                                class="profile-board-grade-value tabular-nums rounded-sm {{ $profileBoardGradeText }}"
+                                                style="{{ $profileBoardGradeBoxStyle }}{{ $profileBoardSummary->roleCellStyle }}"
+                                            >{{ $profileBoardSummary->roleDisplay }}</span>
+                                        </span>
+                                        <span class="text-gray-300" aria-hidden="true">·</span>
+                                        <span class="inline-flex items-center gap-x-1 tabular-nums">
+                                            <span>{{ __('Conf') }}</span>
+                                            <span
+                                                class="profile-board-grade-value tabular-nums rounded-sm {{ $profileBoardGradeText }}"
+                                                style="{{ $profileBoardGradeBoxStyle }}{{ $profileBoardSummary->confidenceCellStyle }}"
+                                            >{{ $profileBoardSummary->confidenceDisplay }}</span>
+                                        </span>
+                                        <span class="text-gray-300" aria-hidden="true">·</span>
+                                        <span class="inline-flex items-center gap-x-1 tabular-nums">
+                                            <span>{{ __('Risk') }}</span>
+                                            <span
+                                                class="profile-board-grade-value tabular-nums rounded-sm {{ $profileBoardGradeText }}"
+                                                style="{{ $profileBoardGradeBoxStyle }}{{ $profileBoardSummary->riskCellStyle }}"
+                                            >{{ $profileBoardSummary->riskDisplay }}</span>
+                                        </span>
+                                        <span class="text-gray-300" aria-hidden="true">·</span>
+                                        <span class="inline-flex items-center gap-x-1 tabular-nums">
+                                            <span>{{ __('Bat') }}</span>
+                                            <span
+                                                class="profile-board-grade-value tabular-nums rounded-sm {{ $profileBoardGradeText }}"
+                                                style="{{ $profileBoardGradeBoxStyle }}{{ $profileBoardSummary->batGradeCellStyle }}"
+                                            >{{ $profileBoardSummary->batGradeDisplay }}</span>
+                                        </span>
+                                    </div>
+                                @endif
                             </div>
                         @endif
                 </div>
@@ -436,7 +466,7 @@
                     ])
                 >
                     <div class="flex h-full min-h-0 min-w-0 max-w-full items-stretch">
-                        {{-- CSS Grid (not <table>): browsers don't distribute <tr> heights reliably; 7× minmax(0,1fr) rows are equal. --}}
+                        {{-- CSS Grid (not <table>): browsers don't distribute <tr> heights reliably; equal minmax(0,1fr) rows. --}}
                         <div
                             role="table"
                             aria-label="{{ __('Grade summary') }}"

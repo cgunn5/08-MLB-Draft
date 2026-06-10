@@ -233,7 +233,23 @@ function gradeSummaryStyle(value, min = 2, max = 7) {
     return `background-color: rgb(${r},${g},${b}); color: ${textColor}; font-weight: 700;`;
 }
 
-/** Bat column: red (high) ↔ white (median) ↔ blue (low). */
+/** Bat column: #F9696A (high) ↔ #FFFFFF (median) ↔ #5A8AC6 (low), app-wide bounds. */
+const BAT_GRADE_HEX_LOW = '#5A8AC6';
+const BAT_GRADE_HEX_MID = '#FFFFFF';
+const BAT_GRADE_HEX_HIGH = '#F9696A';
+
+/** Mirrors App\Support\GradeScaleAppearance anchor palette (Role / Swing columns). */
+const GRADE_SCALE_ANCHORS = [
+    { grade: 3.0, hex: '#5A8AC6' },
+    { grade: 4.0, hex: '#ACC3E2' },
+    { grade: 4.5, hex: '#D3E0F0' },
+    { grade: 5.0, hex: '#FFFFFF' },
+    { grade: 5.5, hex: '#FBD8DB' },
+    { grade: 6.0, hex: '#FAB3B5' },
+    { grade: 7.0, hex: '#F9696A' },
+];
+
+/** @deprecated Board role/swing previously used per-board percentile colors. */
 const BAT_COLOR_RED = [229, 115, 115];
 const BAT_COLOR_WHITE = [255, 255, 255];
 const BAT_COLOR_BLUE = [96, 130, 182];
@@ -337,6 +353,94 @@ function gradeFieldPercentileBounds(boardRounds, boardType, roundKeys, field) {
     return percentileBoundsFromValues(collectGradeFieldOnBoard(boardRounds, boardType, roundKeys, field));
 }
 
+function relativeLuminance(rgb) {
+    const linear = rgb.map((channel) => {
+        const c = channel / 255;
+
+        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+}
+
+function textColorForRgb(rgb) {
+    return relativeLuminance(rgb) > 0.5 ? '#000000' : '#ffffff';
+}
+
+function parseHexColor(hex) {
+    const normalized = hex.replace('#', '');
+
+    return [
+        parseInt(normalized.slice(0, 2), 16),
+        parseInt(normalized.slice(2, 4), 16),
+        parseInt(normalized.slice(4, 6), 16),
+    ];
+}
+
+function lerpHexColor(hexA, hexB, t) {
+    const rgb = lerpRgb(parseHexColor(hexA), parseHexColor(hexB), t);
+
+    return (
+        '#' +
+        rgb
+            .map((channel) => Math.round(channel).toString(16).padStart(2, '0'))
+            .join('')
+            .toUpperCase()
+    );
+}
+
+function gradeScaleHexForValue(value) {
+    if (value === null || value === undefined) {
+        return null;
+    }
+
+    const grade = Math.max(3.0, Math.min(7.0, value));
+    const stops = GRADE_SCALE_ANCHORS;
+
+    if (grade <= stops[0].grade) {
+        return stops[0].hex;
+    }
+
+    const last = stops[stops.length - 1];
+    if (grade >= last.grade) {
+        return last.hex;
+    }
+
+    for (let i = 0; i < stops.length - 1; i++) {
+        const low = stops[i];
+        const high = stops[i + 1];
+        if (grade < low.grade || grade > high.grade) {
+            continue;
+        }
+
+        if (Math.abs(grade - low.grade) < 1e-6) {
+            return low.hex;
+        }
+
+        if (Math.abs(grade - high.grade) < 1e-6) {
+            return high.hex;
+        }
+
+        const u = (grade - low.grade) / (high.grade - low.grade);
+
+        return lerpHexColor(low.hex, high.hex, u);
+    }
+
+    return last.hex;
+}
+
+function gradeScaleBoardCellStyle(value, fontWeight = 700) {
+    const n = numericGrade(value);
+    if (n === null) {
+        return `background-color:#ffffff;color:#000000;font-weight:${fontWeight};`;
+    }
+
+    const hex = gradeScaleHexForValue(n);
+    const textColor = textColorForRgb(parseHexColor(hex));
+
+    return `background-color:${hex};color:${textColor};font-weight:${fontWeight};`;
+}
+
 function boardPercentileCellStyle(value, bounds) {
     if (value === null || value === undefined) {
         return 'background-color:#ffffff;color:#000000;font-weight:700;';
@@ -365,9 +469,39 @@ function boardPercentileCellStyle(value, bounds) {
     return `background-color:rgb(${rgb[0]},${rgb[1]},${rgb[2]});color:#000000;font-weight:700;`;
 }
 
-/** @deprecated Use {@link boardPercentileCellStyle}. */
+function batGradePercentileCellStyle(value, bounds, fontWeight = 700) {
+    if (value === null || value === undefined) {
+        return `background-color:#ffffff;color:#000000;font-weight:${fontWeight};`;
+    }
+
+    const { min, max, median } = bounds;
+    if (min === null || max === null || median === null) {
+        return `background-color:#ffffff;color:#000000;font-weight:${fontWeight};`;
+    }
+
+    if (max === min) {
+        return `background-color:#ffffff;color:#000000;font-weight:${fontWeight};`;
+    }
+
+    let hex;
+    if (value >= median) {
+        const den = Math.max(1e-9, max - median);
+        const t = (value - median) / den;
+        hex = lerpHexColor(BAT_GRADE_HEX_MID, BAT_GRADE_HEX_HIGH, t);
+    } else {
+        const den = Math.max(1e-9, median - min);
+        const t = (value - min) / den;
+        hex = lerpHexColor(BAT_GRADE_HEX_LOW, BAT_GRADE_HEX_MID, t);
+    }
+
+    const textColor = textColorForRgb(parseHexColor(hex));
+
+    return `background-color:${hex};color:${textColor};font-weight:${fontWeight};`;
+}
+
+/** @deprecated Use {@link batGradePercentileCellStyle}. */
 function batCellStyle(value, bounds) {
-    return boardPercentileCellStyle(value, bounds);
+    return batGradePercentileCellStyle(value, bounds);
 }
 
 document.addEventListener('alpine:init', () => {
@@ -2494,6 +2628,7 @@ document.addEventListener('alpine:init', () => {
         hsPlayerBaseUrl: '',
         ncaaPlayerBaseUrl: '',
         readOnly: false,
+        batGradeBounds: { min: null, max: null, median: null },
         saving: false,
         saveError: '',
         statusMessage: '',
@@ -2516,6 +2651,10 @@ document.addEventListener('alpine:init', () => {
             this.hsPlayerBaseUrl = String(config.hsPlayerBaseUrl ?? '').replace(/\/$/, '');
             this.ncaaPlayerBaseUrl = String(config.ncaaPlayerBaseUrl ?? '').replace(/\/$/, '');
             this.readOnly = Boolean(config.readOnly);
+            this.batGradeBounds =
+                config.batGradeBounds && typeof config.batGradeBounds === 'object'
+                    ? config.batGradeBounds
+                    : { min: null, max: null, median: null };
 
             Alpine.store('workingBoardBridge').register((detail) => this.addPlayerFromPicker(detail));
 
@@ -2669,32 +2808,26 @@ document.addEventListener('alpine:init', () => {
             return gradeFieldPercentileBounds(this.boardRounds, boardType, this.roundKeys, field);
         },
 
-        roleCellStyle(card, boardType) {
-            return boardPercentileCellStyle(
-                numericGrade(card?.grade_role),
-                this.gradeFieldBounds(boardType, 'grade_role'),
-            );
+        roleCellStyle(card) {
+            return gradeScaleBoardCellStyle(card?.grade_role);
         },
 
-        swingCellStyle(card, boardType) {
-            return boardPercentileCellStyle(
-                numericGrade(card?.grade_swing),
-                this.gradeFieldBounds(boardType, 'grade_swing'),
-            );
+        swingCellStyle(card) {
+            return gradeScaleBoardCellStyle(card?.grade_swing);
         },
 
         batGrade(card) {
             return batGradeForCard(card);
         },
 
-        batBounds(boardType) {
-            return batPercentileBounds(this.boardRounds, boardType, this.roundKeys);
+        batBounds() {
+            return this.batGradeBounds;
         },
 
-        batCellStyle(card, boardType) {
+        batCellStyle(card) {
             const value = batGradeForCard(card);
 
-            return boardPercentileCellStyle(value, this.batBounds(boardType));
+            return batGradePercentileCellStyle(value, this.batBounds());
         },
 
         scaleLabel(v) {

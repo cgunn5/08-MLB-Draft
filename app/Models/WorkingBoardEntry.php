@@ -42,6 +42,20 @@ class WorkingBoardEntry extends Model
         return self::ROUND_DISPLAY_LABELS[$roundKey] ?? $roundKey;
     }
 
+    /** Profile header target-round chip (ordinal / post-10 labels). */
+    public static function profileHeaderTargetRoundLabel(string $roundKey): string
+    {
+        return match ($roundKey) {
+            '1' => '1st',
+            '2' => '2nd',
+            '3' => '3rd',
+            '4+' => '4th+',
+            '10+' => 'Post-10',
+            self::ROUND_COFFIN => self::roundDisplayLabel($roundKey),
+            default => $roundKey,
+        };
+    }
+
     /**
      * @return array<string, string>
      */
