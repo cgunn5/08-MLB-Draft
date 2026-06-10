@@ -43,6 +43,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/players', [PlayerListController::class, 'store'])->name('players.store');
         Route::patch('/players/{player}', [PlayerListController::class, 'update'])->name('players.update');
         Route::delete('/players/{player}', [PlayerListController::class, 'destroy'])->name('players.destroy');
+        Route::get('/notes/export', [NoteInputController::class, 'export'])->name('notes.export');
         Route::get('/notes', [NoteInputController::class, 'index'])->name('notes.index');
         Route::patch('/notes', [NoteInputController::class, 'updateAll'])->name('notes.update-all');
         Route::patch('/notes/section', [NoteInputController::class, 'updateSection'])->name('notes.update-section');

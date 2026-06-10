@@ -53,7 +53,13 @@
                                 :selected-player="$selectedPlayer"
                             />
                         </div>
-                        <div class="flex min-w-0 justify-end pr-3 sm:pr-4">
+                        <div class="flex min-w-0 flex-wrap items-center justify-end gap-3 pr-3 sm:pr-4">
+                            <a
+                                href="{{ route('notes.export') }}"
+                                class="inline-flex shrink-0 items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-widest text-gray-700 shadow-sm transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                            >
+                                {{ __('Download CSV') }}
+                            </a>
                             @if ($selectedPlayer)
                                 <form
                                     id="notes-bulk-save"

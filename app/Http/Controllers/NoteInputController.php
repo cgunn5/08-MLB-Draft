@@ -5,13 +5,40 @@ namespace App\Http\Controllers;
 use App\Http\Requests\PlayerNotesBulkUpdateRequest;
 use App\Http\Requests\PlayerNoteSectionRequest;
 use App\Models\Player;
+use App\Models\User;
+use App\Support\PlayerEvaluationsCsvExporter;
 use App\Support\PlayerNoteFieldKeys;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class NoteInputController extends Controller
 {
+    public function export(Request $request, PlayerEvaluationsCsvExporter $exporter): StreamedResponse
+    {
+        /** @var User $user */
+        $user = $request->user()->dataOwner();
+        $filename = 'player-evaluations-'.now()->format('Y-m-d-His').'.csv';
+
+        return response()->streamDownload(function () use ($exporter, $user): void {
+            $handle = fopen('php://output', 'w');
+            if ($handle === false) {
+                return;
+            }
+
+            fputcsv($handle, PlayerEvaluationsCsvExporter::columnHeaders());
+
+            foreach ($exporter->rowsForUser($user) as $row) {
+                fputcsv($handle, $row);
+            }
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
     public function index(Request $request): View|RedirectResponse
     {
         $players = Player::query()->orderedByName()->get();
