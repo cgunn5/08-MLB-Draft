@@ -77,8 +77,12 @@ class ProfileHeaderBoardSummaryTest extends TestCase
         $this->assertSame('1st', WorkingBoardEntry::profileHeaderTargetRoundLabel('1'));
         $this->assertSame('2nd', WorkingBoardEntry::profileHeaderTargetRoundLabel('2'));
         $this->assertSame('3rd', WorkingBoardEntry::profileHeaderTargetRoundLabel('3'));
-        $this->assertSame('4th+', WorkingBoardEntry::profileHeaderTargetRoundLabel('4+'));
-        $this->assertSame('Post-10', WorkingBoardEntry::profileHeaderTargetRoundLabel('10+'));
+        $this->assertSame('4th', WorkingBoardEntry::profileHeaderTargetRoundLabel('4'));
+        $this->assertSame('5th-7th', WorkingBoardEntry::profileHeaderTargetRoundLabel('5-7'));
+        $this->assertSame('8th-10th', WorkingBoardEntry::profileHeaderTargetRoundLabel('8-10'));
+        $this->assertSame('Post 10', WorkingBoardEntry::profileHeaderTargetRoundLabel('post-10'));
+        $this->assertSame('4th', WorkingBoardEntry::profileHeaderTargetRoundLabel('4+'));
+        $this->assertSame('Post 10', WorkingBoardEntry::profileHeaderTargetRoundLabel('10+'));
     }
 
     #[Test]
@@ -109,11 +113,15 @@ class ProfileHeaderBoardSummaryTest extends TestCase
     }
 
     #[Test]
-    public function risk_fill_style_uses_black_text_on_light_orange_background(): void
+    public function risk_fill_style_matches_confidence_scale_colors(): void
     {
         $this->assertSame(
-            'background-color:#f6b283;color:#000000;font-weight:400;',
+            WorkingBoardCellAppearance::confidenceFillStyle('2'),
             WorkingBoardCellAppearance::riskFillStyle('2'),
+        );
+        $this->assertSame(
+            WorkingBoardCellAppearance::confidenceFillStyle('5'),
+            WorkingBoardCellAppearance::riskFillStyle('5'),
         );
     }
 

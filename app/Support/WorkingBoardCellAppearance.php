@@ -63,16 +63,7 @@ final class WorkingBoardCellAppearance
 
     public static function riskFillStyle(?string $value): string
     {
-        if ($value === null || $value === '') {
-            return self::cellStyle('#ffffff');
-        }
-
-        $n = (int) round((float) $value);
-        if ($n < 1 || $n > 5) {
-            return self::cellStyle('#ffffff');
-        }
-
-        return self::cellStyle(self::RISK_TEXT_COLORS[$n]);
+        return self::confidenceFillStyle($value);
     }
 
     /**

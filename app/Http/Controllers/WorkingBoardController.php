@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateWorkingBoardRequest;
 use App\Support\BatGradeAppearance;
+use App\Support\PlayerProfileCompleteness;
 use App\Models\Player;
 use App\Models\User;
 use App\Models\WorkingBoardEntry;
@@ -27,7 +28,7 @@ class WorkingBoardController extends Controller
 
         $boardPanels = [];
         foreach (WorkingBoardEntry::BOARD_TYPES as $boardType) {
-            $poolPlayers = $this->allPlayersForBoard($boardType);
+            $poolPlayers = $this->orderedPlayerPoolForBoard($boardType);
 
             $boardPanels[$boardType] = [
                 'title' => match ($boardType) {
@@ -69,6 +70,16 @@ class WorkingBoardController extends Controller
             'boardRiskLabels' => WorkingBoardEntry::RISK_DISPLAY_LABELS,
             'boardPanels' => $boardPanels,
             'boardPanelOrder' => WorkingBoardEntry::BOARD_DISPLAY_ORDER,
+            'boardToggleOrder' => [
+                WorkingBoardEntry::BOARD_MASTER,
+                WorkingBoardEntry::BOARD_HS,
+                WorkingBoardEntry::BOARD_NCAA,
+            ],
+            'boardToggleLabels' => [
+                WorkingBoardEntry::BOARD_MASTER => __('Master'),
+                WorkingBoardEntry::BOARD_HS => __('HS'),
+                WorkingBoardEntry::BOARD_NCAA => __('NCAA'),
+            ],
             'boardAlpineBoards' => $boardAlpineBoards,
             'boardBatGradeBounds' => BatGradeAppearance::appWideBounds(),
             'boardReadOnly' => ! auth()->user()->canManageApplicationData(),
@@ -148,7 +159,7 @@ class WorkingBoardController extends Controller
             ->values();
 
         foreach ($boardEntries as $entry) {
-            $rk = $entry->round_key;
+            $rk = WorkingBoardEntry::normalizeRoundKey((string) $entry->round_key);
             if (! in_array($rk, WorkingBoardEntry::ROUND_KEYS, true)) {
                 continue;
             }
@@ -199,6 +210,19 @@ class WorkingBoardController extends Controller
     }
 
     /**
+     * Complete profiles first, then the rest (each group keeps list order).
+     *
+     * @return Collection<int, Player>
+     */
+    private function orderedPlayerPoolForBoard(string $boardType): Collection
+    {
+        [$complete, $incomplete] = $this->allPlayersForBoard($boardType)
+            ->partition(fn (Player $player): bool => PlayerProfileCompleteness::isComplete($player));
+
+        return $complete->values()->concat($incomplete->values());
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function cardPayloadFromPlayer(Player $player, ?string $confidence, ?string $risk): array
@@ -234,6 +258,7 @@ class WorkingBoardController extends Controller
             'grade_adj' => $player->grade_adj,
             'grade_swing' => $player->grade_swing,
             'bat_grade' => $player->batGrade(),
+            'profile_complete' => PlayerProfileCompleteness::isComplete($player),
         ];
     }
 

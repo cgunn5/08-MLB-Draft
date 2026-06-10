@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Player;
 use App\Models\User;
 use App\Models\WorkingBoardEntry;
+use App\Support\PlayerProfileCompleteness;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -26,7 +27,11 @@ class WorkingBoardTest extends TestCase
             ->assertSee('MASTER BOARD', false)
             ->assertSee('NCAA BOARD', false)
             ->assertSee('HS BOARD', false)
-            ->assertSee('⚰️', false);
+            ->assertSee('⚰️', false)
+            ->assertSee('setActiveBoard', false)
+            ->assertSee('>Master<', false)
+            ->assertSee('>HS<', false)
+            ->assertSee('>NCAA<', false);
     }
 
     public function test_board_player_pool_includes_bat_grade_fields(): void
@@ -69,13 +74,55 @@ class WorkingBoardTest extends TestCase
         $res->assertSee('board-picker-input-hs', false);
         $res->assertSee('board-picker-listbox-hs', false);
         $res->assertSee('Type player name', false);
-        $res->assertSee('Add selected player to round', false);
+        $res->assertSee('Add selected to round', false);
+        $res->assertSee('aria-multiselectable="true"', false);
         $res->assertSee('"player_id":'.$complete->id, false);
         $res->assertSee('"player_id":'.$incomplete->id, false);
         $res->assertSee('boardPlayerPicker', false);
         $res->assertSee('working-boards-config', false);
         $res->assertSee('"label":"BRICK, WILL"', false);
         $res->assertSee('"label":"PLAYER, INCOMPLETE"', false);
+    }
+
+    public function test_board_player_pool_lists_complete_profiles_first_with_flag(): void
+    {
+        $user = User::factory()->admin()->create();
+        $complete = Player::factory()->create([
+            'player_pool' => 'hs',
+            'first_name' => 'Will',
+            'last_name' => 'Brick',
+            'master_take' => 'High-end catcher prospect.',
+            'note_performance' => 'Strong summer.',
+            'note_approach_miss' => 'Advanced approach.',
+            'note_pitch_coverage' => 'Handles velo.',
+            'note_engine' => 'Plus power.',
+            'note_swing' => 'Compact.',
+            'grade_role' => 6,
+            'grade_perf' => 5.5,
+            'grade_approach' => 6,
+            'grade_contact' => 5.5,
+            'grade_damage' => 6,
+            'grade_swing' => 5.5,
+        ]);
+        $incomplete = Player::factory()->create([
+            'player_pool' => 'hs',
+            'first_name' => 'Incomplete',
+            'last_name' => 'Player',
+        ]);
+
+        $this->assertTrue(PlayerProfileCompleteness::isComplete($complete));
+        $this->assertFalse(PlayerProfileCompleteness::isComplete($incomplete));
+
+        $html = $this->actingAs($user)->get(route('board.index'))->assertOk()->getContent();
+        $brickPos = strpos($html, '"label":"BRICK, WILL"');
+        $incompletePos = strpos($html, '"label":"PLAYER, INCOMPLETE"');
+
+        $this->assertNotFalse($brickPos);
+        $this->assertNotFalse($incompletePos);
+        $this->assertLessThan($incompletePos, $brickPos);
+        $this->assertStringContainsString('"profile_complete":true', $html);
+        $this->assertStringContainsString('Add all complete profiles to round', $html);
+        $this->assertStringContainsString('Add all players to round', $html);
     }
 
     public function test_board_patch_persists_rounds(): void

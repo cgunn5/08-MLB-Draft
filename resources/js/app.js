@@ -167,9 +167,7 @@ function gradeRgbForValue(value, min, max) {
     ];
 }
 
-/** Conf / risk 1–5: red (1) → green (5). */
-const BOARD_SCALE_YELLOW = '#F2B705';
-
+/** Conf / risk 1–5: red (1) → green (5). Risk H=1 … L=5 uses the same scale. */
 const BOARD_SCALE_COLORS = {
     1: '#ec7c77',
     2: '#f7cac9',
@@ -190,30 +188,6 @@ function boardScaleFillStyle(value) {
     const color = BOARD_SCALE_COLORS[clamped] ?? '#ffffff';
 
     return `background-color:${color};`;
-}
-
-/** Risk column text colors (labels H / M-H / M / L-M / L). */
-const BOARD_RISK_TEXT_COLORS = {
-    1: '#ec7c77',
-    2: '#f6b283',
-    3: BOARD_SCALE_YELLOW,
-    4: '#b8d68c',
-    5: '#7dbd7d',
-};
-
-/** Risk column: scale color on the label only (white cell). */
-function boardScaleTextStyle(value) {
-    if (value === '' || value === null || value === undefined) {
-        return 'color:#94a3b8;font-weight:700;';
-    }
-    const n = Number(value);
-    if (Number.isNaN(n)) {
-        return 'color:#94a3b8;font-weight:700;';
-    }
-    const clamped = Math.max(1, Math.min(5, Math.round(n)));
-    const color = BOARD_RISK_TEXT_COLORS[clamped] ?? '#0f172a';
-
-    return `color:${color};font-weight:700;`;
 }
 
 function gradeSummaryStyle(value, min = 2, max = 7) {
@@ -2515,8 +2489,19 @@ document.addEventListener('alpine:init', () => {
 
     Alpine.store('workingBoardBridge', {
         addHandler: null,
+        boardRef: null,
         register(handler) {
             this.addHandler = handler;
+        },
+        setBoard(board) {
+            this.boardRef = board;
+        },
+        isPlayerOnBoard(boardType, playerId) {
+            if (typeof this.boardRef?.isPlayerOnBoard === 'function') {
+                return this.boardRef.isPlayerOnBoard(boardType, playerId);
+            }
+
+            return false;
         },
         add(detail) {
             if (typeof this.addHandler === 'function') {
@@ -2533,37 +2518,73 @@ document.addEventListener('alpine:init', () => {
         readOnly: Boolean(config.readOnly),
         open: false,
         query: '',
-        selectedPlayerId: null,
+        selectedPlayerIds: [],
 
-        pickerSubtitle(player) {
-            const pos = String(player?.position ?? '').trim();
-            const school = String(player?.school ?? '').trim();
-            const bits = [pos, school].filter((x) => x !== '');
+        completeAvailableCount() {
+            return this.players.filter(
+                (p) => p.profile_complete && !this.isPlayerOnBoard(p.player_id),
+            ).length;
+        },
 
-            return bits.length > 0 ? bits.join(' · ') : '—';
+        availableCount() {
+            return this.players.filter((p) => !this.isPlayerOnBoard(p.player_id)).length;
+        },
+
+        availablePlayers() {
+            return this.players.filter((p) => !this.isPlayerOnBoard(p.player_id));
         },
 
         get filtered() {
             const q = this.query.trim().toLowerCase();
-            if (q === '') {
-                return this.players;
+            let list = this.availablePlayers();
+            if (q !== '') {
+                const tokens = q.split(/[\s,]+/).filter((t) => t.length > 0);
+                list = list.filter((p) => {
+                    const hay = String(p.search_blob ?? p.label ?? '').toLowerCase();
+
+                    return tokens.every((token) => hay.includes(token));
+                });
             }
-            const tokens = q.split(/[\s,]+/).filter((t) => t.length > 0);
 
-            return this.players.filter((p) => {
-                const hay = String(p.search_blob ?? p.label ?? '').toLowerCase();
+            const complete = list.filter((p) => p.profile_complete);
+            const incomplete = list.filter((p) => !p.profile_complete);
 
-                return tokens.every((token) => hay.includes(token));
-            });
+            return [...complete, ...incomplete];
         },
 
-        get selectedLabel() {
-            if (!this.selectedPlayerId) {
-                return '';
-            }
-            const p = this.players.find((row) => Number(row.player_id) === Number(this.selectedPlayerId));
+        selectedCount() {
+            return this.selectedPlayerIds.length;
+        },
 
-            return p?.label ?? '';
+        isPlayerOnBoard(playerId) {
+            if (typeof this.$parent?.isPlayerOnBoard === 'function') {
+                return this.$parent.isPlayerOnBoard(this.boardType, playerId);
+            }
+
+            return Alpine.store('workingBoardBridge').isPlayerOnBoard(this.boardType, playerId);
+        },
+
+        isPlayerSelected(playerId) {
+            return this.selectedPlayerIds.includes(Number(playerId));
+        },
+
+        togglePlayer(player) {
+            if (this.readOnly || this.isPlayerOnBoard(player?.player_id)) {
+                return;
+            }
+            const id = Number(player.player_id);
+            if (!id || Number.isNaN(id)) {
+                return;
+            }
+            if (this.isPlayerSelected(id)) {
+                this.selectedPlayerIds = this.selectedPlayerIds.filter((rowId) => rowId !== id);
+            } else {
+                this.selectedPlayerIds = [...this.selectedPlayerIds, id];
+            }
+        },
+
+        clearSelection() {
+            this.selectedPlayerIds = [];
         },
 
         onFocus() {
@@ -2579,7 +2600,6 @@ document.addEventListener('alpine:init', () => {
             }
             this.open = true;
             this.query = event.target.value;
-            this.selectedPlayerId = null;
         },
 
         close() {
@@ -2588,28 +2608,64 @@ document.addEventListener('alpine:init', () => {
 
         clear() {
             this.query = '';
-            this.selectedPlayerId = null;
-            this.open = false;
-        },
-
-        choose(player) {
-            this.selectedPlayerId = Number(player.player_id);
-            this.query = player.label ?? '';
+            this.selectedPlayerIds = [];
             this.open = false;
         },
 
         addSelected() {
-            if (this.readOnly || !this.selectedPlayerId) {
+            if (this.readOnly || this.selectedPlayerIds.length === 0) {
                 return;
             }
-            const player = this.players.find((row) => Number(row.player_id) === Number(this.selectedPlayerId));
+            const players = this.selectedPlayerIds
+                .map((id) => this.players.find((row) => Number(row.player_id) === Number(id)))
+                .filter((row) => row && !this.isPlayerOnBoard(row.player_id));
+            if (players.length === 0) {
+                return;
+            }
             Alpine.store('workingBoardBridge').add({
                 boardType: this.boardType,
                 round: this.round,
-                playerId: this.selectedPlayerId,
-                player: player ?? null,
+                players,
             });
-            this.selectedPlayerId = null;
+            this.selectedPlayerIds = [];
+            this.query = '';
+            this.open = false;
+        },
+
+        addAllComplete() {
+            if (this.readOnly) {
+                return;
+            }
+            const players = this.players.filter(
+                (p) => p.profile_complete && !this.isPlayerOnBoard(p.player_id),
+            );
+            if (players.length === 0) {
+                return;
+            }
+            Alpine.store('workingBoardBridge').add({
+                boardType: this.boardType,
+                round: this.round,
+                players,
+            });
+            this.selectedPlayerIds = [];
+            this.query = '';
+            this.open = false;
+        },
+
+        addAllAvailable() {
+            if (this.readOnly) {
+                return;
+            }
+            const players = this.availablePlayers();
+            if (players.length === 0) {
+                return;
+            }
+            Alpine.store('workingBoardBridge').add({
+                boardType: this.boardType,
+                round: this.round,
+                players,
+            });
+            this.selectedPlayerIds = [];
             this.query = '';
             this.open = false;
         },
@@ -2617,6 +2673,7 @@ document.addEventListener('alpine:init', () => {
 
     Alpine.data('workingBoards', () => ({
         boardTypes: [],
+        activeBoard: 'master',
         roundKeys: [],
         roundLabels: {},
         confidenceOptions: [],
@@ -2636,10 +2693,13 @@ document.addEventListener('alpine:init', () => {
         _saveT: null,
         _statusT: null,
         _savingNow: false,
+        _boardScaleT: null,
+        _boardScaleObserver: null,
 
         init() {
             const config = readWorkingBoardConfig();
             this.boardTypes = Array.isArray(config.boardTypes) ? config.boardTypes : [];
+            this.activeBoard = this.resolveActiveBoard();
             this.roundKeys = Array.isArray(config.roundKeys) ? config.roundKeys : [];
             this.roundLabels =
                 config.roundLabels && typeof config.roundLabels === 'object' ? config.roundLabels : {};
@@ -2657,6 +2717,7 @@ document.addEventListener('alpine:init', () => {
                     : { min: null, max: null, median: null };
 
             Alpine.store('workingBoardBridge').register((detail) => this.addPlayerFromPicker(detail));
+            Alpine.store('workingBoardBridge').setBoard(this);
 
             const boardsIn = config.boards && typeof config.boards === 'object' ? config.boards : {};
             this.boardRounds = {};
@@ -2690,6 +2751,66 @@ document.addEventListener('alpine:init', () => {
             window.addEventListener('beforeunload', () => {
                 this.saveNow({ keepalive: true, silentSuccess: true });
             });
+
+            this.$watch('activeBoard', () => {
+                this.$nextTick(() => this.scheduleBoardScale());
+            });
+            this.$watch('boardRounds', () => {
+                this.scheduleBoardScale();
+            });
+            window.addEventListener('resize', () => this.scheduleBoardScale());
+            this._boardScaleObserver = new ResizeObserver(() => this.scheduleBoardScale());
+            document.querySelectorAll('.working-board-columns-viewport').forEach((el) => {
+                this._boardScaleObserver.observe(el);
+            });
+            this.$nextTick(() => this.scheduleBoardScale());
+        },
+
+        scheduleBoardScale() {
+            if (this._boardScaleT) {
+                clearTimeout(this._boardScaleT);
+            }
+            this._boardScaleT = setTimeout(() => {
+                this._boardScaleT = null;
+                this.updateBoardScale();
+            }, 50);
+        },
+
+        updateBoardScale() {
+            const boardType = this.activeBoard;
+            const pane = document.querySelector(`.working-board-pane[data-board-type="${boardType}"]`);
+            if (!pane) {
+                return;
+            }
+            const viewport = pane.querySelector('.working-board-columns-viewport');
+            const content = pane.querySelector('.working-board-columns-scroll');
+            if (!viewport || !content) {
+                return;
+            }
+
+            content.style.transform = 'none';
+            content.style.width = '100%';
+            viewport.style.height = 'auto';
+
+            const availH = viewport.clientHeight;
+            const availW = viewport.clientWidth;
+            if (availH <= 0 || availW <= 0) {
+                return;
+            }
+
+            const naturalH = content.scrollHeight;
+            const naturalW = content.scrollWidth;
+            if (naturalH <= 0) {
+                return;
+            }
+
+            const scale = Math.min(1, availH / naturalH, availW / naturalW);
+            if (scale < 0.995) {
+                content.style.transform = `scale(${scale})`;
+                content.style.transformOrigin = 'top center';
+                content.style.width = `${100 / scale}%`;
+                viewport.style.height = `${Math.ceil(naturalH * scale)}px`;
+            }
         },
 
         setStatus(message, isError = false) {
@@ -2713,14 +2834,54 @@ document.addEventListener('alpine:init', () => {
             return this.roundLabels?.[roundKey] ?? roundKey;
         },
 
+        resolveActiveBoard() {
+            const config = readWorkingBoardConfig();
+            const preferred =
+                typeof config.defaultActiveBoard === 'string' && config.defaultActiveBoard !== ''
+                    ? config.defaultActiveBoard
+                    : 'master';
+            try {
+                const saved = localStorage.getItem('workingBoardActive');
+                if (saved && this.boardTypes.includes(saved)) {
+                    return saved;
+                }
+            } catch (_) {
+                // localStorage may be unavailable
+            }
+            if (this.boardTypes.includes(preferred)) {
+                return preferred;
+            }
+
+            return this.boardTypes[0] ?? preferred;
+        },
+
+        setActiveBoard(boardType) {
+            if (!this.boardTypes.includes(boardType)) {
+                return;
+            }
+            this.activeBoard = boardType;
+            try {
+                localStorage.setItem('workingBoardActive', boardType);
+            } catch (_) {
+                // localStorage may be unavailable
+            }
+            this.$nextTick(() => this.scheduleBoardScale());
+        },
+
         addPlayerFromPicker(detail) {
             const boardType = detail?.boardType;
             const round = detail?.round;
             const player = detail?.player;
             const playerId = detail?.playerId;
+            const players = detail?.players;
 
             if (!boardType || !round) {
                 this.setStatus('Could not add player (missing board or round).', true);
+                return;
+            }
+
+            if (Array.isArray(players) && players.length > 0) {
+                this.addManyPlayersFromPicker(boardType, round, players);
                 return;
             }
 
@@ -2751,14 +2912,44 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
-        addPlayerToRoundByTemplate(boardType, rk, template) {
+        addManyPlayersFromPicker(boardType, round, players) {
+            let added = 0;
+            let skipped = 0;
+            for (const player of players) {
+                if (this.addPlayerToRoundByTemplate(boardType, round, player, { silent: true })) {
+                    added++;
+                } else {
+                    skipped++;
+                }
+            }
+            if (added > 0) {
+                this.scheduleSave(50);
+                this.setStatus(
+                    `Added ${added} to round ${this.roundLabel(round)}.${skipped > 0 ? ` ${skipped} skipped.` : ''}`,
+                );
+            } else {
+                this.setStatus(
+                    skipped > 0
+                        ? 'All selected players are already on this board.'
+                        : 'No players to add.',
+                    true,
+                );
+            }
+        },
+
+        addPlayerToRoundByTemplate(boardType, rk, template, opts = {}) {
+            const silent = Boolean(opts.silent);
             const id = Number(template?.player_id);
             if (!id || Number.isNaN(id)) {
-                this.setStatus('Invalid player.', true);
+                if (!silent) {
+                    this.setStatus('Invalid player.', true);
+                }
                 return false;
             }
             if (this.isPlayerOnBoard(boardType, id)) {
-                this.setStatus('Player is already on this board.', true);
+                if (!silent) {
+                    this.setStatus('Player is already on this board.', true);
+                }
                 return false;
             }
             const card = {
@@ -2770,8 +2961,10 @@ document.addEventListener('alpine:init', () => {
             rounds[rk] = [...(rounds[rk] ?? []), card];
             this.boardRounds[boardType] = rounds;
             this.boardRounds = { ...this.boardRounds };
-            // Save quickly so navigating away doesn't lose board state.
-            this.scheduleSave(50);
+            if (!silent) {
+                // Save quickly so navigating away doesn't lose board state.
+                this.scheduleSave(50);
+            }
             return true;
         },
 
@@ -2852,10 +3045,6 @@ document.addEventListener('alpine:init', () => {
 
         boardScaleFillStyle(v) {
             return boardScaleFillStyle(v);
-        },
-
-        boardScaleTextStyle(v) {
-            return boardScaleTextStyle(v);
         },
 
         openScaleSelect(event) {

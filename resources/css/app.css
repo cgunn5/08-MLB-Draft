@@ -538,11 +538,55 @@
     }
 
     .working-boards-row {
-        min-height: calc(100vh - 5.5rem);
+        min-height: calc(100vh - 7.5rem);
+    }
+
+    .working-board-toggle-row {
+        padding-top: 0.125rem;
+    }
+
+    .working-board-toggle-btn {
+        min-width: 5.5rem;
+        text-align: center;
     }
 
     .working-board-pane {
-        min-height: calc(100vh - 5.5rem);
+        min-height: calc(100vh - 7.5rem);
+        width: 100%;
+        max-width: none;
+    }
+
+    .working-board-columns-viewport {
+        position: relative;
+        z-index: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .working-board-columns-scroll {
+        display: flex;
+        flex-direction: column;
+        gap: 0.375rem;
+        transform-origin: top center;
+        will-change: transform;
+    }
+
+    .working-board-columns-row {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        align-items: stretch;
+    }
+
+    .working-board-round-column {
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .working-board-round-header .working-board-round-label {
+        color: #000000 !important;
+        font-weight: 700 !important;
     }
 
     .working-board-pane-header--logo {
@@ -647,20 +691,32 @@
         font-weight: 700 !important;
     }
 
-    .working-board-round-divider {
-        background-color: #e5e7eb !important;
+    .working-board-round-table {
+        table-layout: fixed;
     }
 
-    .working-board-round-divider td,
-    .working-board-round-divider .working-board-round-label {
-        color: #000000 !important;
-        font-weight: 700 !important;
-    }
-
+    /* Scale cols were 2.75rem; grade cols 2.5rem (w-10); pos 2.25rem (w-9) — each reduced 20%. */
     .working-board-col-scale {
-        width: 2.75rem !important;
-        max-width: 2.75rem !important;
-        min-width: 2.75rem !important;
+        width: 2.2rem !important;
+        max-width: 2.2rem !important;
+        min-width: 2.2rem !important;
+    }
+
+    .working-board-col-pos {
+        width: 1.8rem !important;
+        max-width: 1.8rem !important;
+        min-width: 1.8rem !important;
+    }
+
+    .working-board-col-grade {
+        width: 2rem !important;
+        max-width: 2rem !important;
+        min-width: 2rem !important;
+    }
+
+    .working-board-col-name {
+        width: auto !important;
+        min-width: 8.55rem !important;
     }
 
     .working-board-scale-cell {
@@ -696,17 +752,9 @@
         font-size: 11px !important;
     }
 
-    .working-board-risk-cell {
-        background-color: #ffffff !important;
-    }
-
-    .working-board-risk-value {
-        font-family: Carbon, ui-sans-serif, system-ui, sans-serif;
-    }
-
     .working-board-grade-cell {
         font-weight: 700 !important;
-        padding: 0.125rem 0.375rem !important;
+        padding: 0.125rem 0.25rem !important;
         vertical-align: middle;
     }
 
@@ -719,16 +767,32 @@
         font-weight: 700 !important;
     }
 
+    .working-board-remove-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 0.875rem;
+        height: 0.875rem;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: #dc2626;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .working-board-remove-btn:hover {
+        color: #b91c1c;
+    }
+
     .working-board-card-row {
         background-color: #ffffff !important;
     }
 
     .working-board-card-row:hover {
         background-color: #f8fafc !important;
-    }
-
-    .working-board-card-row .working-board-risk-cell {
-        background-color: #ffffff !important;
     }
 
     .working-board-picker-input {
@@ -758,15 +822,20 @@
         overflow: visible !important;
     }
 
+    .working-board-picker-option {
+        min-height: 0;
+    }
+
+    .working-board-picker-checkbox {
+        width: 0.75rem;
+        height: 0.75rem;
+    }
+
     .working-board-pane > section {
         overflow: visible !important;
         isolation: isolate;
     }
 
-    .working-board-pane .working-board-table-scroll {
-        position: relative;
-        z-index: 0;
-    }
 }
 
 /*

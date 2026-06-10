@@ -29,31 +29,47 @@ class WorkingBoardEntry extends Model
 
     public const ROUND_COFFIN = 'coffin';
 
-    /** @var list<string> */
-    public const ROUND_KEYS = ['1', '2', '3', '4+', '10+', self::ROUND_COFFIN];
+    /** @var list<list<string>> Round columns grouped into rows (4 per row, left to right). */
+    public const ROUND_ROW_GROUPS = [
+        ['1', '2', '3', '4'],
+        ['5-7', '8-10', 'post-10', self::ROUND_COFFIN],
+    ];
+
+    /** @var list<string> Left-to-right column order on the working board. */
+    public const ROUND_KEYS = ['1', '2', '3', '4', '5-7', '8-10', 'post-10', self::ROUND_COFFIN];
 
     /** @var array<string, string> Round key → divider / picker display label */
     public const ROUND_DISPLAY_LABELS = [
+        '1' => '1st',
+        '2' => '2nd',
+        '3' => '3rd',
+        '4' => '4th',
+        '5-7' => '5th-7th',
+        '8-10' => '8th-10th',
+        'post-10' => 'Post 10',
         self::ROUND_COFFIN => '⚰️',
     ];
 
+    public static function normalizeRoundKey(string $roundKey): string
+    {
+        return match ($roundKey) {
+            '4+' => '4',
+            '10+' => 'post-10',
+            default => $roundKey,
+        };
+    }
+
     public static function roundDisplayLabel(string $roundKey): string
     {
-        return self::ROUND_DISPLAY_LABELS[$roundKey] ?? $roundKey;
+        $normalized = self::normalizeRoundKey($roundKey);
+
+        return self::ROUND_DISPLAY_LABELS[$normalized] ?? $roundKey;
     }
 
     /** Profile header target-round chip (ordinal / post-10 labels). */
     public static function profileHeaderTargetRoundLabel(string $roundKey): string
     {
-        return match ($roundKey) {
-            '1' => '1st',
-            '2' => '2nd',
-            '3' => '3rd',
-            '4+' => '4th+',
-            '10+' => 'Post-10',
-            self::ROUND_COFFIN => self::roundDisplayLabel($roundKey),
-            default => $roundKey,
-        };
+        return self::roundDisplayLabel($roundKey);
     }
 
     /**

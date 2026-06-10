@@ -1,6 +1,11 @@
 @php
+    use App\Models\WorkingBoardEntry;
+
+    $defaultActiveBoard = WorkingBoardEntry::BOARD_MASTER;
+
     $workingBoardJsConfig = [
         'boardTypes' => $boardPanelOrder,
+        'defaultActiveBoard' => $defaultActiveBoard,
         'roundKeys' => $boardRoundKeys,
         'roundLabels' => $boardRoundLabels,
         'confidenceOptions' => $boardConfidenceOptions,
@@ -22,25 +27,53 @@
             </script>
 
             <div class="working-boards-page relative flex min-h-0 min-w-0 flex-1 flex-col" x-data="workingBoards()">
-                <div
-                    class="pointer-events-none absolute right-2 top-0 z-10 flex items-center gap-2 text-[10px] font-semibold text-slate-600 normal-case sm:right-3 sm:text-xs"
-                >
-                    <span x-show="saving" x-cloak class="pointer-events-auto rounded bg-white/90 px-2 py-0.5 shadow-sm">{{ __('Saving…') }}</span>
-                    <span
-                        x-show="statusMessage"
-                        x-text="statusMessage"
-                        x-cloak
-                        class="pointer-events-auto max-w-[16rem] rounded px-2 py-0.5 shadow-sm"
-                        :class="statusIsError ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-800'"
-                    ></span>
+                <div class="relative z-10 shrink-0 pb-3">
+                    <div
+                        class="pointer-events-none absolute right-0 top-0 flex items-center gap-2 text-[10px] font-semibold text-slate-600 normal-case sm:text-xs"
+                    >
+                        <span x-show="saving" x-cloak class="pointer-events-auto rounded bg-white/90 px-2 py-0.5 shadow-sm">{{ __('Saving…') }}</span>
+                        <span
+                            x-show="statusMessage"
+                            x-text="statusMessage"
+                            x-cloak
+                            class="pointer-events-auto max-w-[16rem] rounded px-2 py-0.5 shadow-sm"
+                            :class="statusIsError ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-800'"
+                        ></span>
+                    </div>
+
+                    <div
+                        class="working-board-toggle-row flex flex-wrap items-center justify-center gap-2 normal-case"
+                        role="tablist"
+                        aria-label="{{ __('Board') }}"
+                    >
+                        @foreach ($boardToggleOrder as $toggleBoardType)
+                            <button
+                                type="button"
+                                role="tab"
+                                class="working-board-toggle-btn rounded border px-4 py-1.5 text-sm font-bold shadow-sm transition"
+                                :class="activeBoard === '{{ $toggleBoardType }}'
+                                    ? 'border-indigo-600 bg-indigo-600 text-white'
+                                    : 'border-slate-300 bg-white text-slate-800 hover:border-indigo-400 hover:bg-indigo-50'"
+                                :aria-selected="activeBoard === '{{ $toggleBoardType }}'"
+                                @click="setActiveBoard('{{ $toggleBoardType }}')"
+                            >{{ $boardToggleLabels[$toggleBoardType] }}</button>
+                        @endforeach
+                    </div>
                 </div>
 
-                <div class="working-boards-row flex min-h-0 min-w-0 flex-1 gap-3 overflow-x-auto pb-1">
+                <div class="working-boards-row flex min-h-0 min-w-0 flex-1 flex-col pb-1">
                     @foreach ($boardPanelOrder as $boardType)
-                        @include('board.partials.pane', [
-                            'boardType' => $boardType,
-                            'panel' => $boardPanels[$boardType],
-                        ])
+                        <div
+                            class="flex min-h-0 min-w-0 flex-1 flex-col"
+                            style="display: {{ $boardType === $defaultActiveBoard ? 'flex' : 'none' }};"
+                            x-show="activeBoard === '{{ $boardType }}'"
+                            role="tabpanel"
+                        >
+                            @include('board.partials.pane', [
+                                'boardType' => $boardType,
+                                'panel' => $boardPanels[$boardType],
+                            ])
+                        </div>
                     @endforeach
                 </div>
             </div>
