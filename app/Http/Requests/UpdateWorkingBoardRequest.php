@@ -29,8 +29,16 @@ class UpdateWorkingBoardRequest extends FormRequest
 
             foreach (WorkingBoardEntry::ROUND_KEYS as $key) {
                 $rules["boards.$boardType.rounds.$key"] = ['sometimes', 'array'];
+                $rules["boards.$boardType.rounds.$key.*.entry_type"] = [
+                    'sometimes',
+                    'string',
+                    Rule::in([
+                        WorkingBoardEntry::ENTRY_TYPE_PLAYER,
+                        WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER,
+                    ]),
+                ];
                 $rules["boards.$boardType.rounds.$key.*.player_id"] = [
-                    'required',
+                    'nullable',
                     'integer',
                     Rule::exists('players', 'id')->where(
                         fn ($query) => $this->playerPoolConstraint($query, $boardType),
@@ -80,9 +88,23 @@ class UpdateWorkingBoardRequest extends FormRequest
                         continue;
                     }
                     foreach ($list as $row) {
-                        if (is_array($row) && isset($row['player_id'])) {
-                            $ids[] = (int) $row['player_id'];
+                        if (! is_array($row)) {
+                            continue;
                         }
+                        $entryType = (string) ($row['entry_type'] ?? WorkingBoardEntry::ENTRY_TYPE_PLAYER);
+                        if ($entryType === WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER) {
+                            continue;
+                        }
+                        $pid = (int) ($row['player_id'] ?? 0);
+                        if ($pid <= 0) {
+                            $validator->errors()->add(
+                                "boards.$boardType.rounds.$rk",
+                                __('Each player row must include a player.'),
+                            );
+
+                            continue;
+                        }
+                        $ids[] = $pid;
                     }
                 }
 

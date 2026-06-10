@@ -237,6 +237,45 @@ class WorkingBoardTest extends TestCase
         $this->actingAs($user)->patchJson(route('board.update'), $payload)->assertStatus(422);
     }
 
+    public function test_board_patch_persists_tier_dividers_in_round_order(): void
+    {
+        $user = User::factory()->admin()->create();
+        $a = Player::factory()->create(['player_pool' => 'hs', 'last_name' => 'Tier', 'first_name' => 'Top']);
+        $b = Player::factory()->create(['player_pool' => 'hs', 'last_name' => 'Tier', 'first_name' => 'Bottom']);
+
+        $payload = $this->boardsPayload([
+            WorkingBoardEntry::BOARD_HS => [
+                '1' => [
+                    ['entry_type' => WorkingBoardEntry::ENTRY_TYPE_PLAYER, 'player_id' => $a->id, 'confidence' => '', 'risk' => ''],
+                    ['entry_type' => WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER],
+                    ['entry_type' => WorkingBoardEntry::ENTRY_TYPE_PLAYER, 'player_id' => $b->id, 'confidence' => '', 'risk' => ''],
+                ],
+            ],
+        ]);
+
+        $this->actingAs($user)->patchJson(route('board.update'), $payload)->assertOk();
+
+        $entries = WorkingBoardEntry::query()
+            ->where('user_id', $user->id)
+            ->where('board_type', WorkingBoardEntry::BOARD_HS)
+            ->where('round_key', '1')
+            ->orderBy('sort_order')
+            ->get();
+
+        $this->assertCount(3, $entries);
+        $this->assertSame(WorkingBoardEntry::ENTRY_TYPE_PLAYER, $entries[0]->entry_type);
+        $this->assertSame($a->id, $entries[0]->player_id);
+        $this->assertSame(WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER, $entries[1]->entry_type);
+        $this->assertNull($entries[1]->player_id);
+        $this->assertSame(WorkingBoardEntry::ENTRY_TYPE_PLAYER, $entries[2]->entry_type);
+        $this->assertSame($b->id, $entries[2]->player_id);
+
+        $this->actingAs($user)
+            ->get(route('board.index'))
+            ->assertOk()
+            ->assertSee('"entry_type":"tier_divider"', false);
+    }
+
     public function test_board_patch_rejects_non_hs_player_on_hs_board(): void
     {
         $user = User::factory()->admin()->create();

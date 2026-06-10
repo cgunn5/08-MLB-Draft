@@ -275,11 +275,18 @@ function batGradeForCard(card) {
     return nums.reduce((sum, n) => sum + n, 0) / nums.length;
 }
 
+function isTierDivider(item) {
+    return item?.entry_type === 'tier_divider';
+}
+
 function collectBatGradesOnBoard(boardRounds, boardType, roundKeys) {
     const values = [];
     for (const rk of roundKeys) {
         const cards = boardRounds?.[boardType]?.[rk] ?? [];
         for (const card of cards) {
+            if (isTierDivider(card)) {
+                continue;
+            }
             const bat = batGradeForCard(card);
             if (bat !== null) {
                 values.push(bat);
@@ -295,6 +302,9 @@ function collectGradeFieldOnBoard(boardRounds, boardType, roundKeys, field) {
     for (const rk of roundKeys) {
         const cards = boardRounds?.[boardType]?.[rk] ?? [];
         for (const card of cards) {
+            if (isTierDivider(card)) {
+                continue;
+            }
             const n = numericGrade(card?.[field]);
             if (n !== null) {
                 values.push(n);
@@ -2737,7 +2747,7 @@ document.addEventListener('alpine:init', () => {
                         this.boardRounds[boardType][rk] = [];
                     }
                     this.boardRounds[boardType][rk] = this.boardRounds[boardType][rk].filter(
-                        (item) => item?.entry_type !== 'tier_divider' && item?.player_id,
+                        (item) => isTierDivider(item) || item?.player_id,
                     );
                 }
             }
@@ -2828,6 +2838,33 @@ document.addEventListener('alpine:init', () => {
 
         roundCards(boardType, rk) {
             return this.boardRounds?.[boardType]?.[rk] ?? [];
+        },
+
+        isTierDivider(item) {
+            return isTierDivider(item);
+        },
+
+        roundRowKey(boardType, rk, item, idx) {
+            if (isTierDivider(item)) {
+                return `tier-${boardType}-${rk}-${idx}`;
+            }
+
+            return `p-${boardType}-${rk}-${item?.player_id ?? 'x'}-${idx}`;
+        },
+
+        addTierDivider(boardType, rk) {
+            if (this.readOnly) {
+                return;
+            }
+            if (!Array.isArray(this.boardRounds[boardType]?.[rk])) {
+                this.boardRounds[boardType][rk] = [];
+            }
+            this.boardRounds[boardType][rk] = [
+                ...this.boardRounds[boardType][rk],
+                { entry_type: 'tier_divider' },
+            ];
+            this.boardRounds = { ...this.boardRounds };
+            this.scheduleSave(50);
         },
 
         roundLabel(roundKey) {
@@ -3141,7 +3178,7 @@ document.addEventListener('alpine:init', () => {
 
         dropIndexFromEvent(ev) {
             const tbody = ev.currentTarget;
-            const rows = [...tbody.querySelectorAll('tr[data-player-row]')];
+            const rows = [...tbody.querySelectorAll('tr[data-board-row]')];
             if (rows.length === 0) {
                 return 0;
             }
@@ -3198,11 +3235,18 @@ document.addEventListener('alpine:init', () => {
             for (const boardType of this.boardTypes) {
                 const rounds = {};
                 for (const rk of this.roundKeys) {
-                    rounds[rk] = (this.boardRounds[boardType]?.[rk] ?? []).map((c) => ({
-                        player_id: Number(c.player_id),
-                        confidence: c.confidence ?? '',
-                        risk: c.risk ?? '',
-                    }));
+                    rounds[rk] = (this.boardRounds[boardType]?.[rk] ?? []).map((c) => {
+                        if (isTierDivider(c)) {
+                            return { entry_type: 'tier_divider' };
+                        }
+
+                        return {
+                            entry_type: 'player',
+                            player_id: Number(c.player_id),
+                            confidence: c.confidence ?? '',
+                            risk: c.risk ?? '',
+                        };
+                    });
                 }
                 boards[boardType] = { rounds };
             }

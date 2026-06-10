@@ -215,7 +215,7 @@
     @endunless
 
     <div class="working-board-columns-viewport min-h-0 flex-1">
-        <div class="working-board-columns-scroll bg-slate-100">
+        <div class="working-board-columns-scroll bg-white">
         @foreach (WorkingBoardEntry::ROUND_ROW_GROUPS as $roundRowKeys)
             <div class="working-board-columns-row">
                 @foreach ($roundRowKeys as $boardRoundKey)

@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WorkingBoardEntry extends Model
 {
+    public const ENTRY_TYPE_PLAYER = 'player';
+
+    public const ENTRY_TYPE_TIER_DIVIDER = 'tier_divider';
+
     public const BOARD_MASTER = 'master';
 
     public const BOARD_NCAA = 'ncaa';
@@ -66,6 +70,19 @@ class WorkingBoardEntry extends Model
         return self::ROUND_DISPLAY_LABELS[$normalized] ?? $roundKey;
     }
 
+    /** Column header / board picker label (e.g. "1st Round"). */
+    public static function roundColumnLabel(string $roundKey): string
+    {
+        $normalized = self::normalizeRoundKey($roundKey);
+        if ($normalized === self::ROUND_COFFIN) {
+            return self::ROUND_DISPLAY_LABELS[$normalized];
+        }
+
+        $base = self::ROUND_DISPLAY_LABELS[$normalized] ?? $roundKey;
+
+        return $base.' Round';
+    }
+
     /** Profile header target-round chip (ordinal / post-10 labels). */
     public static function profileHeaderTargetRoundLabel(string $roundKey): string
     {
@@ -80,6 +97,19 @@ class WorkingBoardEntry extends Model
         $labels = [];
         foreach (self::ROUND_KEYS as $key) {
             $labels[$key] = self::roundDisplayLabel($key);
+        }
+
+        return $labels;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function roundColumnLabels(): array
+    {
+        $labels = [];
+        foreach (self::ROUND_KEYS as $key) {
+            $labels[$key] = self::roundColumnLabel($key);
         }
 
         return $labels;
@@ -112,6 +142,7 @@ class WorkingBoardEntry extends Model
     protected $fillable = [
         'user_id',
         'board_type',
+        'entry_type',
         'player_id',
         'round_key',
         'sort_order',

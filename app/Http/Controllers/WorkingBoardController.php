@@ -64,7 +64,7 @@ class WorkingBoardController extends Controller
 
         return view('board.index', [
             'boardRoundKeys' => WorkingBoardEntry::ROUND_KEYS,
-            'boardRoundLabels' => WorkingBoardEntry::roundDisplayLabels(),
+            'boardRoundLabels' => WorkingBoardEntry::roundColumnLabels(),
             'boardConfidenceOptions' => WorkingBoardEntry::CONFIDENCE_OPTIONS,
             'boardRiskOptions' => WorkingBoardEntry::RISK_OPTIONS,
             'boardRiskLabels' => WorkingBoardEntry::RISK_DISPLAY_LABELS,
@@ -112,6 +112,23 @@ class WorkingBoardController extends Controller
                         if (! is_array($row)) {
                             continue;
                         }
+                        $entryType = (string) ($row['entry_type'] ?? WorkingBoardEntry::ENTRY_TYPE_PLAYER);
+                        if ($entryType === WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER) {
+                            WorkingBoardEntry::query()->create([
+                                'user_id' => $user->id,
+                                'board_type' => $boardType,
+                                'entry_type' => WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER,
+                                'player_id' => null,
+                                'round_key' => $rk,
+                                'sort_order' => $order,
+                                'confidence' => null,
+                                'risk' => null,
+                            ]);
+                            $order++;
+
+                            continue;
+                        }
+
                         $pid = (int) ($row['player_id'] ?? 0);
                         if ($pid <= 0) {
                             continue;
@@ -119,6 +136,7 @@ class WorkingBoardController extends Controller
                         WorkingBoardEntry::query()->create([
                             'user_id' => $user->id,
                             'board_type' => $boardType,
+                            'entry_type' => WorkingBoardEntry::ENTRY_TYPE_PLAYER,
                             'player_id' => $pid,
                             'round_key' => $rk,
                             'sort_order' => $order,
@@ -161,6 +179,14 @@ class WorkingBoardController extends Controller
         foreach ($boardEntries as $entry) {
             $rk = WorkingBoardEntry::normalizeRoundKey((string) $entry->round_key);
             if (! in_array($rk, WorkingBoardEntry::ROUND_KEYS, true)) {
+                continue;
+            }
+
+            if ($entry->entry_type === WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER) {
+                $rounds[$rk][] = [
+                    'entry_type' => WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER,
+                ];
+
                 continue;
             }
 

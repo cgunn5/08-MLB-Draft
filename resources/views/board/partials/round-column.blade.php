@@ -6,16 +6,27 @@
 @endphp
 <div
     @class([
-        'working-board-round-column flex shrink-0 flex-col border-r border-slate-300 bg-white',
+        'working-board-round-column flex shrink-0 flex-col overflow-hidden rounded-md border bg-white shadow-sm',
         'working-board-round-column--coffin' => $boardRoundKey === WorkingBoardEntry::ROUND_COFFIN,
     ])
     data-round="{{ $boardRoundKey }}"
     data-board-type="{{ $boardType }}"
 >
-    <div class="working-board-round-header shrink-0 border-b border-slate-300 bg-[#e5e7eb] px-2 py-1.5 text-center">
+    <div class="working-board-round-header relative shrink-0 border-b border-gray-200 bg-[#e5e7eb] px-2 py-1.5 text-center">
         <span class="working-board-round-label text-[10px] font-bold tracking-widest text-black">
             {{ $boardRoundLabels[$boardRoundKey] ?? $boardRoundKey }}
         </span>
+        @unless ($boardReadOnly)
+            <button
+                type="button"
+                class="working-board-add-tier-btn"
+                title="{{ __('Add tier separator') }}"
+                @click="addTierDivider('{{ $boardType }}', '{{ $boardRoundKey }}')"
+            >
+                <span class="sr-only">{{ __('Add tier separator') }}</span>
+                <span aria-hidden="true">+</span>
+            </button>
+        @endunless
     </div>
 
     <div class="working-board-round-table-wrap">
@@ -28,7 +39,7 @@
                     <th class="working-board-th working-board-col-name px-1 py-1">{{ __('NAME') }}</th>
                     <th class="working-board-th working-board-col-pos px-0.5 py-1">{{ __('POS') }}</th>
                     <th class="working-board-th working-board-col-grade px-0.5 py-1">{{ __('BAT') }}</th>
-                    <th class="working-board-th working-board-col-grade px-0.5 py-1">{{ __('SWING') }}</th>
+                    <th class="working-board-th working-board-col-grade px-0.5 py-1">{{ __('Sw') }}</th>
                 </tr>
             </thead>
             <tbody
@@ -36,15 +47,48 @@
                 @dragover.prevent
                 @drop.prevent="onRoundDrop($event, '{{ $boardType }}', '{{ $boardRoundKey }}')"
             >
-                <template x-for="(card, idx) in roundCards('{{ $boardType }}', '{{ $boardRoundKey }}')" :key="'p-{{ $boardType }}-{{ $boardRoundKey }}-' + card.player_id + '-' + idx">
+                <template x-for="(card, idx) in roundCards('{{ $boardType }}', '{{ $boardRoundKey }}')" :key="roundRowKey('{{ $boardType }}', '{{ $boardRoundKey }}', card, idx)">
                     <tr
-                        class="working-board-card-row border-b border-slate-200 bg-white text-center font-bold text-slate-900 hover:bg-slate-50/80"
-                        :class="readOnly ? '' : 'cursor-grab active:cursor-grabbing'"
+                        data-board-row
+                        :class="[
+                            isTierDivider(card)
+                                ? 'working-board-tier-row border-b border-slate-200'
+                                : 'working-board-card-row border-b border-slate-200 bg-white text-center font-bold text-slate-900 hover:bg-slate-50/80',
+                            readOnly ? '' : 'cursor-grab active:cursor-grabbing',
+                        ]"
                         :draggable="!readOnly"
-                        data-player-row
+                        :data-player-row="!isTierDivider(card) ? true : null"
+                        :data-tier-divider="isTierDivider(card) ? true : null"
                         @dragstart="onDragStart($event, '{{ $boardType }}', '{{ $boardRoundKey }}', idx)"
                     >
                         <td
+                            x-show="isTierDivider(card)"
+                            colspan="7"
+                            class="working-board-tier-cell relative p-0"
+                        >
+                            <div class="working-board-tier-dashes-wrap">
+                                <span class="working-board-tier-dashes" aria-hidden="true">
+                                    @for ($dash = 0; $dash < 36; $dash++)
+                                        <span>-</span>
+                                    @endfor
+                                </span>
+                            </div>
+                            @unless ($boardReadOnly)
+                                <button
+                                    type="button"
+                                    class="working-board-remove-btn working-board-tier-remove-btn"
+                                    title="{{ __('Remove tier separator') }}"
+                                    draggable="false"
+                                    @mousedown.stop
+                                    @click.stop="removeFromRound('{{ $boardType }}', '{{ $boardRoundKey }}', idx)"
+                                >
+                                    <span class="sr-only">{{ __('Remove') }}</span>
+                                    <span aria-hidden="true">×</span>
+                                </button>
+                            @endunless
+                        </td>
+                        <td
+                            x-show="!isTierDivider(card)"
                             class="working-board-scale-cell working-board-col-scale border-r border-slate-200 p-0 align-middle normal-case"
                             :style="boardScaleFillStyle(card.confidence)"
                             @click="openScaleSelect($event)"
@@ -62,6 +106,7 @@
                             </select>
                         </td>
                         <td
+                            x-show="!isTierDivider(card)"
                             class="working-board-scale-cell working-board-col-scale border-r border-slate-200 p-0 align-middle normal-case"
                             :style="boardScaleFillStyle(card.risk)"
                             @click="openScaleSelect($event)"
@@ -79,11 +124,15 @@
                             </select>
                         </td>
                         <td
+                            x-show="!isTierDivider(card)"
                             class="working-board-grade-cell working-board-col-grade border-r border-slate-200 p-0 align-middle font-bold text-black"
                             :style="roleCellStyle(card)"
                             x-text="gradeFmt(card.grade_role)"
                         ></td>
-                        <td class="working-board-name-cell working-board-col-name border-r border-slate-200 bg-white px-1 py-0.5 align-middle leading-snug">
+                        <td
+                            x-show="!isTierDivider(card)"
+                            class="working-board-name-cell working-board-col-name border-r border-slate-200 bg-white px-1 py-0.5 align-middle leading-snug"
+                        >
                             <div class="flex items-center justify-center gap-0.5">
                                 <a
                                     class="working-board-player-name min-w-0 text-black underline decoration-slate-400 decoration-1 underline-offset-2 hover:decoration-black"
@@ -106,15 +155,18 @@
                             </div>
                         </td>
                         <td
+                            x-show="!isTierDivider(card)"
                             class="working-board-col-pos border-r border-slate-200 bg-white px-0.5 py-0.5 align-middle font-bold text-slate-800"
                             x-text="card.position || '—'"
                         ></td>
                         <td
+                            x-show="!isTierDivider(card)"
                             class="working-board-grade-cell working-board-col-grade border-r border-slate-200 p-0 align-middle font-bold text-black"
                             :style="batCellStyle(card)"
                             x-text="gradeFmt(batGrade(card))"
                         ></td>
                         <td
+                            x-show="!isTierDivider(card)"
                             class="working-board-grade-cell working-board-col-grade bg-white p-0 align-middle font-bold text-black"
                             :style="swingCellStyle(card)"
                             x-text="gradeFmt(card.grade_swing)"
