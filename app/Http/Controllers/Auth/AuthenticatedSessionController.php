@@ -32,7 +32,7 @@ class AuthenticatedSessionController extends Controller
 
         ApplicationDatabaseBackupTrigger::maybeRun();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        return redirect()->intended($request->user()->applicationHomePath());
     }
 
     /**

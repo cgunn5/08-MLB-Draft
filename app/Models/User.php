@@ -58,4 +58,9 @@ class User extends Authenticatable
     {
         return $this->is_admin;
     }
+
+    public function applicationHomePath(): string
+    {
+        return $this->is_admin ? '/dashboard' : '/board';
+    }
 }

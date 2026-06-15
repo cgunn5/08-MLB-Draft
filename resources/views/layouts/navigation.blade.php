@@ -63,7 +63,7 @@
             <!-- Logos (center) -->
             <div class="app-nav-logo-wrap pointer-events-none absolute inset-x-0 flex items-center justify-center">
                 <div class="app-nav-logos pointer-events-auto flex items-center gap-2 sm:gap-2.5">
-                    <a href="{{ url('/dashboard') }}" class="flex h-full min-h-0 items-center">
+                    <a href="{{ url(auth()->user()->applicationHomePath()) }}" class="flex h-full min-h-0 items-center">
                         <img
                             src="{{ asset('images/texas-rangers-logo.png') }}"
                             alt="{{ __('Texas Rangers') }}"

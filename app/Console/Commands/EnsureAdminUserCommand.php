@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Hash;
 class EnsureAdminUserCommand extends Command
 {
     protected $signature = 'app:ensure-admin-user
-                            {--email=admin@example.com : Admin login email}
+                            {--email=cgunn@texasrangers.com : Admin login email}
                             {--password= : Plain password (prompted if omitted)}
                             {--name=Admin User : Display name}';
 
@@ -17,7 +17,7 @@ class EnsureAdminUserCommand extends Command
 
     public function handle(): int
     {
-        $email = (string) ($this->option('email') ?: env('ADMIN_EMAIL', 'admin@example.com'));
+        $email = (string) ($this->option('email') ?: env('ADMIN_EMAIL', 'cgunn@texasrangers.com'));
         $password = (string) ($this->option('password') ?: env('ADMIN_PASSWORD', ''));
 
         if ($password === '') {

@@ -11,7 +11,7 @@ class PlayerNotesBulkUpdateRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->canManageApplicationData() ?? false;
     }
 
     protected function prepareForValidation(): void

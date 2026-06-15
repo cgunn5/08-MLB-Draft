@@ -17,7 +17,7 @@ final class AppNavigation
         $isAdmin = (bool) ($user?->is_admin ?? false);
 
         $defs = [
-            ['label' => 'HOME', 'href' => '/dashboard', 'patterns' => ['dashboard'], 'admin' => false],
+            ['label' => 'HOME', 'href' => '/dashboard', 'patterns' => ['dashboard'], 'admin' => true],
             ['label' => 'BOARD', 'href' => '/board', 'patterns' => ['board*'], 'admin' => false],
             ['label' => 'PLAYERS', 'href' => '/players', 'patterns' => ['players*'], 'admin' => true],
             ['label' => 'NCAA Profiles', 'href' => '/ncaa', 'patterns' => ['ncaa', 'ncaa/*'], 'admin' => false],

@@ -17,17 +17,13 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     if (auth()->check()) {
-        return redirect()->route('dashboard');
+        return redirect(auth()->user()->applicationHomePath());
     }
 
     return redirect()->route('login');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
-
     Route::get('/board', [WorkingBoardController::class, 'index'])->name('board.index');
     Route::get('/ncaa', [NcaaDashboardController::class, 'index'])->name('ncaa.index');
     Route::get('/ncaa/players/{player}', [NcaaPlayerController::class, 'show'])->name('ncaa.players.show');
@@ -42,6 +38,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::middleware('admin')->group(function () {
+        Route::get('/dashboard', function () {
+            return view('dashboard');
+        })->name('dashboard');
+
         Route::patch('/board', [WorkingBoardController::class, 'update'])->name('board.update');
         Route::get('/players', [PlayerListController::class, 'index'])->name('players.index');
         Route::post('/players', [PlayerListController::class, 'store'])->name('players.store');

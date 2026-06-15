@@ -10,7 +10,7 @@ class StorePlayerRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        return $this->user()?->canManageApplicationData() ?? false;
     }
 
     /**
