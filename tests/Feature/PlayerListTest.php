@@ -124,6 +124,7 @@ class PlayerListTest extends TestCase
             'grade_role' => 6,
             'grade_perf' => 5.5,
             'grade_approach' => 6,
+            'grade_damage' => 5.5,
             'grade_adj' => 5,
             'grade_contact' => 4.5,
             'grade_swing' => 6,
@@ -145,12 +146,14 @@ class PlayerListTest extends TestCase
         $response->assertOk();
         $response->assertSee('player-list-config', false);
         $response->assertSee('playerListTable()', false);
+        $response->assertSee('Then by', false);
         $response->assertSee('DOE, JANE', false);
         $response->assertSee('role_display', false);
         $response->assertSee('conf_display', false);
         $response->assertSee('risk_display', false);
         $response->assertSee('M-H', false);
         $response->assertSee('perf_display', false);
+        $response->assertSee('damage_display', false);
         $response->assertSee('platoon_display', false);
     }
 

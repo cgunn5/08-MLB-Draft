@@ -125,6 +125,7 @@ class PlayerListController extends Controller
         $role = $this->gradeNumeric($player->grade_role);
         $perf = $this->gradeNumeric($player->grade_perf);
         $kZone = $this->gradeNumeric($player->grade_approach);
+        $damage = $this->gradeNumeric($player->grade_damage);
         $adj = $this->gradeNumeric($isHs ? $player->grade_contact : $player->grade_adj);
         $platoon = $isHs ? null : $this->gradeNumeric($player->grade_contact);
         $swing = $this->gradeNumeric($player->grade_swing);
@@ -160,6 +161,9 @@ class PlayerListController extends Controller
             'k_zone' => $kZone,
             'k_zone_display' => $this->gradeDisplay($player->grade_approach),
             'k_zone_style' => $this->gradeStyle($kZone, $gradeBounds),
+            'damage' => $damage,
+            'damage_display' => $this->gradeDisplay($player->grade_damage),
+            'damage_style' => $this->gradeStyle($damage, $gradeBounds),
             'adj' => $adj,
             'adj_display' => $this->gradeDisplay($isHs ? $player->grade_contact : $player->grade_adj),
             'adj_style' => $this->gradeStyle($adj, $gradeBounds),

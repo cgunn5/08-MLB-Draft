@@ -2199,7 +2199,7 @@ document.addEventListener('alpine:init', () => {
         filterQuery: '',
         poolFilter: 'all',
         advancedOpen: false,
-        thresholdKeys: ['role', 'conf', 'risk', 'bat', 'perf', 'k_zone', 'adj', 'platoon', 'swing'],
+        thresholdKeys: ['role', 'conf', 'risk', 'bat', 'perf', 'k_zone', 'damage', 'adj', 'platoon', 'swing'],
         thresholdFilters: {
             role: '',
             conf: '',
@@ -2207,6 +2207,7 @@ document.addEventListener('alpine:init', () => {
             bat: '',
             perf: '',
             k_zone: '',
+            damage: '',
             adj: '',
             platoon: '',
             swing: '',
@@ -2218,6 +2219,7 @@ document.addEventListener('alpine:init', () => {
             bat: 'Bat',
             perf: 'Perf',
             k_zone: 'K-Zone',
+            damage: 'Damage',
             adj: 'Adj',
             platoon: 'L/R',
             swing: 'Swing',
@@ -2232,16 +2234,32 @@ document.addEventListener('alpine:init', () => {
             { key: 'bat', label: 'Bat' },
             { key: 'perf', label: 'Perf' },
             { key: 'k_zone', label: 'K-Zone' },
+            { key: 'damage', label: 'Damage' },
             { key: 'adj', label: 'Adj' },
             { key: 'platoon', label: 'L/R' },
             { key: 'swing', label: 'Swing' },
         ],
         sortKey: 'player',
         sortDir: 'asc',
+        sortKey2: '',
+        sortDir2: 'asc',
         editingId: null,
         editDraft: {},
         editFieldErrors: {},
         saving: false,
+
+        init() {
+            this.$watch('sortKey', (value) => {
+                if (value && value === this.sortKey2) {
+                    this.sortKey2 = '';
+                }
+            });
+            this.$watch('sortKey2', (value) => {
+                if (value && value === this.sortKey) {
+                    this.sortKey2 = '';
+                }
+            });
+        },
 
         thresholdBounds(key) {
             if (key === 'conf' || key === 'risk') {
@@ -2352,6 +2370,7 @@ document.addEventListener('alpine:init', () => {
                 bat: 'bat',
                 perf: 'perf',
                 k_zone: 'k_zone',
+                damage: 'damage',
                 adj: 'adj',
                 platoon: 'platoon',
                 swing: 'swing',
@@ -2362,7 +2381,30 @@ document.addEventListener('alpine:init', () => {
         },
 
         isNumericSortKey(key) {
-            return ['role', 'conf', 'risk', 'bat', 'perf', 'k_zone', 'adj', 'platoon', 'swing'].includes(key);
+            return ['role', 'conf', 'risk', 'bat', 'perf', 'k_zone', 'damage', 'adj', 'platoon', 'swing'].includes(key);
+        },
+
+        activeSortLevels() {
+            const levels = [{ key: this.sortKey, dir: this.sortDir }];
+            if (this.sortKey2 && this.sortKey2 !== this.sortKey) {
+                levels.push({ key: this.sortKey2, dir: this.sortDir2 });
+            }
+
+            return levels;
+        },
+
+        compareBySortKey(a, b, key, asc) {
+            if (key === 'profile') {
+                return this.compareProfile(a.profile_url, b.profile_url, asc);
+            }
+            const field = this.sortField(key);
+            const va = a[field];
+            const vb = b[field];
+            if (this.isNumericSortKey(key)) {
+                return this.compareNum(va, vb, asc);
+            }
+
+            return this.compareStr(va, vb, asc);
         },
 
         compareNum(a, b, asc) {
@@ -2425,24 +2467,41 @@ document.addEventListener('alpine:init', () => {
 
         get displayRows() {
             const rows = [...this.filteredRows];
-            const key = this.sortKey;
-            const asc = this.sortDir === 'asc';
-            const field = this.sortField(key);
+            const levels = this.activeSortLevels();
 
             rows.sort((a, b) => {
-                if (key === 'profile') {
-                    return this.compareProfile(a.profile_url, b.profile_url, asc);
-                }
-                const va = a[field];
-                const vb = b[field];
-                if (this.isNumericSortKey(key)) {
-                    return this.compareNum(va, vb, asc);
+                for (const level of levels) {
+                    const asc = level.dir === 'asc';
+                    const cmp = this.compareBySortKey(a, b, level.key, asc);
+                    if (cmp !== 0) {
+                        return cmp;
+                    }
                 }
 
-                return this.compareStr(va, vb, asc);
+                return this.compareStr(a.name, b.name, true);
             });
 
             return rows;
+        },
+
+        sortTier(key) {
+            if (this.sortKey === key) {
+                return 1;
+            }
+            if (this.sortKey2 && this.sortKey2 === key) {
+                return 2;
+            }
+
+            return 0;
+        },
+
+        ariaSort(key) {
+            const tier = this.sortTier(key);
+            if (tier === 0) {
+                return 'none';
+            }
+
+            return (tier === 1 ? this.sortDir : this.sortDir2) === 'asc' ? 'ascending' : 'descending';
         },
 
         sortBy(key) {
@@ -2455,19 +2514,30 @@ document.addEventListener('alpine:init', () => {
         },
 
         sortIndicator(key) {
-            if (this.sortKey !== key) {
+            const tier = this.sortTier(key);
+            if (tier === 0) {
                 return '';
             }
+            const asc = tier === 1 ? this.sortDir === 'asc' : this.sortDir2 === 'asc';
+            const arrow = asc ? '▲' : '▼';
 
-            return this.sortDir === 'asc' ? '▲' : '▼';
+            return tier === 2 ? `²${arrow}` : arrow;
         },
 
         sortHighlightHeader(key) {
-            return this.sortKey === key ? 'player-list-sort-active' : '';
+            const tier = this.sortTier(key);
+            if (tier === 1) {
+                return 'player-list-sort-active';
+            }
+            if (tier === 2) {
+                return 'player-list-sort-secondary';
+            }
+
+            return '';
         },
 
         sortHighlightBody(key) {
-            return this.sortKey === key ? 'bg-yellow-50' : '';
+            return this.sortTier(key) > 0 ? 'bg-yellow-50' : '';
         },
 
         confirmDelete(event) {

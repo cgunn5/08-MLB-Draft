@@ -173,10 +173,36 @@
                                                 >{{ __('Desc') }}</button>
                                             </div>
                                         </div>
+                                        <div>
+                                            <label class="block text-[10px] font-semibold uppercase text-gray-600" for="player_list_sort_key_2">{{ __('Then by') }}</label>
+                                            <select id="player_list_sort_key_2" x-model="sortKey2" class="mt-0.5 block w-full rounded-md border-gray-300 text-xs shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                                <option value="">{{ __('None') }}</option>
+                                                <template x-for="opt in sortOptions" :key="'then-' + opt.key">
+                                                    <option x-bind:value="opt.key" x-text="opt.label" x-bind:disabled="opt.key === sortKey"></option>
+                                                </template>
+                                            </select>
+                                        </div>
+                                        <div x-show="sortKey2" x-cloak>
+                                            <span class="block text-[10px] font-semibold uppercase text-gray-600">{{ __('Then direction') }}</span>
+                                            <div class="mt-0.5 flex gap-1">
+                                                <button
+                                                    type="button"
+                                                    class="flex-1 rounded-md border px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition"
+                                                    x-bind:class="sortDir2 === 'asc' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'"
+                                                    @click="sortDir2 = 'asc'"
+                                                >{{ __('Asc') }}</button>
+                                                <button
+                                                    type="button"
+                                                    class="flex-1 rounded-md border px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide transition"
+                                                    x-bind:class="sortDir2 === 'desc' ? 'border-indigo-600 bg-indigo-600 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'"
+                                                    @click="sortDir2 = 'desc'"
+                                                >{{ __('Desc') }}</button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <p class="mt-3 text-[10px] font-normal normal-case text-gray-500">
-                                    {{ __('Set any minimum thresholds to narrow the list. Click a column header to sort; header sort stays in sync with these controls.') }}
+                                    {{ __('Set any minimum thresholds to narrow the list. Click a column header to sort; use Then by for a secondary sort when values tie.') }}
                                 </p>
                             </div>
 
@@ -190,7 +216,7 @@
                                         <col class="player-list-col-player" />
                                         <col class="player-list-col-pool" />
                                         <col class="player-list-col-school" />
-                                        @for ($i = 0; $i < 9; $i++)
+                                        @for ($i = 0; $i < 10; $i++)
                                             <col class="player-list-grade-col" />
                                         @endfor
                                         <col class="player-list-col-action" />
@@ -210,6 +236,7 @@
                                                 ['key' => 'bat', 'label' => __('BAT'), 'grade' => true],
                                                 ['key' => 'perf', 'label' => __('PERF'), 'grade' => true],
                                                 ['key' => 'k_zone', 'label' => __('K-ZONE'), 'grade' => true],
+                                                ['key' => 'damage', 'label' => __('DAMAGE'), 'grade' => true],
                                                 ['key' => 'adj', 'label' => __('ADJ'), 'grade' => true],
                                                 ['key' => 'platoon', 'label' => __('L/R'), 'grade' => true],
                                                 ['key' => 'swing', 'label' => __('SWING'), 'grade' => true],
@@ -224,7 +251,7 @@
                                                         'player-list-col-school' => $column['key'] === 'school',
                                                     ])
                                                     :class="sortHighlightHeader('{{ $column['key'] }}')"
-                                                    :aria-sort="sortKey === '{{ $column['key'] }}' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'"
+                                                    :aria-sort="ariaSort('{{ $column['key'] }}')"
                                                 >
                                                     <button type="button" class="inline-flex w-full items-center justify-center gap-0.5 text-white hover:text-gray-200" @click.prevent="sortBy('{{ $column['key'] }}')">
                                                         <span>{{ $column['label'] }}</span>
@@ -236,7 +263,7 @@
                                                 scope="col"
                                                 class="border border-[#364056] px-2 py-2 uppercase tracking-wide transition-colors"
                                                 :class="sortHighlightHeader('profile')"
-                                                :aria-sort="sortKey === 'profile' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'"
+                                                :aria-sort="ariaSort('profile')"
                                             >
                                                 <button type="button" class="inline-flex w-full items-center justify-center gap-0.5 text-white hover:text-gray-200" @click.prevent="sortBy('profile')">
                                                     <span>{{ __('PROFILE') }}</span>
@@ -352,6 +379,7 @@
                                                 <td class="player-list-grade-col player-list-filled-cell player-list-metric-emphasis border border-gray-200 transition-colors" :class="sortHighlightBody('bat')" :style="row.bat_style" x-text="row.bat_display"></td>
                                                 <td class="player-list-grade-col player-list-filled-cell border border-gray-200 transition-colors" :class="sortHighlightBody('perf')" :style="row.perf_style" x-text="row.perf_display"></td>
                                                 <td class="player-list-grade-col player-list-filled-cell border border-gray-200 transition-colors" :class="sortHighlightBody('k_zone')" :style="row.k_zone_style" x-text="row.k_zone_display"></td>
+                                                <td class="player-list-grade-col player-list-filled-cell border border-gray-200 transition-colors" :class="sortHighlightBody('damage')" :style="row.damage_style" x-text="row.damage_display"></td>
                                                 <td class="player-list-grade-col player-list-filled-cell border border-gray-200 transition-colors" :class="sortHighlightBody('adj')" :style="row.adj_style" x-text="row.adj_display"></td>
                                                 <td class="player-list-grade-col player-list-filled-cell border border-gray-200 transition-colors" :class="sortHighlightBody('platoon')" :style="row.platoon_style" x-text="row.platoon_display"></td>
                                                 <td class="player-list-grade-col player-list-filled-cell border border-gray-200 transition-colors" :class="sortHighlightBody('swing')" :style="row.swing_style" x-text="row.swing_display"></td>
