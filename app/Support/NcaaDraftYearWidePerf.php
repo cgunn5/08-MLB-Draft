@@ -98,7 +98,7 @@ final class NcaaDraftYearWidePerf
      */
     private static function resolveCanonicalSlugForBlock(string $baseHeader, array $slugSet): ?string
     {
-        $slugKey = strtolower((string) preg_replace('/[^a-z0-9]+/i', '', DataSourceCsvHeaders::slugify($baseHeader)));
+        $slugKey = DataSourceCsvHeaders::slugify($baseHeader);
         if ($slugKey === '') {
             return null;
         }
@@ -108,7 +108,7 @@ final class NcaaDraftYearWidePerf
                 continue;
             }
             foreach ($aliasList as $alias) {
-                $key = strtolower((string) preg_replace('/[^a-z0-9]+/i', '', $alias));
+                $key = DataSourceCsvHeaders::aliasSlug($alias);
                 if ($key !== '' && $slugKey === $key) {
                     return $canonical;
                 }

@@ -19,10 +19,6 @@ final class NcaaRangerTraitsSheetLayout
                 'type' => 'multi_year',
                 'slugs' => ['pa', 'avg', 'slg', 'iso', 'ops', 'xwoba', 'woba', 'awoba'],
             ],
-            'ncaa_perf_summer' => [
-                'type' => 'single_year',
-                'slugs' => ['g', 'pa', 'avg', 'obp', 'slg', 'ops'],
-            ],
             'ncaa_approach_ncaa' => [
                 'type' => 'multi_year',
                 'slugs' => [
@@ -30,12 +26,9 @@ final class NcaaRangerTraitsSheetLayout
                     'sw_pct', 'ch_pct', 'swdec', 'swm_pct', 'iz_swm_pct',
                 ],
             ],
-            'ncaa_approach_summer' => [
-                'type' => 'single_year',
-                'slugs' => [
-                    'k_pct', 'ak_pct', 'bb_pct', 'abb_pct', 'k_bb', 'ak_bb',
-                    'sw_pct', 'ch_pct', 'swdec', 'swm_pct', 'iz_swm_pct',
-                ],
+            'ncaa_hunt' => [
+                'type' => 'multi_year',
+                'slugs' => ['cov_pct', 'hunt_pct', 'lt2k_hunt_pct', 'nz_xops', 'onz_xops', 'delta'],
             ],
             'ncaa_adjust_pitch' => [
                 'type' => 'pitch_rows',
@@ -65,20 +58,15 @@ final class NcaaRangerTraitsSheetLayout
                 'table' => 'NCAA',
                 'blocks' => ['ncaa_perf_ncaa'],
             ],
-            'performance_summer' => [
-                'section' => 'Performance',
-                'table' => 'Summer',
-                'blocks' => ['ncaa_perf_summer'],
-            ],
             'approach_ncaa' => [
                 'section' => 'K-Zone Control',
                 'table' => 'NCAA',
                 'blocks' => ['ncaa_approach_ncaa'],
             ],
-            'approach_summer' => [
+            'approach_hunt' => [
                 'section' => 'K-Zone Control',
-                'table' => 'Summer',
-                'blocks' => ['ncaa_approach_summer'],
+                'table' => 'Hunt%',
+                'blocks' => ['ncaa_hunt'],
             ],
             'adjustability_overall' => [
                 'section' => 'Adjustability',
@@ -126,8 +114,8 @@ final class NcaaRangerTraitsSheetLayout
     {
         $defs = self::ncaaProfileSlotDefinitions();
         $order = [
-            'Performance' => ['performance_ncaa', 'performance_summer'],
-            'K-Zone Control' => ['approach_ncaa', 'approach_summer'],
+            'Performance' => ['performance_ncaa'],
+            'K-Zone Control' => ['approach_ncaa', 'approach_hunt'],
             'Platoon' => ['platoon_ncaa'],
             'Adjustability' => ['adjustability_overall', 'adjustability_pitch'],
             'Engine' => ['engine_overall'],
@@ -187,6 +175,15 @@ final class NcaaRangerTraitsSheetLayout
                 $base['gb_pct'] ?? [],
                 ['gb_r', 'gb r', 'gb-r']
             ))),
+            'cov_pct' => ['cov', 'cov%', 'covpct', 'covpercent', 'coverage', 'coverage%', 'cov_pct'],
+            'hunt_pct' => ['hunt', 'hunt%', 'huntpct', 'huntpercent', 'hunt_pct'],
+            'lt2k_hunt_pct' => [
+                '<2k hunt%', '<2k hunt', 'lt2k hunt%', 'lt2k hunt', 'lt2k_hunt%',
+                'under2k hunt%', 'under 2k hunt%', '2k hunt%', 'lt2khunt%',
+            ],
+            'nz_xops' => ['nz xops', 'nz_xops', 'nzxops', 'nz xops', 'nz x ops'],
+            'onz_xops' => ['onz xops', 'onz_xops', 'onzxops', 'o nz xops', 'o nz xops', 'onz x ops'],
+            'delta' => ['Δ', 'delta', 'diff', 'change', 'nz delta', 'xops delta'],
         ]);
     }
 }

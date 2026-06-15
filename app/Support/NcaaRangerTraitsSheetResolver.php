@@ -12,9 +12,8 @@ class NcaaRangerTraitsSheetResolver
     /** Blocks whose heat uses the dataset comp bucket when {@see HsCompHeatScope} is set (same buckets as HS). */
     private const BLOCK_KEYS_NCAA_COMP_SCOPED_HEAT = [
         'ncaa_perf_ncaa',
-        'ncaa_perf_summer',
         'ncaa_approach_ncaa',
-        'ncaa_approach_summer',
+        'ncaa_hunt',
         'ncaa_engine_ncaa',
         'ncaa_platoon',
         'ncaa_adjust_pitch',
@@ -25,9 +24,8 @@ class NcaaRangerTraitsSheetResolver
      *     has_source: bool,
      *     source_name: ?string,
      *     ncaa_perf_ncaa: list<array<string, string>>,
-     *     ncaa_perf_summer: ?array<string, string>,
      *     ncaa_approach_ncaa: list<array<string, string>>,
-     *     ncaa_approach_summer: ?array<string, string>,
+     *     ncaa_hunt: list<array<string, string>>,
      *     ncaa_engine_ncaa: list<array<string, string>>,
      *     ncaa_platoon: list<array<string, string>>,
      *     ncaa_adjust_pitch: list<array{pitch: string, rows: list<array<string, string>>, heat: list<array<string, string>>}>,
@@ -42,7 +40,7 @@ class NcaaRangerTraitsSheetResolver
         $empty = $this->emptyPayload();
 
         if (trim($player->first_name) === '' && trim($player->last_name) === '') {
-            return $empty;
+            return $this->finalizePayload($empty, $player, $user);
         }
 
         /** @var list<DataSourceUpload> $assigned */
@@ -63,7 +61,7 @@ class NcaaRangerTraitsSheetResolver
             ->all();
 
         if ($assigned === []) {
-            return $empty;
+            return $this->finalizePayload($empty, $player, $user);
         }
 
         /** Prefer uploads named like "Pitch Types" last so adjustability pitch tables merge from that dataset. */
@@ -122,17 +120,28 @@ class NcaaRangerTraitsSheetResolver
             : implode(' · ', array_values(array_unique($sourceNames)));
 
         if (! $anyHadRows) {
-            return array_merge($empty, [
+            return $this->finalizePayload(array_merge($empty, [
                 'has_source' => true,
                 'source_name' => $label,
-            ]);
+            ]), $player, $user);
         }
 
         $out['has_source'] = true;
         $out['source_name'] = $label;
         $out['radar'] = $this->buildHsOverallRadarPayload($assigned, $player, $compHeatScope);
 
-        return $out;
+        return $this->finalizePayload($out, $player, $user);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function finalizePayload(array $payload, Player $player, User $user): array
+    {
+        $payload['hard_contact'] = NcaaHardContactVisualResolver::forPlayer($player, $user);
+
+        return $payload;
     }
 
     /**
@@ -251,9 +260,29 @@ class NcaaRangerTraitsSheetResolver
             $type = $def['type'];
             if ($type === 'single_year') {
                 $sourceRow = $latestAggregate ?? $latest;
-                if ($blockKey === 'ncaa_perf_summer') {
-                    if ($sourceRow !== null) {
-                        $demCells = $this->extractSlugRow($sourceRow, $headers, ['bats', 'throws', 'demo_age'], $slugToIdx, $yearCol, false);
+                if ($sourceRow === null) {
+                    $partial[$blockKey] = null;
+                    $partialHeat[$blockKey] = [];
+                } else {
+                    $rowRaw = $this->extractSlugRow($sourceRow, $headers, $def['slugs'], $slugToIdx, $yearCol, true);
+                    $partialHeat[$blockKey] = $this->heatForSlugs(
+                        $rowRaw,
+                        $def['slugs'],
+                        $slugToHeader,
+                        $heatRules,
+                        $this->heatStatsForBlock($blockKey, $compHeatScope, $compCol, $scopedHeatStats, $heatStats),
+                    );
+                    $partial[$blockKey] = $rowRaw;
+                }
+
+                continue;
+            }
+
+            if ($type === 'multi_year') {
+                if ($blockKey === 'ncaa_perf_ncaa' && $demographics === null) {
+                    $demSource = $latestAggregate ?? $latest;
+                    if ($demSource !== null) {
+                        $demCells = $this->extractSlugRow($demSource, $headers, ['bats', 'throws', 'demo_age'], $slugToIdx, $yearCol, false);
                         $demographics = [
                             'bats' => $demCells['bats'] ?? PlayerSheetPlaceholder::CELL,
                             'throws' => $demCells['throws'] ?? PlayerSheetPlaceholder::CELL,
@@ -267,27 +296,6 @@ class NcaaRangerTraitsSheetResolver
                         ];
                     }
                 }
-                if ($sourceRow === null) {
-                    $partial[$blockKey] = null;
-                    $partialHeat[$blockKey] = [];
-                } else {
-                    $rowRaw = $this->extractSlugRow($sourceRow, $headers, $def['slugs'], $slugToIdx, $yearCol, true);
-                    $partialHeat[$blockKey] = $this->heatForSlugs(
-                        $rowRaw,
-                        $def['slugs'],
-                        $slugToHeader,
-                        $heatRules,
-                        $this->heatStatsForBlock($blockKey, $compHeatScope, $compCol, $scopedHeatStats, $heatStats),
-                    );
-                    $partial[$blockKey] = $blockKey === 'ncaa_approach_summer'
-                        ? $this->formatNcaaApproachNcaaRowForDisplay($rowRaw)
-                        : $rowRaw;
-                }
-
-                continue;
-            }
-
-            if ($type === 'multi_year') {
                 if (NcaaDraftYearWidePerf::usesWideLayout($headers)
                     && ($blockKey === 'ncaa_perf_ncaa' || $blockKey === 'ncaa_approach_ncaa' || $blockKey === 'ncaa_engine_ncaa' || $blockKey === 'ncaa_platoon')) {
                     $draftCol = DataSourceCsvHeaders::draftYearColumnIndex($headers);
@@ -325,7 +333,7 @@ class NcaaRangerTraitsSheetResolver
 
                 $list = [];
                 $heatList = [];
-                $rowsToUse = ($blockKey === 'ncaa_approach_ncaa' || $blockKey === 'ncaa_engine_ncaa' || $blockKey === 'ncaa_platoon')
+                $rowsToUse = ($blockKey === 'ncaa_approach_ncaa' || $blockKey === 'ncaa_engine_ncaa' || $blockKey === 'ncaa_platoon' || $blockKey === 'ncaa_hunt')
                     ? array_slice($sorted, 0, 3)
                     : $sorted;
                 foreach ($rowsToUse as $r) {
@@ -350,6 +358,8 @@ class NcaaRangerTraitsSheetResolver
                         $list[] = $this->formatNcaaEngineNcaaRowForDisplay($rowRaw);
                     } elseif ($blockKey === 'ncaa_platoon') {
                         $list[] = $this->formatNcaaPlatoonRowForDisplay($rowRaw);
+                    } elseif ($blockKey === 'ncaa_hunt') {
+                        $list[] = $this->formatNcaaHuntRowForDisplay($rowRaw);
                     } else {
                         $list[] = $rowRaw;
                     }
@@ -602,9 +612,8 @@ class NcaaRangerTraitsSheetResolver
      *     has_source: bool,
      *     source_name: ?string,
      *     ncaa_perf_ncaa: list<array<string, string>>,
-     *     ncaa_perf_summer: null,
      *     ncaa_approach_ncaa: list<array<string, string>>,
-     *     ncaa_approach_summer: null,
+     *     ncaa_hunt: list<array<string, string>>,
      *     ncaa_engine_ncaa: list<array<string, string>>,
      *     ncaa_platoon: list<array<string, string>>,
      *     ncaa_adjust_pitch: list<array{pitch: string, rows: list<array<string, string>>, heat: list<array<string, string>>}>,
@@ -619,9 +628,8 @@ class NcaaRangerTraitsSheetResolver
             'has_source' => false,
             'source_name' => null,
             'ncaa_perf_ncaa' => [],
-            'ncaa_perf_summer' => null,
             'ncaa_approach_ncaa' => [],
-            'ncaa_approach_summer' => null,
+            'ncaa_hunt' => [],
             'ncaa_engine_ncaa' => [],
             'ncaa_platoon' => [],
             'ncaa_adjust_pitch' => [
@@ -632,6 +640,7 @@ class NcaaRangerTraitsSheetResolver
             'cell_heat' => $this->emptyCellHeatSkeleton(),
             'overall_demographics' => null,
             'radar' => null,
+            'hard_contact' => null,
         ];
     }
 
@@ -964,7 +973,7 @@ class NcaaRangerTraitsSheetResolver
         $resolvedHeader = [];
         foreach ($aliases as $canonical => $aliasList) {
             foreach ($aliasList as $alias) {
-                $key = strtolower((string) preg_replace('/[^a-z0-9]+/i', '', $alias));
+                $key = DataSourceCsvHeaders::aliasSlug($alias);
                 if ($key === '' || ! isset($map[$key])) {
                     continue;
                 }
@@ -1137,6 +1146,30 @@ class NcaaRangerTraitsSheetResolver
             if (array_key_exists($k, $out)) {
                 $out[$k] = HsRangerTraitsDisplay::formatTwoDecimalRatio($out[$k]);
             }
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<string, string>  $row  Raw slug row from CSV
+     * @return array<string, string>
+     */
+    private function formatNcaaHuntRowForDisplay(array $row): array
+    {
+        $out = $row;
+        foreach (['cov_pct', 'hunt_pct', 'lt2k_hunt_pct'] as $k) {
+            if (array_key_exists($k, $out)) {
+                $out[$k] = HsRangerTraitsDisplay::formatPercentRateForDisplay($out[$k]);
+            }
+        }
+        foreach (['nz_xops', 'onz_xops'] as $k) {
+            if (array_key_exists($k, $out)) {
+                $out[$k] = HsRangerTraitsDisplay::formatThreeDecimals($out[$k]);
+            }
+        }
+        if (array_key_exists('delta', $out)) {
+            $out['delta'] = HsRangerTraitsDisplay::formatThreeDecimals($out['delta']);
         }
 
         return $out;

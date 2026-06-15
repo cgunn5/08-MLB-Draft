@@ -955,7 +955,7 @@ final class HsRangerTraitsSheetResolver
         $resolvedHeader = [];
         foreach ($aliases as $canonical => $aliasList) {
             foreach ($aliasList as $alias) {
-                $key = strtolower((string) preg_replace('/[^a-z0-9]+/i', '', $alias));
+                $key = DataSourceCsvHeaders::aliasSlug($alias);
                 if ($key === '' || ! isset($map[$key])) {
                     continue;
                 }

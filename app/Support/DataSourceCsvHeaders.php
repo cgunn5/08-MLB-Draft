@@ -20,9 +20,18 @@ final class DataSourceCsvHeaders
     public static function slugify(string $header): string
     {
         $t = self::normalizeForMatch($header);
+        if ($t === 'δ' || $t === 'Δ') {
+            return 'delta';
+        }
         $t = str_replace('%', 'pct', $t);
 
         return strtolower((string) preg_replace('/[^a-z0-9]+/i', '', $t));
+    }
+
+    /** Normalized key for matching a canonical slug alias to a slugified CSV header. */
+    public static function aliasSlug(string $alias): string
+    {
+        return self::slugify($alias);
     }
 
     /**

@@ -162,9 +162,8 @@ final class DataSourcePortalMisplacementFixer
         $allowed = array_flip(HsRangerTraitsSheetLayout::hsProfileSlotKeys());
         $map = [
             'performance_ncaa' => 'performance_overall',
-            'performance_summer' => null,
             'approach_ncaa' => 'approach_overall',
-            'approach_summer' => null,
+            'approach_hunt' => null,
             'adjustability_overall' => null,
             'adjustability_pitch' => 'adjustability_pitch',
             'engine_overall' => 'impact_overall',

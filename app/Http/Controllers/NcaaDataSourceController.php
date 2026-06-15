@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\NcaaHardContactVisualLibraryTab;
 use App\Models\DataSourceUpload;
+use App\Models\NcaaPlayerHardContactVisual;
+use App\Models\Player;
 use Illuminate\Support\Collection;
+use Illuminate\View\View;
 
 class NcaaDataSourceController extends AbstractDataSourcePortalController
 {
@@ -45,5 +49,31 @@ class NcaaDataSourceController extends AbstractDataSourcePortalController
     protected function resolvedProfileFeedSlotsForUpload(DataSourceUpload $upload, ?Collection $allUploads = null): array
     {
         return $upload->resolvedNcaaProfileFeedSlotsForUi();
+    }
+
+    public function index(): View
+    {
+        $view = parent::index();
+        /** @var \Illuminate\Support\Collection<int, DataSourceUpload> $uploads */
+        $uploads = $view->getData()['uploads'];
+        $initialActiveId = $view->getData()['initialActiveId'];
+        $tabId = NcaaHardContactVisualLibraryTab::TAB_ID;
+        $queryDataset = request()->query('dataset');
+
+        if ($queryDataset === $tabId) {
+            $initialActiveId = $tabId;
+        } elseif ($initialActiveId === null) {
+            $initialActiveId = $tabId;
+        }
+
+        return $view->with([
+            'initialActiveId' => $initialActiveId,
+            'hardContactVisualsTabId' => $tabId,
+            'ncaaPlayers' => Player::query()->ncaa()->orderedByName()->get(),
+            'hardContactVisualsByPlayerId' => NcaaPlayerHardContactVisual::query()
+                ->where('user_id', auth()->id())
+                ->get()
+                ->keyBy('player_id'),
+        ]);
     }
 }

@@ -125,46 +125,53 @@
                 </div>
             </div>
 
-            @if ($uploads->isEmpty())
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                    <div class="p-4 text-sm text-gray-600 normal-case sm:p-6">
-                        {{ __('No saved datasets yet. Upload a CSV above.') }}
-                    </div>
-                </div>
-            @else
-                @php
-                    $dataSourceLibraryConfig = array_merge([
-                        'initialActiveId' => $initialActiveId,
-                        'blankGroupTabLabel' => __('(blank)'),
-                        'libraryIndexPath' => '/ncaa-data-sources',
-                        'tableDataBase' => '/ncaa-data-sources/uploads',
-                        'readOnlyById' => $uploads->mapWithKeys(static fn (\App\Models\DataSourceUpload $u): array => [
-                            (string) $u->id => $u->isCareerPgMaster(),
-                        ])->all(),
-                        'uploadSummaries' => $uploadSummaries,
-                    ], $dataSourceLibraryProfileFeed);
-                @endphp
-                <div
-                    class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
-                    x-data="dataSourceLibrary(@js($dataSourceLibraryConfig))"
-                >
-                    <div class="border-b border-gray-200 px-4 pt-3 pb-3 sm:px-6">
-                        <div class="flex flex-wrap items-center justify-between gap-3">
-                            <nav class="-mb-px flex min-w-0 flex-1 gap-1 overflow-x-auto" aria-label="{{ __('Saved CSV datasets') }}">
-                                @foreach ($uploads as $u)
-                                    <button
-                                        type="button"
-                                        @click="selectUpload({{ $u->id }})"
-                                        class="shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-xs font-semibold uppercase tracking-wide transition text-left"
-                                        :class="activeId === {{ $u->id }}
-                                            ? 'border-indigo-600 text-indigo-600'
-                                            : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-800'"
-                                    >
-                                        <span class="max-w-[14rem] truncate inline-block align-bottom" title="{{ $u->name }}">{{ $u->name }}</span>
-                                    </button>
-                                @endforeach
-                            </nav>
-                            <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            @php
+                $hardContactVisualsTabId = $hardContactVisualsTabId ?? \App\Support\NcaaHardContactVisualLibraryTab::TAB_ID;
+                $dataSourceLibraryConfig = array_merge([
+                    'initialActiveId' => $initialActiveId,
+                    'blankGroupTabLabel' => __('(blank)'),
+                    'libraryIndexPath' => '/ncaa-data-sources',
+                    'tableDataBase' => '/ncaa-data-sources/uploads',
+                    'hardContactVisualsTabId' => $hardContactVisualsTabId,
+                    'readOnlyById' => $uploads->mapWithKeys(static fn (\App\Models\DataSourceUpload $u): array => [
+                        (string) $u->id => $u->isCareerPgMaster(),
+                    ])->all(),
+                    'uploadSummaries' => $uploadSummaries,
+                ], $dataSourceLibraryProfileFeed);
+            @endphp
+            <div
+                class="bg-white overflow-hidden shadow-sm sm:rounded-lg"
+                x-data="dataSourceLibrary(@js($dataSourceLibraryConfig))"
+            >
+                <div class="border-b border-gray-200 px-4 pt-3 pb-3 sm:px-6">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <nav class="-mb-px flex min-w-0 flex-1 gap-1 overflow-x-auto" aria-label="{{ __('Saved datasets') }}">
+                            @foreach ($uploads as $u)
+                                <button
+                                    type="button"
+                                    @click="selectUpload({{ $u->id }})"
+                                    class="shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-xs font-semibold uppercase tracking-wide transition text-left"
+                                    :class="activeId === {{ $u->id }}
+                                        ? 'border-indigo-600 text-indigo-600'
+                                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-800'"
+                                >
+                                    <span class="max-w-[14rem] truncate inline-block align-bottom" title="{{ $u->name }}">{{ $u->name }}</span>
+                                </button>
+                            @endforeach
+                            <button
+                                type="button"
+                                @click="selectHardContactVisuals()"
+                                class="shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-xs font-semibold uppercase tracking-wide transition text-left"
+                                :class="isHardContactVisualsActive
+                                    ? 'border-indigo-600 text-indigo-600'
+                                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-800'"
+                            >
+                                <span class="max-w-[14rem] truncate inline-block align-bottom" title="{{ \App\Support\NcaaHardContactVisualLibraryTab::TAB_LABEL }}">
+                                    {{ \App\Support\NcaaHardContactVisualLibraryTab::TAB_LABEL }}
+                                </span>
+                            </button>
+                        </nav>
+                        <div class="flex shrink-0 flex-wrap items-center justify-end gap-2" x-show="isDatasetTabActive" x-cloak>
                                 <button
                                     type="button"
                                     class="rounded border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-900 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"
@@ -196,7 +203,7 @@
 
                     <div
                         class="border-b border-gray-100 bg-gray-50/90 px-4 py-2.5 sm:px-6"
-                        x-show="activeId && !activeUploadReadOnly"
+                        x-show="isDatasetTabActive && activeId && !activeUploadReadOnly"
                         x-cloak
                     >
                         <div class="flex flex-wrap items-end gap-2">
@@ -229,7 +236,7 @@
 
                     <div
                         class="flex flex-wrap items-center justify-between gap-2 border-b border-emerald-100 bg-emerald-50/50 px-4 py-2 sm:px-6"
-                        x-show="activeId && !activeUploadReadOnly"
+                        x-show="isDatasetTabActive && activeId && !activeUploadReadOnly"
                         x-cloak
                     >
                         <p class="text-[11px] font-medium normal-case text-gray-700">
@@ -245,7 +252,11 @@
                         </button>
                     </div>
 
-                    <div class="space-y-6 p-4 sm:p-6">
+                    <div x-show="isHardContactVisualsActive" x-cloak>
+                        @include('ncaa-data-sources.partials.hard-contact-visuals-table')
+                    </div>
+
+                    <div class="space-y-6 p-4 sm:p-6" x-show="isDatasetTabActive" x-cloak>
                         <template x-if="loading">
                             <p class="text-xs text-gray-500 uppercase tracking-wide">{{ __('LOADING…') }}</p>
                         </template>
@@ -837,7 +848,6 @@
                         </div>
                     </div>
                 </div>
-            @endif
         </div>
     </div>
 </x-app-layout>

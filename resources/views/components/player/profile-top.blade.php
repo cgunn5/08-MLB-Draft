@@ -62,6 +62,20 @@
         ->values()
         ->all();
     $comboboxAccessibleLabel = $comboboxSrLabel ?? __('NCAA / JUCO player');
+    $hardContact = is_array($rangerSheet['hard_contact'] ?? null) ? $rangerSheet['hard_contact'] : null;
+    $showNcaaHardContact = $profileRouteName === 'ncaa.players.show';
+    $plateHeatmapUrl = $hardContact['plate_url'] ?? null;
+    $zonePitchMapUrl = $hardContact['zone_url'] ?? null;
+    $ncaaVisualSlotCount = $showNcaaHardContact
+        ? 1 + (filled($plateHeatmapUrl) ? 1 : 0) + (filled($zonePitchMapUrl) ? 1 : 0)
+        : 0;
+    $ncaaTripleVisuals = $showNcaaHardContact && filled($plateHeatmapUrl) && filled($zonePitchMapUrl);
+    $gradeGridColsClass = $showNcaaHardContact ? 'grid-cols-[11fr_8.4fr]' : 'grid-cols-[11fr_14fr]';
+    $gradesRadarRowGridClass = $hsGradesRadarRowGrid
+        ? ($showNcaaHardContact
+            ? 'grid grid-cols-[auto_minmax(0,1fr)] items-stretch gap-3 md:gap-4 2xl:gap-5'
+            : 'grid grid-cols-[auto_minmax(0,1fr)_auto] items-stretch gap-2 md:gap-3 2xl:gap-4')
+        : null;
 
     if ($compactProfile) {
         $summaryText =
@@ -117,7 +131,8 @@
             ($compactProfile
                 ? 'profile-top-compact-shell profile-top--compact'
                 : 'flex h-full min-h-0 flex-col').
-            ($comfortable && ! $compactProfile ? ' profile-top--comfortable' : ''),
+            ($comfortable && ! $compactProfile ? ' profile-top--comfortable' : '').
+            ($showNcaaHardContact && $hsGradesRadarRowGrid ? ' profile-top--ncaa-header' : ''),
     ]) }}
 >
     {{-- Three equal columns; overflow-hidden on each track prevents bleed/overlap into neighbors. --}}
@@ -448,7 +463,7 @@
             <div
                 @class([
                     'w-full min-w-0 max-w-full flex-1',
-                    'grid grid-cols-[auto_minmax(0,1fr)_auto] items-stretch gap-2 md:gap-3 2xl:gap-4' => $hsGradesRadarRowGrid,
+                    $gradesRadarRowGridClass,
                     'flex flex-col items-center justify-center gap-0.5 sm:flex-row sm:items-stretch md:gap-2 2xl:gap-3' => ! $hsGradesRadarRowGrid,
                     'sm:justify-between' => ! $hsGradesRadarRowGrid && (! $omitCenterColumn || $compactProfile),
                     'sm:justify-start sm:gap-2 md:gap-3 2xl:gap-4' => ! $hsGradesRadarRowGrid && $omitCenterColumn && ! $compactProfile,
@@ -470,7 +485,12 @@
                         <div
                             role="table"
                             aria-label="{{ __('Grade summary') }}"
-                            class="profile-grades-grid grid h-full min-h-0 grid-cols-[11fr_14fr] gap-px p-px font-sans font-[700] leading-none {{ $gradeGridClass }}"
+                            @class([
+                                'profile-grades-grid grid h-full min-h-0 gap-px p-px font-sans font-[700] leading-none',
+                                $gradeGridColsClass,
+                                $gradeGridClass,
+                                'profile-grades-grid--ncaa-header' => $showNcaaHardContact,
+                            ])
                             style="grid-template-rows: repeat({{ $gradeRowCount }}, minmax(0, 1fr))"
                         >
                             @foreach ($gradeDefsForGrid as $label => $attribute)
@@ -494,6 +514,48 @@
                     </div>
                 </div>
 
+                @if ($showNcaaHardContact)
+                    <div
+                        @class([
+                            'profile-ncaa-header-visuals grid h-full min-h-0 min-w-0 w-full',
+                            'profile-ncaa-header-visuals--triple items-center' => $ncaaTripleVisuals,
+                            'items-center' => ! $ncaaTripleVisuals,
+                        ])
+                        @unless ($ncaaTripleVisuals)
+                            style="grid-template-columns: repeat({{ $ncaaVisualSlotCount }}, minmax(0, 1fr))"
+                        @endunless
+                    >
+                        <div class="profile-ncaa-header-visual-slot profile-ncaa-header-visual-slot--radar flex h-full min-h-0 w-full min-w-0 items-center justify-center">
+                            <x-player.radar-chart
+                                :compact="$compactProfile"
+                                :slot-fill="true"
+                                :fill-height="false"
+                                :show-legend="false"
+                                :radar="$rangerSheet['radar'] ?? null"
+                                :player="$player"
+                                class="profile-ncaa-header-radar-chart"
+                            />
+                        </div>
+                        @if (filled($plateHeatmapUrl))
+                            <div class="profile-ncaa-header-visual-slot profile-ncaa-header-visual-slot--plate flex h-full min-h-0 w-full items-center justify-center overflow-hidden">
+                                <img
+                                    src="{{ $plateHeatmapUrl }}"
+                                    alt="{{ __('Hard contact plate heat map') }}"
+                                    class="profile-ncaa-header-visual-image profile-ncaa-header-visual-image--plate"
+                                />
+                            </div>
+                        @endif
+                        @if (filled($zonePitchMapUrl))
+                            <div class="profile-ncaa-header-visual-slot profile-ncaa-header-visual-slot--zone flex h-full min-h-0 w-full items-center justify-center overflow-hidden">
+                                <img
+                                    src="{{ $zonePitchMapUrl }}"
+                                    alt="{{ __('Hard contact pitch map') }}"
+                                    class="profile-ncaa-header-visual-image profile-ncaa-header-visual-image--zone"
+                                />
+                            </div>
+                        @endif
+                    </div>
+                @else
                 <div
                     @class([
                         'flex min-h-0 min-w-0 shrink-0 justify-center',
@@ -501,26 +563,27 @@
                         'h-full max-h-full items-stretch' => $fillHeaderRadar,
                     ])
                 >
-                    <x-player.radar-chart
-                        :compact="$compactProfile"
-                        :comfortable="$comfortable && ! $compactProfile && ! $fillHeaderRadar"
-                        :fill-height="$fillHeaderRadar"
-                        :show-legend="false"
-                        :radar="$rangerSheet['radar'] ?? null"
-                        :player="$player"
-                        class="min-w-0 shrink-0"
-                    />
+                        <x-player.radar-chart
+                            :compact="$compactProfile"
+                            :comfortable="$comfortable && ! $compactProfile && ! $fillHeaderRadar"
+                            :fill-height="$fillHeaderRadar"
+                            :show-legend="false"
+                            :radar="$rangerSheet['radar'] ?? null"
+                            :player="$player"
+                            class="min-w-0 shrink-0"
+                        />
                 </div>
 
                 <div class="mr-1 flex h-full shrink-0 items-center justify-center self-stretch py-px sm:mr-1.5 sm:py-0.5 sm:pl-px md:mr-2 md:pl-0.5">
-                    <img
-                        src="{{ asset('images/mlb-draft-logo.png') }}"
-                        alt="{{ __('MLB DRAFT') }}"
-                        class="h-auto w-auto object-contain object-right {{ $logoClass }}"
-                        width="160"
-                        height="192"
-                    />
+                        <img
+                            src="{{ asset('images/mlb-draft-logo.png') }}"
+                            alt="{{ __('MLB DRAFT') }}"
+                            class="h-auto w-auto object-contain object-right {{ $logoClass }}"
+                            width="160"
+                            height="192"
+                        />
                 </div>
+                @endif
             </div>
         </div>
     </div>

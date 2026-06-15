@@ -7,6 +7,7 @@ use App\Http\Controllers\HsDashboardController;
 use App\Http\Controllers\HsPlayerController;
 use App\Http\Controllers\NcaaDashboardController;
 use App\Http\Controllers\NcaaDataSourceController;
+use App\Http\Controllers\NcaaHardContactVisualController;
 use App\Http\Controllers\NcaaPlayerController;
 use App\Http\Controllers\NoteInputController;
 use App\Http\Controllers\PlayerListController;
@@ -30,6 +31,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/board', [WorkingBoardController::class, 'index'])->name('board.index');
     Route::get('/ncaa', [NcaaDashboardController::class, 'index'])->name('ncaa.index');
     Route::get('/ncaa/players/{player}', [NcaaPlayerController::class, 'show'])->name('ncaa.players.show');
+    Route::get('/ncaa/players/{player}/hard-contact/{type}', [NcaaHardContactVisualController::class, 'show'])
+        ->where('type', 'plate|zone')
+        ->name('ncaa.players.hard-contact.show');
     Route::get('/hs', [HsDashboardController::class, 'index'])->name('hs.index');
     Route::get('/hs/players/{player}', [HsPlayerController::class, 'show'])->name('hs.players.show');
 
@@ -62,6 +66,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         Route::get('/ncaa-data-sources', [NcaaDataSourceController::class, 'index'])->name('ncaa-data-sources.index');
         Route::post('/ncaa-data-sources', [NcaaDataSourceController::class, 'store'])->name('ncaa-data-sources.store');
+        Route::post('/ncaa-data-sources/hard-contact-visuals/{player}', [NcaaHardContactVisualController::class, 'update'])
+            ->name('ncaa-data-sources.hard-contact-visuals.update');
+        Route::delete('/ncaa-data-sources/hard-contact-visuals/{player}/{type}', [NcaaHardContactVisualController::class, 'destroy'])
+            ->where('type', 'plate|zone')
+            ->name('ncaa-data-sources.hard-contact-visuals.destroy');
         Route::get('/ncaa-data-sources/uploads/{dataSourceUpload}/player-names', [NcaaDataSourceController::class, 'playerNames'])->name('ncaa-data-sources.uploads.player-names');
         Route::get('/ncaa-data-sources/uploads/{dataSourceUpload}/table-data', [NcaaDataSourceController::class, 'tableData'])->name('ncaa-data-sources.uploads.table-data');
         Route::get('/ncaa-data-sources/uploads/{dataSourceUpload}/group-values', [NcaaDataSourceController::class, 'groupColumnValues'])->name('ncaa-data-sources.uploads.group-values');

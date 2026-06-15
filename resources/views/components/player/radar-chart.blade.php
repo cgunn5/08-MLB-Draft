@@ -6,6 +6,8 @@
     'showLegend' => true,
     /** When true, grow with parent height (profile header); width follows viewBox aspect ratio. */
     'fillHeight' => false,
+    /** When true, fill a fixed-size header slot (width/height 100%, meet). */
+    'slotFill' => false,
 ])
 
 @php
@@ -16,8 +18,15 @@
         && count($radar['values']) >= 5;
 
     $fillHeight = filter_var($fillHeight, FILTER_VALIDATE_BOOLEAN);
+    $slotFill = filter_var($slotFill, FILTER_VALIDATE_BOOLEAN);
+    $slotFillSvgStyle = null;
+    $viewBox = '0 5 220 200';
 
-    if ($compact) {
+    if ($slotFill) {
+        $svgSize = 'profile-ncaa-header-radar-svg';
+        $slotFillSvgStyle = 'display:block;height:7.212rem;width:auto;max-width:6.733rem;';
+        $viewBox = '-16 0 236 210';
+    } elseif ($compact) {
         $svgSize = 'max-w-[30px] max-h-[24px] sm:max-w-[32px] sm:max-h-[26px]';
     } elseif ($fillHeight) {
         /* w-full h-full + slice: column is usually width-tight vs viewBox; meet leaves top/bottom gap. */
@@ -107,14 +116,22 @@
 <div
     {{ $attributes->merge([
         'class' =>
-            'flex min-w-0 flex-col items-center gap-px text-black sm:gap-0.5'.
-            ($fillHeight ? ' h-full min-h-0 w-full justify-center' : ''),
+            'flex min-w-0 flex-col text-black'.
+            ($slotFill
+                ? ' shrink-0'
+                : ' items-center gap-px sm:gap-0.5'.
+                  ($fillHeight ? ' h-full min-h-0 w-full justify-center' : '')),
     ]) }}
 >
     <svg
-        viewBox="0 5 220 200"
-        class="{{ $fillHeight ? $svgSize.' shrink-0' : 'h-auto w-full shrink-0 '.$svgSize }}"
-        preserveAspectRatio="{{ $fillHeight ? 'xMidYMid slice' : 'xMidYMid meet' }}"
+        viewBox="{{ $viewBox }}"
+        @class([
+            $svgSize,
+            'shrink-0' => ! $slotFill,
+            'h-auto w-full' => ! $fillHeight && ! $slotFill,
+        ])
+        @if ($slotFill) style="{{ $slotFillSvgStyle }}" @endif
+        preserveAspectRatio="{{ ($fillHeight && ! $slotFill) ? 'xMidYMid slice' : 'xMidYMid meet' }}"
         role="img"
         aria-label="{{ $ariaRadar }}"
     >

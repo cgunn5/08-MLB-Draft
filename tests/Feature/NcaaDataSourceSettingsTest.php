@@ -121,6 +121,47 @@ class NcaaDataSourceSettingsTest extends TestCase
         $this->assertCount(3, $sheet['ncaa_perf_ncaa']);
     }
 
+    public function test_ncaa_resolver_hunt_block_returns_three_year_rows(): void
+    {
+        $user = User::factory()->admin()->create();
+        $path = 'data-source-uploads/ncaa-hunt-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($path, implode("\n", [
+            'PLAYER,Year,Cov%,Hunt%,<2K Hunt%,NZ xOPS,oNZ xOPS,Δ',
+            '"DOE, JANE",2026,95,40,35,.800,.650,.150',
+            '"DOE, JANE",2025,94,38,33,.750,.620,.130',
+            '"DOE, JANE",2024,93,36,31,.700,.590,.110',
+        ]));
+
+        DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'dataset_portal' => DataSourceUpload::PORTAL_NCAA,
+            'upload_kind' => DataSourceUpload::UPLOAD_KIND_FILE,
+            'name' => 'Hunt',
+            'original_filename' => 'hunt.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => [
+                'PLAYER', 'Year', 'Cov%', 'Hunt%', '<2K Hunt%', 'NZ xOPS', 'oNZ xOPS', 'Δ',
+            ],
+            'row_count' => 3,
+            'ncaa_profile_feed_slots' => ['approach_hunt'],
+        ]);
+
+        $player = Player::factory()->create([
+            'player_pool' => 'ncaa',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+        ]);
+
+        $sheet = app(NcaaRangerTraitsSheetResolver::class)->resolve($player, $user, null);
+        $this->assertCount(3, $sheet['ncaa_hunt']);
+        $this->assertSame('2026', $sheet['ncaa_hunt'][0]['year'] ?? '');
+        $this->assertSame('40.0%', $sheet['ncaa_hunt'][0]['hunt_pct'] ?? '');
+        $this->assertSame('35.0%', $sheet['ncaa_hunt'][0]['lt2k_hunt_pct'] ?? '');
+        $this->assertSame('.800', $sheet['ncaa_hunt'][0]['nz_xops'] ?? '');
+        $this->assertSame('.150', $sheet['ncaa_hunt'][0]['delta'] ?? '');
+    }
+
     public function test_ncaa_resolver_platoon_block_returns_three_year_rows(): void
     {
         $user = User::factory()->admin()->create();

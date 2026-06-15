@@ -285,6 +285,171 @@
         vertical-align: middle;
     }
 
+    .app-nav-logo-wrap {
+        top: 0;
+        bottom: 0;
+        z-index: 10;
+    }
+
+    .app-nav-inner {
+        padding-right: 0.5rem;
+    }
+
+    @media (min-width: 640px) {
+        .app-nav-inner {
+            padding-right: 0.75rem;
+        }
+    }
+
+    .app-nav-select-wrap {
+        z-index: 130;
+        /* Profile master pane left border: page gutter (px-2 / sm:px-3). */
+        padding-left: 0.5rem !important;
+    }
+
+    @media (min-width: 640px) {
+        .app-nav-select-wrap {
+            padding-left: 0.75rem !important;
+        }
+    }
+
+    .app-nav-user-wrap {
+        margin-left: auto;
+    }
+
+    .app-nav-logos {
+        max-width: 100%;
+    }
+
+    .app-nav-draft-logo {
+        width: auto !important;
+        max-width: 120px !important;
+    }
+
+    .app-nav-select {
+        width: auto;
+        min-width: 15rem;
+        z-index: 130;
+    }
+
+    .app-nav-select-trigger,
+    .app-nav-select-option-label,
+    .app-nav-select-trigger-label {
+        font-family: Carbon, ui-sans-serif, system-ui, sans-serif !important;
+        font-weight: 700 !important;
+        font-synthesis: weight;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        text-shadow: 0.35px 0 0 currentColor, -0.35px 0 0 currentColor;
+    }
+
+    .app-nav-select-trigger-label,
+    .app-nav-select-option-label {
+        text-align: left;
+    }
+
+    .app-nav-select-trigger {
+        position: relative;
+        display: inline-flex !important;
+        width: auto;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.4rem;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+        padding: 0.3rem 0;
+        color: #111827;
+        font-size: 0.8125rem !important;
+        line-height: 1.2 !important;
+        box-shadow: none;
+        transition: color 150ms ease;
+    }
+
+    .app-nav-select-trigger-label {
+        flex: 0 1 auto;
+        width: auto;
+    }
+
+    .app-nav-select-trigger:hover,
+    .app-nav-select-trigger:focus {
+        color: #111827;
+        outline: none;
+        box-shadow: none;
+    }
+
+    .app-nav-select-caret {
+        position: static;
+        height: 0.85rem;
+        width: 0.85rem;
+        flex-shrink: 0;
+        fill: #6b7280;
+        transform: none;
+    }
+
+    .app-nav-select-menu {
+        position: absolute;
+        left: 0;
+        min-width: 100%;
+        width: max-content;
+        top: calc(100% + 0.35rem);
+        z-index: 140;
+        overflow: hidden;
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        background: #fff;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    }
+
+    .app-nav-select-option {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        width: 100%;
+        padding: 0.45rem 2rem 0.45rem 0.85rem;
+        color: #111827;
+        font-size: 0.8125rem !important;
+        line-height: 1.2 !important;
+        text-decoration: none;
+        transition: background-color 120ms ease;
+    }
+
+    .app-nav-select-option-label {
+        width: auto;
+    }
+
+    .app-nav-select-option:hover,
+    .app-nav-select-option:focus {
+        background: #f9fafb;
+        color: #111827;
+        outline: none;
+    }
+
+    .app-nav-select-option.is-active {
+        background: #fef2f2;
+        color: #b91c1c;
+    }
+
+    .app-nav-select-option-check {
+        position: absolute;
+        left: 0.85rem;
+        top: 50%;
+        display: inline-flex;
+        width: 0.9rem;
+        height: 0.9rem;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        color: #dc2626;
+        transform: translateY(-50%);
+    }
+
+    .app-nav-select-option-check svg {
+        width: 0.9rem;
+        height: 0.9rem;
+    }
+
     @media (min-width: 1280px) {
         .app-nav-logo {
             height: 24px !important;
@@ -1112,6 +1277,204 @@ input[type='number'].notes-grade-score-input {
 .profile-top--compact .profile-master-take-text {
     font-size: clamp(3.75px, 1.65cqw, 6px) !important;
     line-height: 1.25 !important;
+}
+
+/* NCAA hard-contact preview: same header row as radar / draft logo; images scale inside slot. */
+.profile-hard-contact-slot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.profile-hard-contact-slot--radar {
+    width: 100%;
+    max-width: 100%;
+}
+
+.profile-hard-contact-slot img {
+    display: block;
+    height: auto;
+    width: auto;
+    max-height: 100%;
+    max-width: 100%;
+    min-height: 0;
+    object-fit: contain;
+    object-position: center;
+}
+
+.profile-top--comfortable .profile-hard-contact-slot--radar {
+    aspect-ratio: 220 / 200;
+    height: auto;
+    width: auto;
+    max-height: 100%;
+    max-width: min(100%, 12rem);
+}
+
+@media (min-width: 1536px) {
+    .profile-top--comfortable .profile-hard-contact-slot--radar {
+        max-width: min(100%, 12rem);
+        max-height: 9.35rem;
+    }
+}
+
+.profile-hard-contact-preview-scale {
+    transform: scale(0.85);
+    transform-origin: center center;
+}
+
+.profile-ncaa-header-visuals {
+    width: 100%;
+    min-width: 0;
+    column-gap: 0.35rem;
+}
+
+.profile-ncaa-header-visuals--triple {
+    padding-left: 0.85rem;
+    column-gap: 0.65rem;
+    align-items: center;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (min-width: 640px) {
+    .profile-ncaa-header-visuals {
+        column-gap: 0.5rem;
+    }
+
+    .profile-ncaa-header-visuals--triple {
+        padding-left: 1.1rem;
+        column-gap: 0.85rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .profile-ncaa-header-visuals {
+        column-gap: 0.75rem;
+    }
+
+    .profile-ncaa-header-visuals--triple {
+        padding-left: 1.35rem;
+        column-gap: 1rem;
+    }
+}
+
+@media (min-width: 1536px) {
+    .profile-ncaa-header-visuals--triple {
+        padding-left: 1.6rem;
+        column-gap: 1.15rem;
+    }
+}
+
+.profile-ncaa-header-visual-slot {
+    min-width: 0;
+    min-height: 0;
+    padding-inline: 0.125rem;
+    overflow: hidden;
+}
+
+.profile-ncaa-header-visual-slot--radar {
+    justify-content: center;
+    overflow: visible;
+}
+
+.profile-ncaa-header-visual-slot--plate,
+.profile-ncaa-header-visual-slot--zone {
+    overflow: hidden;
+}
+
+/* Triple row: plate + zone caps (radar sized separately — SVG has no intrinsic px like images). */
+.profile-ncaa-header-visuals--triple .profile-ncaa-header-visual-image--plate,
+.profile-ncaa-header-visuals--triple .profile-ncaa-header-visual-image--zone {
+    max-height: min(100%, 9.35rem);
+    max-width: min(100%, 8.75rem);
+}
+
+.profile-ncaa-header-visuals--triple .profile-ncaa-header-visual-slot--radar .profile-ncaa-header-radar-chart {
+    display: block;
+    width: auto;
+    height: auto;
+    flex-shrink: 0;
+}
+
+.profile-ncaa-header-radar-svg,
+.profile-ncaa-header-visuals--triple .profile-ncaa-header-visual-slot--radar .profile-ncaa-header-radar-chart svg {
+    display: block !important;
+    height: 5.596rem !important;
+    width: auto !important;
+    max-width: min(100%, 5.237rem) !important;
+    max-height: none !important;
+    overflow: visible !important;
+}
+
+/*
+ * NCAA header: value column −40% (14fr → 8.4fr) narrows the grades table to 77.6%;
+ * reclaimed width goes to the visuals column via larger caps (÷ 0.776).
+ */
+.profile-top--ncaa-header .profile-grades-grid--ncaa-header {
+    width: 4.7045rem;
+}
+
+@media (min-width: 640px) {
+    .profile-top--ncaa-header .profile-grades-grid--ncaa-header {
+        width: 5.1895rem;
+    }
+}
+
+@media (min-width: 768px) {
+    .profile-top--ncaa-header .profile-grades-grid--ncaa-header {
+        width: 5.6745rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .profile-top--ncaa-header .profile-grades-grid--ncaa-header {
+        width: 6.1595rem;
+    }
+}
+
+@media (min-width: 1536px) {
+    .profile-top--ncaa-header .profile-grades-grid--ncaa-header {
+        width: 6.6445rem;
+    }
+}
+
+.profile-top--ncaa-header .profile-ncaa-header-visuals--triple .profile-ncaa-header-visual-image--plate,
+.profile-top--ncaa-header .profile-ncaa-header-visuals--triple .profile-ncaa-header-visual-image--zone {
+    max-height: min(100%, 12.05rem);
+    max-width: min(100%, 11.25rem);
+}
+
+.profile-top--ncaa-header .profile-ncaa-header-radar-svg,
+.profile-top--ncaa-header .profile-ncaa-header-visuals--triple .profile-ncaa-header-visual-slot--radar .profile-ncaa-header-radar-chart svg,
+.profile-top--ncaa-header .profile-ncaa-header-visuals:not(.profile-ncaa-header-visuals--triple) .profile-ncaa-header-visual-slot--radar .profile-ncaa-header-radar-chart svg {
+    height: 7.212rem !important;
+    width: auto !important;
+    max-width: min(100%, 6.733rem) !important;
+    overflow: visible !important;
+}
+
+.profile-top--ncaa-header .profile-ncaa-header-visuals:not(.profile-ncaa-header-visuals--triple) .profile-ncaa-header-visual-image {
+    max-width: min(100%, 11.25rem);
+}
+
+.profile-ncaa-header-visual-image {
+    display: block;
+    height: auto;
+    width: auto;
+    max-height: 100%;
+    max-width: 100%;
+    min-height: 0;
+    object-fit: contain;
+    object-position: center;
+}
+
+.profile-top--comfortable .profile-ncaa-header-visual-image {
+    max-height: min(100%, 9.35rem);
+    max-width: min(100%, 7.5rem);
 }
 
 /* School / position / target round + Role / Conf / Risk / Bat labels (Carbon is 400 only). */

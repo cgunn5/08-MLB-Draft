@@ -620,6 +620,10 @@ document.addEventListener('alpine:init', () => {
             !Array.isArray(config.readOnlyById)
                 ? config.readOnlyById
                 : {},
+        hardContactVisualsTabId:
+            typeof config.hardContactVisualsTabId === 'string' && config.hardContactVisualsTabId !== ''
+                ? config.hardContactVisualsTabId
+                : null,
         activeId: config.initialActiveId ?? null,
         page: 1,
         headers: [],
@@ -668,11 +672,47 @@ document.addEventListener('alpine:init', () => {
         renameBusy: false,
         renameError: '',
 
-        init() {
-            this.syncRenameDraft();
-            this.$watch('activeId', () => {
-                this.syncRenameDraft();
-            });
+        get isHardContactVisualsActive() {
+            return (
+                this.hardContactVisualsTabId !== null &&
+                this.activeId === this.hardContactVisualsTabId
+            );
+        },
+
+        get isDatasetTabActive() {
+            return this.activeId !== null && !this.isHardContactVisualsActive;
+        },
+
+        selectHardContactVisuals() {
+            const tabId = this.hardContactVisualsTabId;
+            if (!tabId) {
+                return;
+            }
+            const changed = this.activeId !== tabId;
+            this.activeId = tabId;
+            if (changed) {
+                this.loading = false;
+                this.loadError = '';
+                this.headers = [];
+                this.rows = [];
+                this.rowOrdinals = [];
+                this.columnOrder = [];
+                this.heatRules = {};
+                this.heatColumnStats = {};
+                this.heatPaQualifier = { min: null, column_index: null };
+                this.heatRowPaOk = null;
+                this.playerPickerQuery = '';
+                this.playerPickerOpen = false;
+                this.sortColumn = null;
+                this.sortDirection = 'asc';
+                this.thresholdDraft = [];
+                this.groupByColumnRaw = '';
+                this.groupValues = [];
+                this.activeGroupValue = null;
+                this.page = 1;
+                this.cancelEditPlayer();
+                this.newRowCells = [];
+            }
         },
 
         /** Saved Min PA for the active dataset (from last persisted browse settings). */
@@ -1345,6 +1385,13 @@ document.addEventListener('alpine:init', () => {
         },
 
         async init() {
+            this.syncRenameDraft();
+            this.$watch('activeId', () => {
+                this.syncRenameDraft();
+            });
+            if (this.isHardContactVisualsActive) {
+                return;
+            }
             this.syncHsProfileFeedDraft();
             this.applyBrowseSettingsFromSummary();
             if (!this.activeId) {
@@ -1416,6 +1463,11 @@ document.addEventListener('alpine:init', () => {
         },
 
         async selectUpload(id) {
+            if (this.hardContactVisualsTabId && id === this.hardContactVisualsTabId) {
+                this.selectHardContactVisuals();
+
+                return;
+            }
             const n = Number(id);
             const changed = this.activeId !== n;
             this.activeId = n;
@@ -1889,7 +1941,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         async loadPage(p) {
-            if (!this.activeId) {
+            if (!this.activeId || this.isHardContactVisualsActive) {
                 return;
             }
             this._tableLoadSeq = (this._tableLoadSeq ?? 0) + 1;
