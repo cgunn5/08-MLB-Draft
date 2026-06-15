@@ -290,7 +290,46 @@ class NcaaDataSourceSettingsTest extends TestCase
 
         $sheet = app(NcaaRangerTraitsSheetResolver::class)->resolve($player, $user, null);
         $gbPct = ($sheet['ncaa_adjust_pitch'][0]['rows'] ?? [])[0]['gb_pct'] ?? null;
-        $this->assertSame('41.5', $gbPct);
+        $this->assertSame('41.5%', $gbPct);
+    }
+
+    public function test_ncaa_resolver_adjustability_pitch_percent_columns_use_one_decimal(): void
+    {
+        $user = User::factory()->admin()->create();
+        $path = 'data-source-uploads/ncaa-adj-pctfmt-'.uniqid('', true).'.csv';
+        Storage::disk('local')->put($path, implode("\n", [
+            'PLAYER,Year,Pitch,P,BIPx,OPS,ISO,EV95,GB%,SwM%,IZSwM%,CH%',
+            '"DOE, JANE",2026,FB,620,96,.982,.292,107.1,34.90%,14.80%,11.60%,22.40%',
+        ]));
+
+        DataSourceUpload::query()->create([
+            'user_id' => $user->id,
+            'dataset_portal' => DataSourceUpload::PORTAL_NCAA,
+            'upload_kind' => DataSourceUpload::UPLOAD_KIND_FILE,
+            'name' => 'Pitch Types',
+            'original_filename' => 'pt.csv',
+            'disk' => 'local',
+            'path' => $path,
+            'header_row' => [
+                'PLAYER', 'Year', 'Pitch', 'P', 'BIPx', 'OPS', 'ISO', 'EV95', 'GB%', 'SwM%', 'IZSwM%', 'CH%',
+            ],
+            'row_count' => 1,
+            'ncaa_profile_feed_slots' => ['adjustability_pitch'],
+        ]);
+
+        $player = Player::factory()->create([
+            'player_pool' => 'ncaa',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+        ]);
+
+        $sheet = app(NcaaRangerTraitsSheetResolver::class)->resolve($player, $user, null);
+        $row = ($sheet['ncaa_adjust_pitch'][0]['rows'] ?? [])[0] ?? [];
+
+        $this->assertSame('34.9%', $row['gb_pct'] ?? null);
+        $this->assertSame('14.8%', $row['swm'] ?? null);
+        $this->assertSame('11.6%', $row['izswm'] ?? null);
+        $this->assertSame('22.4%', $row['ch_pct'] ?? null);
     }
 
     public function test_ncaa_resolver_adjustability_prefers_upload_named_pitch_types_when_merged_last(): void

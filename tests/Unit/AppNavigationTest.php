@@ -25,11 +25,19 @@ class AppNavigationTest extends TestCase
         $labels = array_column(AppNavigation::items($user, $request), 'label');
 
         $this->assertContains('BOARD', $labels);
+        $this->assertContains('PLAYERS', $labels);
         $this->assertContains('NCAA Profiles', $labels);
         $this->assertContains('HS Profiles', $labels);
         $this->assertNotContains('HOME', $labels);
-        $this->assertNotContains('PLAYERS', $labels);
         $this->assertNotContains('NCAA DATA', $labels);
+    }
+
+    public function test_items_mark_players_page_active_for_viewer(): void
+    {
+        $user = User::factory()->make(['is_admin' => false]);
+        $request = Request::create('/players', 'GET');
+
+        $this->assertSame('PLAYERS', AppNavigation::currentLabel($user, $request));
     }
 
     public function test_items_mark_ncaa_data_page_active(): void

@@ -25,6 +25,7 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/board', [WorkingBoardController::class, 'index'])->name('board.index');
+    Route::get('/players', [PlayerListController::class, 'index'])->name('players.index');
     Route::get('/ncaa', [NcaaDashboardController::class, 'index'])->name('ncaa.index');
     Route::get('/ncaa/players/{player}', [NcaaPlayerController::class, 'show'])->name('ncaa.players.show');
     Route::get('/ncaa/players/{player}/hard-contact/{type}', [NcaaHardContactVisualController::class, 'show'])
@@ -43,7 +44,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         })->name('dashboard');
 
         Route::patch('/board', [WorkingBoardController::class, 'update'])->name('board.update');
-        Route::get('/players', [PlayerListController::class, 'index'])->name('players.index');
         Route::post('/players', [PlayerListController::class, 'store'])->name('players.store');
         Route::patch('/players/{player}', [PlayerListController::class, 'update'])->name('players.update');
         Route::delete('/players/{player}', [PlayerListController::class, 'destroy'])->name('players.destroy');

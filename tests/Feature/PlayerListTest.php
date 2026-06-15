@@ -33,35 +33,36 @@ class PlayerListTest extends TestCase
         $this->assertDatabaseHas('players', ['id' => $player->id]);
     }
 
-    public function test_authenticated_user_can_patch_player_names_and_source_ranks(): void
+    public function test_authenticated_user_can_patch_player_names(): void
     {
         $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
             'first_name' => 'Bo',
             'last_name' => 'Jackson',
+            'player_pool' => 'ncaa',
+            'school' => 'Auburn',
             'source_ranks' => ['model' => 10, 'mlb' => 20, 'fangraphs' => 44],
         ]);
 
         $response = $this->actingAs($user)->patchJson(route('players.update', $player), [
             'first_name' => 'Ben',
             'last_name' => 'Jackson',
-            'source_mdl' => null,
-            'source_mlb' => 5,
-            'source_espn' => null,
-            'source_law' => null,
-            'source_fb' => null,
-            'source_ba' => 99,
+            'player_pool' => 'hs',
+            'school' => 'Texas',
         ]);
 
         $response->assertOk();
         $response->assertJsonPath('row.first_name', 'Ben');
-        $response->assertJsonPath('row.mdl', null);
-        $response->assertJsonPath('row.mlb', 5);
-        $response->assertJsonPath('row.fb', null);
-        $response->assertJsonPath('row.ba', 99);
+        $response->assertJsonPath('row.name', 'JACKSON, BEN');
+        $response->assertJsonPath('row.player_pool', 'HS');
+        $response->assertJsonPath('row.player_pool_key', 'hs');
+        $response->assertJsonPath('row.school', 'Texas');
 
         $player->refresh();
-        $this->assertSame(['mlb' => 5, 'ba' => 99], $player->source_ranks);
+        $this->assertSame('Ben', $player->first_name);
+        $this->assertSame('hs', $player->player_pool);
+        $this->assertSame('Texas', $player->school);
+        $this->assertSame(['model' => 10, 'mlb' => 20, 'fangraphs' => 44], $player->source_ranks);
     }
 
     public function test_guest_cannot_patch_player_list(): void
@@ -71,12 +72,8 @@ class PlayerListTest extends TestCase
         $this->patchJson(route('players.update', $player), [
             'first_name' => 'X',
             'last_name' => 'Y',
-            'source_mdl' => null,
-            'source_mlb' => null,
-            'source_espn' => null,
-            'source_law' => null,
-            'source_fb' => null,
-            'source_ba' => null,
+            'player_pool' => 'ncaa',
+            'school' => null,
         ])->assertUnauthorized();
     }
 
@@ -109,10 +106,70 @@ class PlayerListTest extends TestCase
         $response = $this->actingAs($user)->get(route('players.index'));
 
         $response->assertOk();
-        $response->assertSee('playerListTable', false);
+        $response->assertSee('player-list-config', false);
+        $response->assertSee('playerListTable()', false);
         $this->assertTrue(PlayerProfileCompleteness::isComplete(
             Player::query()->where('last_name', 'Brick')->firstOrFail(),
         ));
+    }
+
+    public function test_player_list_table_includes_grade_and_board_columns(): void
+    {
+        $user = User::factory()->admin()->create();
+        $player = Player::factory()->create([
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+            'player_pool' => 'ncaa',
+            'school' => 'Texas',
+            'grade_role' => 6,
+            'grade_perf' => 5.5,
+            'grade_approach' => 6,
+            'grade_adj' => 5,
+            'grade_contact' => 4.5,
+            'grade_swing' => 6,
+        ]);
+
+        \App\Models\WorkingBoardEntry::query()->create([
+            'user_id' => $user->id,
+            'board_type' => 'ncaa',
+            'entry_type' => 'player',
+            'player_id' => $player->id,
+            'round_key' => '1',
+            'sort_order' => 0,
+            'confidence' => '4',
+            'risk' => '2',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('players.index'));
+
+        $response->assertOk();
+        $response->assertSee('player-list-config', false);
+        $response->assertSee('playerListTable()', false);
+        $response->assertSee('DOE, JANE', false);
+        $response->assertSee('role_display', false);
+        $response->assertSee('conf_display', false);
+        $response->assertSee('risk_display', false);
+        $response->assertSee('M-H', false);
+        $response->assertSee('perf_display', false);
+        $response->assertSee('platoon_display', false);
+    }
+
+    public function test_player_list_table_shows_dash_for_hs_platoon(): void
+    {
+        $user = User::factory()->admin()->create();
+        Player::factory()->create([
+            'first_name' => 'Sam',
+            'last_name' => 'Smith',
+            'player_pool' => 'hs',
+            'grade_contact' => 5.5,
+        ]);
+
+        $response = $this->actingAs($user)->get(route('players.index'));
+
+        $response->assertOk();
+        $response->assertSee('adj_display', false);
+        $response->assertSee('platoon_display', false);
+        $response->assertSee('SMITH, SAM', false);
     }
 
     public function test_authenticated_user_can_add_player_with_source_ranks(): void

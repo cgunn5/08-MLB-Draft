@@ -19,7 +19,7 @@ final class AppNavigation
         $defs = [
             ['label' => 'HOME', 'href' => '/dashboard', 'patterns' => ['dashboard'], 'admin' => true],
             ['label' => 'BOARD', 'href' => '/board', 'patterns' => ['board*'], 'admin' => false],
-            ['label' => 'PLAYERS', 'href' => '/players', 'patterns' => ['players*'], 'admin' => true],
+            ['label' => 'PLAYERS', 'href' => '/players', 'patterns' => ['players*'], 'admin' => false],
             ['label' => 'NCAA Profiles', 'href' => '/ncaa', 'patterns' => ['ncaa', 'ncaa/*'], 'admin' => false],
             ['label' => 'HS Profiles', 'href' => '/hs', 'patterns' => ['hs', 'hs/*'], 'admin' => false],
             ['label' => 'Notes/Grades', 'href' => '/notes', 'patterns' => ['notes*'], 'admin' => true],

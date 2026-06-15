@@ -1550,3 +1550,54 @@ a.player-list-profile-open--complete:hover svg {
     color: #047857 !important;
     -webkit-text-fill-color: #047857 !important;
 }
+
+.player-list-table {
+    table-layout: fixed;
+    width: 100%;
+    min-width: 58rem;
+}
+
+.player-list-table col.player-list-col-player {
+    width: 11rem;
+}
+
+.player-list-table col.player-list-col-pool {
+    width: 3.25rem;
+}
+
+.player-list-table col.player-list-col-school {
+    width: 9rem;
+}
+
+.player-list-table col.player-list-grade-col,
+.player-list-table th.player-list-grade-col,
+.player-list-table td.player-list-grade-col {
+    width: 2.85rem !important;
+    min-width: 2.85rem !important;
+    max-width: 2.85rem !important;
+}
+
+.player-list-table col.player-list-col-action {
+    width: 3.25rem;
+}
+
+.player-list-table td.player-list-filled-cell {
+    padding: 0;
+    height: 1.75rem;
+    vertical-align: middle;
+    text-align: center;
+    line-height: 1.75rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.player-list-table td.player-list-col-player {
+    text-align: center;
+}
+
+.player-list-table .player-list-metric-emphasis {
+    font-weight: 700 !important;
+}
+
+.player-list-table thead th.player-list-sort-active {
+    background-color: rgb(91 110 140) !important;
+}

@@ -82,6 +82,18 @@ function readWorkingBoardConfig() {
     }
 }
 
+function readPlayerListConfig() {
+    const el = document.getElementById('player-list-config');
+    if (!el?.textContent) {
+        return {};
+    }
+    try {
+        return JSON.parse(el.textContent);
+    } catch {
+        return {};
+    }
+}
+
 /** Mirrors App\Support\NoteGradeInputAppearance::summaryCellStyle (profile grade grid). */
 const GRADE_STYLE = {
     NAVY: [12, 35, 64],
@@ -2172,39 +2184,115 @@ document.addEventListener('alpine:init', () => {
         };
     });
 
-    Alpine.data('playerListTable', (config) => ({
-        rows: config.rows,
+    Alpine.data('playerListTable', () => {
+        const config = readPlayerListConfig();
+
+        return {
+        rows: Array.isArray(config.rows) ? config.rows : [],
+        readOnly: Boolean(config.readOnly),
         deleteConfirm: config.deleteConfirm ?? '',
         playersPatchBase: String(config.playersPatchBase ?? '/players').replace(/\/$/, ''),
+        gradeMin: Number(config.gradeMin ?? 2),
+        gradeMax: Number(config.gradeMax ?? 7),
+        boardScaleMin: Number(config.boardScaleMin ?? 1),
+        boardScaleMax: Number(config.boardScaleMax ?? 5),
         filterQuery: '',
-        sortKey: 'rk',
+        poolFilter: 'all',
+        advancedOpen: false,
+        thresholdKeys: ['role', 'conf', 'risk', 'bat', 'perf', 'k_zone', 'adj', 'platoon', 'swing'],
+        thresholdFilters: {
+            role: '',
+            conf: '',
+            risk: '',
+            bat: '',
+            perf: '',
+            k_zone: '',
+            adj: '',
+            platoon: '',
+            swing: '',
+        },
+        thresholdLabels: {
+            role: 'Role',
+            conf: 'Conf',
+            risk: 'Risk',
+            bat: 'Bat',
+            perf: 'Perf',
+            k_zone: 'K-Zone',
+            adj: 'Adj',
+            platoon: 'L/R',
+            swing: 'Swing',
+        },
+        sortOptions: [
+            { key: 'player', label: 'Player' },
+            { key: 'pool', label: 'Pool' },
+            { key: 'school', label: 'School' },
+            { key: 'role', label: 'Role' },
+            { key: 'conf', label: 'Conf' },
+            { key: 'risk', label: 'Risk' },
+            { key: 'bat', label: 'Bat' },
+            { key: 'perf', label: 'Perf' },
+            { key: 'k_zone', label: 'K-Zone' },
+            { key: 'adj', label: 'Adj' },
+            { key: 'platoon', label: 'L/R' },
+            { key: 'swing', label: 'Swing' },
+        ],
+        sortKey: 'player',
         sortDir: 'asc',
         editingId: null,
         editDraft: {},
         editFieldErrors: {},
         saving: false,
 
-        nullIfEmptyRank(v) {
-            if (v === null || v === undefined || v === '') {
-                return null;
+        thresholdBounds(key) {
+            if (key === 'conf' || key === 'risk') {
+                return { min: this.boardScaleMin, max: this.boardScaleMax, step: 1 };
             }
-            const n = Number(v);
 
-            return Number.isNaN(n) ? null : n;
+            return { min: this.gradeMin, max: this.gradeMax, step: 0.5 };
+        },
+
+        hasActiveThresholds() {
+            return this.poolFilter !== 'all'
+                || this.thresholdKeys.some((key) => String(this.thresholdFilters[key] ?? '').trim() !== '');
+        },
+
+        clearAdvancedFilters() {
+            this.poolFilter = 'all';
+            this.thresholdKeys.forEach((key) => {
+                this.thresholdFilters[key] = '';
+            });
+        },
+
+        passesThresholds(row) {
+            for (const key of this.thresholdKeys) {
+                const raw = String(this.thresholdFilters[key] ?? '').trim();
+                if (raw === '') {
+                    continue;
+                }
+                const min = Number(raw);
+                if (Number.isNaN(min)) {
+                    continue;
+                }
+                const val = row[key];
+                if (val === null || val === undefined || Number(val) < min) {
+                    return false;
+                }
+            }
+
+            return true;
         },
 
         startEdit(row) {
+            if (this.readOnly) {
+                return;
+            }
             this.editFieldErrors = {};
             this.editingId = row.id;
             this.editDraft = {
                 first_name: row.first_name,
                 last_name: row.last_name,
-                mdl: row.mdl ?? '',
-                mlb: row.mlb ?? '',
-                espn: row.espn ?? '',
-                law: row.law ?? '',
-                fb: row.fb ?? '',
-                ba: row.ba ?? '',
+                player_pool: row.player_pool_key ?? row.player_pool?.toLowerCase?.() ?? 'ncaa',
+                school: row.school ?? '',
             };
         },
 
@@ -2221,7 +2309,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         async saveEdit(rowId) {
-            if (this.saving) {
+            if (this.readOnly || this.saving) {
                 return;
             }
             this.saving = true;
@@ -2230,12 +2318,8 @@ document.addEventListener('alpine:init', () => {
             const payload = {
                 first_name: d.first_name,
                 last_name: d.last_name,
-                source_mdl: this.nullIfEmptyRank(d.mdl),
-                source_mlb: this.nullIfEmptyRank(d.mlb),
-                source_espn: this.nullIfEmptyRank(d.espn),
-                source_law: this.nullIfEmptyRank(d.law),
-                source_fb: this.nullIfEmptyRank(d.fb),
-                source_ba: this.nullIfEmptyRank(d.ba),
+                player_pool: d.player_pool,
+                school: d.school === '' ? null : d.school,
             };
             try {
                 const { data } = await window.axios.patch(`${this.playersPatchBase}/${rowId}`, payload, {
@@ -2259,18 +2343,18 @@ document.addEventListener('alpine:init', () => {
 
         sortField(key) {
             const map = {
-                rk: 'aggregate_rank',
                 player: 'name',
                 pool: 'player_pool',
                 school: 'school',
-                pos: 'position',
-                agg: 'aggregate_score',
-                mdl: 'mdl',
-                mlb: 'mlb',
-                espn: 'espn',
-                law: 'law',
-                fb: 'fb',
-                ba: 'ba',
+                role: 'role',
+                conf: 'conf',
+                risk: 'risk',
+                bat: 'bat',
+                perf: 'perf',
+                k_zone: 'k_zone',
+                adj: 'adj',
+                platoon: 'platoon',
+                swing: 'swing',
                 profile: 'profile_url',
             };
 
@@ -2278,7 +2362,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         isNumericSortKey(key) {
-            return ['rk', 'agg', 'mdl', 'mlb', 'espn', 'law', 'fb', 'ba'].includes(key);
+            return ['role', 'conf', 'risk', 'bat', 'perf', 'k_zone', 'adj', 'platoon', 'swing'].includes(key);
         },
 
         compareNum(a, b, asc) {
@@ -2318,19 +2402,23 @@ document.addEventListener('alpine:init', () => {
 
         get filteredRows() {
             const q = this.filterQuery.trim().toLowerCase();
-            if (q === '') {
-                return [...this.rows];
-            }
 
             return this.rows.filter((r) => {
+                if (this.poolFilter !== 'all' && r.player_pool.toLowerCase() !== this.poolFilter) {
+                    return false;
+                }
+                if (!this.passesThresholds(r)) {
+                    return false;
+                }
+                if (q === '') {
+                    return true;
+                }
                 const school = (r.school ?? '').toLowerCase();
-                const pos = (r.position ?? '').toLowerCase();
 
                 return (
                     r.name.toLowerCase().includes(q) ||
                     school.includes(q) ||
-                    r.player_pool.toLowerCase().includes(q) ||
-                    pos.includes(q)
+                    r.player_pool.toLowerCase().includes(q)
                 );
             });
         },
@@ -2357,80 +2445,6 @@ document.addEventListener('alpine:init', () => {
             return rows;
         },
 
-        get heatStats() {
-            const fields = [
-                ['rk', 'aggregate_rank'],
-                ['agg', 'aggregate_score'],
-                ['mdl', 'mdl'],
-                ['mlb', 'mlb'],
-                ['espn', 'espn'],
-                ['law', 'law'],
-                ['fb', 'fb'],
-                ['ba', 'ba'],
-            ];
-            const out = {};
-            // Use the full loaded list for min/max so colors stay meaningful when the table is filtered.
-            for (const [heatKey, rowKey] of fields) {
-                const vals = this.rows
-                    .map((r) => r[rowKey])
-                    .filter((v) => v !== null && v !== undefined && !Number.isNaN(Number(v)));
-                if (vals.length === 0) {
-                    out[heatKey] = { empty: true, min: 0, max: 0 };
-                } else {
-                    const nums = vals.map((v) => Number(v));
-                    out[heatKey] = {
-                        empty: false,
-                        min: Math.min(...nums),
-                        max: Math.max(...nums),
-                    };
-                }
-            }
-
-            return out;
-        },
-
-        cellHeatStyle(heatKey, value) {
-            if (value === null || value === undefined || Number.isNaN(Number(value))) {
-                return null;
-            }
-            const s = this.heatStats[heatKey];
-            if (!s || s.empty || s.min === s.max) {
-                return null;
-            }
-            const n = Number(value);
-            const t = (n - s.min) / (s.max - s.min);
-            // Very bright red (best / low) → white (mid) → very dark blue (worst / high); solid fills.
-            const redR = 255;
-            const redG = 0;
-            const redB = 0;
-            const blueR = 90;
-            const blueG = 125;
-            const blueB = 188;
-            let r;
-            let g;
-            let bch;
-            if (t <= 0.5) {
-                const linearU = t / 0.5;
-                const u = linearU ** 1.12;
-                r = Math.round(redR + (255 - redR) * u);
-                g = Math.round(redG + (255 - redG) * u);
-                bch = Math.round(redB + (255 - redB) * u);
-            } else {
-                const linearU = (t - 0.5) / 0.5;
-                const u = 1 - (1 - linearU) ** 2;
-                r = Math.round(255 + (blueR - 255) * u);
-                g = Math.round(255 + (blueG - 255) * u);
-                bch = Math.round(255 + (blueB - 255) * u);
-            }
-
-            const whiteText = t <= 0.2 || t >= 0.8;
-
-            return {
-                backgroundColor: `rgb(${r},${g},${bch})`,
-                color: whiteText ? '#ffffff' : '#111827',
-            };
-        },
-
         sortBy(key) {
             if (this.sortKey === key) {
                 this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
@@ -2440,28 +2454,34 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        sortIndicator(key) {
+            if (this.sortKey !== key) {
+                return '';
+            }
+
+            return this.sortDir === 'asc' ? '▲' : '▼';
+        },
+
         sortHighlightHeader(key) {
-            return this.sortKey === key ? 'bg-yellow-100/50' : '';
+            return this.sortKey === key ? 'player-list-sort-active' : '';
         },
 
         sortHighlightBody(key) {
             return this.sortKey === key ? 'bg-yellow-50' : '';
         },
 
-        formatRank(v) {
-            return v !== null && v !== undefined ? String(v) : '—';
-        },
-
-        formatAgg(v) {
-            return v !== null && v !== undefined ? Number(v).toFixed(1) : '—';
-        },
-
         confirmDelete(event) {
+            if (this.readOnly) {
+                event.preventDefault();
+
+                return;
+            }
             if (this.deleteConfirm !== '' && !window.confirm(this.deleteConfirm)) {
                 event.preventDefault();
             }
         },
-    }));
+        };
+    });
 
     Alpine.data('ncaaPlayerCombobox', (config) => ({
         players: config.players,

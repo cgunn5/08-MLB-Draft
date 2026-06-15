@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests;
 
-use App\Support\PlayerListSourceRanksInput;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdatePlayerListEntryRequest extends FormRequest
 {
@@ -20,6 +20,8 @@ class UpdatePlayerListEntryRequest extends FormRequest
         return [
             'first_name' => ['required', 'string', 'max:128'],
             'last_name' => ['required', 'string', 'max:128'],
-        ] + PlayerListSourceRanksInput::validationRules();
+            'player_pool' => ['required', 'string', Rule::in(['ncaa', 'hs'])],
+            'school' => ['nullable', 'string', 'max:255'],
+        ];
     }
 }

@@ -456,7 +456,7 @@ class NcaaRangerTraitsSheetResolver
                                 null,
                                 $pitchQualHeat,
                             );
-                            $rows[] = $one;
+                            $rows[] = $this->formatNcaaAdjustPitchRowForDisplay($one);
                         }
                     }
 
@@ -1125,6 +1125,22 @@ class NcaaRangerTraitsSheetResolver
         }
         if (array_key_exists('bip110', $out)) {
             $out['bip110'] = HsRangerTraitsDisplay::formatIntegerForDisplay($out['bip110']);
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<string, string>  $row  Raw slug row from CSV
+     * @return array<string, string>
+     */
+    private function formatNcaaAdjustPitchRowForDisplay(array $row): array
+    {
+        $out = $row;
+        foreach (['gb_pct', 'swm', 'izswm', 'ch_pct'] as $k) {
+            if (array_key_exists($k, $out)) {
+                $out[$k] = HsRangerTraitsDisplay::formatPercentRateForDisplay($out[$k]);
+            }
         }
 
         return $out;
