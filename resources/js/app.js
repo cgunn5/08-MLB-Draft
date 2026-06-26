@@ -291,12 +291,70 @@ function isTierDivider(item) {
     return item?.entry_type === 'tier_divider';
 }
 
+function isNonTargetDivider(item) {
+    return item?.entry_type === 'non_target_divider';
+}
+
+function isRoundDivider(item) {
+    return isTierDivider(item) || isNonTargetDivider(item);
+}
+
+function nonTargetDividerIndex(list) {
+    if (!Array.isArray(list)) {
+        return -1;
+    }
+    for (let i = 0; i < list.length; i++) {
+        if (isNonTargetDivider(list[i])) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+function dedupeNonTargetDividers(list) {
+    if (!Array.isArray(list)) {
+        return [];
+    }
+    let seen = false;
+
+    return list.filter((item) => {
+        if (!isNonTargetDivider(item)) {
+            return true;
+        }
+        if (seen) {
+            return false;
+        }
+        seen = true;
+
+        return true;
+    });
+}
+
+function ensureNonTargetDividerOnList(list) {
+    const normalized = dedupeNonTargetDividers(Array.isArray(list) ? list : []);
+    if (nonTargetDividerIndex(normalized) === -1) {
+        return [...normalized, { entry_type: 'non_target_divider' }];
+    }
+
+    return normalized;
+}
+
+function insertIndexBeforeNonTargetDivider(list) {
+    const dividerIdx = nonTargetDividerIndex(list);
+    if (dividerIdx === -1) {
+        return list.length;
+    }
+
+    return dividerIdx;
+}
+
 function collectBatGradesOnBoard(boardRounds, boardType, roundKeys) {
     const values = [];
     for (const rk of roundKeys) {
         const cards = boardRounds?.[boardType]?.[rk] ?? [];
         for (const card of cards) {
-            if (isTierDivider(card)) {
+            if (isRoundDivider(card)) {
                 continue;
             }
             const bat = batGradeForCard(card);
@@ -314,7 +372,7 @@ function collectGradeFieldOnBoard(boardRounds, boardType, roundKeys, field) {
     for (const rk of roundKeys) {
         const cards = boardRounds?.[boardType]?.[rk] ?? [];
         for (const card of cards) {
-            if (isTierDivider(card)) {
+            if (isRoundDivider(card)) {
                 continue;
             }
             const n = numericGrade(card?.[field]);
@@ -2847,6 +2905,8 @@ document.addEventListener('alpine:init', () => {
         _savingNow: false,
         _boardScaleT: null,
         _boardScaleObserver: null,
+        _readyToSave: false,
+        _boardDirty: false,
 
         init() {
             const config = readWorkingBoardConfig();
@@ -2875,26 +2935,29 @@ document.addEventListener('alpine:init', () => {
             this.boardRounds = {};
             this.boardPools = {};
 
-            for (const boardType of this.boardTypes) {
-                const boardCfg = boardsIn[boardType] ?? {};
-                const init =
-                    boardCfg.initialRounds && typeof boardCfg.initialRounds === 'object'
-                        ? boardCfg.initialRounds
-                        : {};
-                this.boardRounds[boardType] = JSON.parse(JSON.stringify(init));
-                this.boardPools[boardType] = Array.isArray(boardCfg.playerPool) ? boardCfg.playerPool : [];
+            const masterBoard = boardsIn.master ?? {};
+            this.boardPools.master = Array.isArray(masterBoard.playerPool) ? masterBoard.playerPool : [];
+            const masterInit =
+                masterBoard.initialRounds && typeof masterBoard.initialRounds === 'object'
+                    ? masterBoard.initialRounds
+                    : {};
+            this.boardRounds.master = JSON.parse(JSON.stringify(masterInit));
 
-                for (const rk of this.roundKeys) {
-                    if (!Array.isArray(this.boardRounds[boardType][rk])) {
-                        this.boardRounds[boardType][rk] = [];
-                    }
-                    this.boardRounds[boardType][rk] = this.boardRounds[boardType][rk].filter(
-                        (item) => isTierDivider(item) || item?.player_id,
-                    );
+            for (const rk of this.roundKeys) {
+                if (!Array.isArray(this.boardRounds.master[rk])) {
+                    this.boardRounds.master[rk] = [];
                 }
+                this.boardRounds.master[rk] = this.boardRounds.master[rk].filter(
+                    (item) => isRoundDivider(item) || item?.player_id,
+                );
+                this.boardRounds.master[rk] = ensureNonTargetDividerOnList(this.boardRounds.master[rk]);
             }
 
-            // Best-effort persistence when navigating away quickly.
+            this.boardRounds = { ...this.boardRounds };
+            this._readyToSave = true;
+            this._boardDirty = false;
+
+            // Best-effort persistence when navigating away quickly (only after user edits).
             document.addEventListener('visibilitychange', () => {
                 if (document.visibilityState === 'hidden') {
                     this.saveNow({ keepalive: true, silentSuccess: true });
@@ -2982,11 +3045,31 @@ document.addEventListener('alpine:init', () => {
             return this.boardRounds?.[boardType]?.[rk] ?? [];
         },
 
+        roundPlayerCount(boardType, rk) {
+            return this.roundCards(boardType, rk).filter((item) => !isRoundDivider(item)).length;
+        },
+
+        isBelowNonTargetDivider(boardType, rk, idx) {
+            const dividerIdx = nonTargetDividerIndex(this.roundCards(boardType, rk));
+            return dividerIdx !== -1 && idx > dividerIdx;
+        },
+
         isTierDivider(item) {
             return isTierDivider(item);
         },
 
+        isNonTargetDivider(item) {
+            return isNonTargetDivider(item);
+        },
+
+        isRoundDivider(item) {
+            return isRoundDivider(item);
+        },
+
         roundRowKey(boardType, rk, item, idx) {
+            if (isNonTargetDivider(item)) {
+                return `non-target-${boardType}-${rk}-${idx}`;
+            }
             if (isTierDivider(item)) {
                 return `tier-${boardType}-${rk}-${idx}`;
             }
@@ -3001,10 +3084,10 @@ document.addEventListener('alpine:init', () => {
             if (!Array.isArray(this.boardRounds[boardType]?.[rk])) {
                 this.boardRounds[boardType][rk] = [];
             }
-            this.boardRounds[boardType][rk] = [
-                ...this.boardRounds[boardType][rk],
-                { entry_type: 'tier_divider' },
-            ];
+            const list = [...this.boardRounds[boardType][rk]];
+            const insertAt = insertIndexBeforeNonTargetDivider(list);
+            list.splice(insertAt, 0, { entry_type: 'tier_divider' });
+            this.boardRounds[boardType][rk] = ensureNonTargetDividerOnList(list);
             this.boardRounds = { ...this.boardRounds };
             this.scheduleSave(50);
         },
@@ -3015,23 +3098,28 @@ document.addEventListener('alpine:init', () => {
 
         resolveActiveBoard() {
             const config = readWorkingBoardConfig();
+            const visible = Array.isArray(config.visibleBoardTypes)
+                ? config.visibleBoardTypes
+                : Array.isArray(config.boardTypes)
+                  ? config.boardTypes
+                  : [];
             const preferred =
                 typeof config.defaultActiveBoard === 'string' && config.defaultActiveBoard !== ''
                     ? config.defaultActiveBoard
                     : 'master';
             try {
                 const saved = localStorage.getItem('workingBoardActive');
-                if (saved && this.boardTypes.includes(saved)) {
+                if (saved && visible.includes(saved)) {
                     return saved;
                 }
             } catch (_) {
                 // localStorage may be unavailable
             }
-            if (this.boardTypes.includes(preferred)) {
+            if (visible.includes(preferred)) {
                 return preferred;
             }
 
-            return this.boardTypes[0] ?? preferred;
+            return visible[0] ?? preferred;
         },
 
         setActiveBoard(boardType) {
@@ -3137,7 +3225,10 @@ document.addEventListener('alpine:init', () => {
                 risk: '',
             };
             const rounds = { ...(this.boardRounds[boardType] ?? {}) };
-            rounds[rk] = [...(rounds[rk] ?? []), card];
+            const list = [...(rounds[rk] ?? [])];
+            const insertAt = insertIndexBeforeNonTargetDivider(list);
+            list.splice(insertAt, 0, card);
+            rounds[rk] = ensureNonTargetDividerOnList(list);
             this.boardRounds[boardType] = rounds;
             this.boardRounds = { ...this.boardRounds };
             if (!silent) {
@@ -3283,24 +3374,21 @@ document.addEventListener('alpine:init', () => {
             if (!template) {
                 return;
             }
-            const card = {
-                ...template,
-                confidence: '',
-                risk: '',
-            };
-            if (!Array.isArray(this.boardRounds[boardType][rk])) {
-                this.boardRounds[boardType][rk] = [];
+            const added = this.addPlayerToRoundByTemplate(boardType, rk, template);
+            if (added) {
+                this.scheduleSave();
             }
-            // Reassign array to ensure Alpine notices nested updates reliably.
-            this.boardRounds[boardType][rk] = [...this.boardRounds[boardType][rk], card];
-            this.scheduleSave();
         },
 
         removeFromRound(boardType, rk, idx) {
             if (!Array.isArray(this.boardRounds[boardType]?.[rk])) {
                 return;
             }
+            if (isNonTargetDivider(this.boardRounds[boardType][rk][idx])) {
+                return;
+            }
             this.boardRounds[boardType][rk].splice(idx, 1);
+            this.boardRounds[boardType][rk] = ensureNonTargetDividerOnList(this.boardRounds[boardType][rk]);
             this.scheduleSave();
         },
 
@@ -3364,11 +3452,16 @@ document.addEventListener('alpine:init', () => {
             if (fromRk === targetRk && insertAt > fromIdx) {
                 insertAt -= 1;
             }
+            this.boardRounds[boardType][fromRk] = ensureNonTargetDividerOnList(list);
             if (!Array.isArray(this.boardRounds[boardType][targetRk])) {
                 this.boardRounds[boardType][targetRk] = [];
             }
             insertAt = Math.max(0, Math.min(insertAt, this.boardRounds[boardType][targetRk].length));
             this.boardRounds[boardType][targetRk].splice(insertAt, 0, card);
+            this.boardRounds[boardType][targetRk] = ensureNonTargetDividerOnList(
+                this.boardRounds[boardType][targetRk],
+            );
+            this.boardRounds = { ...this.boardRounds };
             this.scheduleSave();
         },
 
@@ -3378,6 +3471,9 @@ document.addEventListener('alpine:init', () => {
                 const rounds = {};
                 for (const rk of this.roundKeys) {
                     rounds[rk] = (this.boardRounds[boardType]?.[rk] ?? []).map((c) => {
+                        if (isNonTargetDivider(c)) {
+                            return { entry_type: 'non_target_divider' };
+                        }
                         if (isTierDivider(c)) {
                             return { entry_type: 'tier_divider' };
                         }
@@ -3400,6 +3496,7 @@ document.addEventListener('alpine:init', () => {
             if (this.readOnly) {
                 return;
             }
+            this._boardDirty = true;
             this.saveError = '';
             if (this._saveT) {
                 clearTimeout(this._saveT);
@@ -3410,7 +3507,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         async saveNow(opts = {}) {
-            if (!this.updateUrl) {
+            if (!this.updateUrl || !this._readyToSave) {
+                return;
+            }
+            if (!this._boardDirty && !opts.force) {
                 return;
             }
             if (this._savingNow) {
@@ -3450,6 +3550,7 @@ document.addEventListener('alpine:init', () => {
                 if (!opts.silentSuccess) {
                     this.setStatus('Saved.', false);
                 }
+                this._boardDirty = false;
             } catch (e) {
                 const msg =
                     e?.response?.data?.message ??

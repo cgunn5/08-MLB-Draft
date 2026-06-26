@@ -405,7 +405,6 @@ final class HsRangerTraitsSheetResolver
                         if ($found !== null) {
                             $one = $this->extractSlugRow($found, $headers, $defSlugs, $slugToIdx, $yearCol, true);
                             $one['pitch'] = $pitchLabel;
-                            $pitchRows[] = $one;
                             $pitchQualHeat = true;
                             if ($volumeMinPitch !== null && $volumeIdxPitch !== null) {
                                 $pitchQualHeat = $this->csvNumericCellMeetsMinimum($volumeMinPitch, $found, $volumeIdxPitch);
@@ -419,6 +418,9 @@ final class HsRangerTraitsSheetResolver
                                 null,
                                 $pitchQualHeat,
                             );
+                            $pitchRows[] = $blockKey === 'adjust_pitch'
+                                ? $this->formatAdjustPitchRowForDisplay($one)
+                                : $one;
                         } else {
                             $pitchRows[] = [
                                 'pitch' => $pitchLabel,
@@ -1017,6 +1019,22 @@ final class HsRangerTraitsSheetResolver
             }
         }
         foreach (['bb_pct', 'k_pct'] as $k) {
+            if (array_key_exists($k, $out)) {
+                $out[$k] = HsRangerTraitsDisplay::formatPercentRateForDisplay($out[$k]);
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<string, string>  $row  Raw slug row from CSV
+     * @return array<string, string>
+     */
+    private function formatAdjustPitchRowForDisplay(array $row): array
+    {
+        $out = $row;
+        foreach (['gb_pct', 'swm', 'izswm', 'ch_pct'] as $k) {
             if (array_key_exists($k, $out)) {
                 $out[$k] = HsRangerTraitsDisplay::formatPercentRateForDisplay($out[$k]);
             }

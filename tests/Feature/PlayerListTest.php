@@ -132,7 +132,7 @@ class PlayerListTest extends TestCase
 
         \App\Models\WorkingBoardEntry::query()->create([
             'user_id' => $user->id,
-            'board_type' => 'ncaa',
+            'board_type' => 'master',
             'entry_type' => 'player',
             'player_id' => $player->id,
             'round_key' => '1',

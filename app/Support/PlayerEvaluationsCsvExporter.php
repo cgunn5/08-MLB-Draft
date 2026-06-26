@@ -40,39 +40,24 @@ final class PlayerEvaluationsCsvExporter
      */
     public function rowsForUser(User $user): array
     {
-        $entriesByBoardPlayer = $this->indexBoardEntries($user);
+        $entriesByPlayerId = WorkingBoardEntry::masterEntriesIndexedByPlayerId($user);
 
         return Player::query()
             ->orderedForPlayerList()
             ->get()
-            ->map(fn (Player $player): array => $this->rowForPlayer($player, $entriesByBoardPlayer))
+            ->map(fn (Player $player): array => $this->rowForPlayer($player, $entriesByPlayerId))
             ->all();
     }
 
     /**
-     * @return array<string, array<int, WorkingBoardEntry>>
-     */
-    private function indexBoardEntries(User $user): array
-    {
-        /** @var array<string, array<int, WorkingBoardEntry>> $indexed */
-        $indexed = [];
-
-        foreach (WorkingBoardEntry::query()->where('user_id', $user->id)->get() as $entry) {
-            $indexed[$entry->board_type][$entry->player_id] = $entry;
-        }
-
-        return $indexed;
-    }
-
-    /**
-     * @param  array<string, array<int, WorkingBoardEntry>>  $entriesByBoardPlayer
+     * @param  array<int, WorkingBoardEntry>  $entriesByPlayerId
      * @return list<string>
      */
-    private function rowForPlayer(Player $player, array $entriesByBoardPlayer): array
+    private function rowForPlayer(Player $player, array $entriesByPlayerId): array
     {
         $pool = PlayerNoteFieldKeys::canonicalPoolForNotes((string) $player->player_pool);
         $isHs = $pool === 'hs';
-        $boardEntry = $this->boardEntryForPlayer($player, $entriesByBoardPlayer);
+        $boardEntry = WorkingBoardEntry::masterEntryForPlayer($player, $entriesByPlayerId);
 
         return [
             $this->playerLabel($player),
@@ -96,28 +81,6 @@ final class PlayerEvaluationsCsvExporter
             $isHs ? '' : $this->textCell($player->note_left_right),
             $this->textCell($player->note_swing),
         ];
-    }
-
-    /**
-     * @param  array<string, array<int, WorkingBoardEntry>>  $entriesByBoardPlayer
-     */
-    private function boardEntryForPlayer(Player $player, array $entriesByBoardPlayer): ?WorkingBoardEntry
-    {
-        $pool = PlayerNoteFieldKeys::canonicalPoolForNotes((string) $player->player_pool);
-        $preferredBoard = match ($pool) {
-            'hs' => WorkingBoardEntry::BOARD_HS,
-            'ncaa' => WorkingBoardEntry::BOARD_NCAA,
-            default => WorkingBoardEntry::BOARD_MASTER,
-        };
-
-        foreach ([$preferredBoard, WorkingBoardEntry::BOARD_MASTER] as $boardType) {
-            $entry = $entriesByBoardPlayer[$boardType][$player->id] ?? null;
-            if ($entry !== null) {
-                return $entry;
-            }
-        }
-
-        return null;
     }
 
     private function playerLabel(Player $player): string

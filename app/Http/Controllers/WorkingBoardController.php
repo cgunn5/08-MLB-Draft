@@ -63,23 +63,15 @@ class WorkingBoardController extends Controller
         }
 
         return view('board.index', [
-            'boardRoundKeys' => WorkingBoardEntry::ROUND_KEYS,
+            'boardRoundKeys' => WorkingBoardEntry::BOARD_ROUND_KEYS,
             'boardRoundLabels' => WorkingBoardEntry::roundColumnLabels(),
             'boardConfidenceOptions' => WorkingBoardEntry::CONFIDENCE_OPTIONS,
             'boardRiskOptions' => WorkingBoardEntry::RISK_OPTIONS,
             'boardRiskLabels' => WorkingBoardEntry::RISK_DISPLAY_LABELS,
             'boardPanels' => $boardPanels,
-            'boardPanelOrder' => WorkingBoardEntry::BOARD_DISPLAY_ORDER,
-            'boardToggleOrder' => [
-                WorkingBoardEntry::BOARD_MASTER,
-                WorkingBoardEntry::BOARD_HS,
-                WorkingBoardEntry::BOARD_NCAA,
-            ],
-            'boardToggleLabels' => [
-                WorkingBoardEntry::BOARD_MASTER => __('Master'),
-                WorkingBoardEntry::BOARD_HS => __('HS'),
-                WorkingBoardEntry::BOARD_NCAA => __('NCAA'),
-            ],
+            'boardPanelOrder' => [WorkingBoardEntry::BOARD_MASTER],
+            'boardTypes' => [WorkingBoardEntry::BOARD_MASTER],
+            'boardVisibleTypes' => [WorkingBoardEntry::BOARD_MASTER],
             'boardAlpineBoards' => $boardAlpineBoards,
             'boardBatGradeBounds' => BatGradeAppearance::appWideBounds(),
             'boardReadOnly' => ! auth()->user()->canManageApplicationData(),
@@ -94,15 +86,18 @@ class WorkingBoardController extends Controller
         $boardsInput = $request->validated('boards');
 
         DB::transaction(function () use ($user, $boardsInput): void {
-            WorkingBoardEntry::query()->where('user_id', $user->id)->delete();
+            WorkingBoardEntry::query()
+                ->where('user_id', $user->id)
+                ->where('board_type', WorkingBoardEntry::BOARD_MASTER)
+                ->delete();
 
-            foreach (WorkingBoardEntry::BOARD_TYPES as $boardType) {
-                $roundsInput = $boardsInput[$boardType]['rounds'] ?? [];
-                if (! is_array($roundsInput)) {
-                    continue;
-                }
+            $boardType = WorkingBoardEntry::BOARD_MASTER;
+            $roundsInput = $boardsInput[$boardType]['rounds'] ?? [];
+            if (! is_array($roundsInput)) {
+                return;
+            }
 
-                foreach (WorkingBoardEntry::ROUND_KEYS as $rk) {
+            foreach (WorkingBoardEntry::BOARD_ROUND_KEYS as $rk) {
                     $list = $roundsInput[$rk] ?? [];
                     if (! is_array($list)) {
                         continue;
@@ -113,11 +108,14 @@ class WorkingBoardController extends Controller
                             continue;
                         }
                         $entryType = (string) ($row['entry_type'] ?? WorkingBoardEntry::ENTRY_TYPE_PLAYER);
-                        if ($entryType === WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER) {
+                        if (in_array($entryType, [
+                            WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER,
+                            WorkingBoardEntry::ENTRY_TYPE_NON_TARGET_DIVIDER,
+                        ], true)) {
                             WorkingBoardEntry::query()->create([
                                 'user_id' => $user->id,
                                 'board_type' => $boardType,
-                                'entry_type' => WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER,
+                                'entry_type' => $entryType,
                                 'player_id' => null,
                                 'round_key' => $rk,
                                 'sort_order' => $order,
@@ -146,7 +144,6 @@ class WorkingBoardController extends Controller
                         $order++;
                     }
                 }
-            }
         });
 
         if ($request->wantsJson()) {
@@ -190,6 +187,14 @@ class WorkingBoardController extends Controller
                 continue;
             }
 
+            if ($entry->entry_type === WorkingBoardEntry::ENTRY_TYPE_NON_TARGET_DIVIDER) {
+                $rounds[$rk][] = [
+                    'entry_type' => WorkingBoardEntry::ENTRY_TYPE_NON_TARGET_DIVIDER,
+                ];
+
+                continue;
+            }
+
             $player = $entry->player;
             if ($player === null) {
                 continue;
@@ -204,7 +209,22 @@ class WorkingBoardController extends Controller
             );
         }
 
-        return $rounds;
+        $coffin = $rounds[WorkingBoardEntry::ROUND_COFFIN] ?? [];
+        if ($coffin !== []) {
+            $postTen = $rounds['post-10'] ?? [];
+            $rounds['post-10'] = array_merge(
+                $postTen,
+                [['entry_type' => WorkingBoardEntry::ENTRY_TYPE_NON_TARGET_DIVIDER]],
+                $coffin,
+            );
+        }
+
+        $display = [];
+        foreach (WorkingBoardEntry::BOARD_ROUND_KEYS as $rk) {
+            $display[$rk] = $rounds[$rk] ?? [];
+        }
+
+        return $display;
     }
 
     private function playerAllowedOnBoard(Player $player, string $boardType): bool

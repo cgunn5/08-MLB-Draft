@@ -233,6 +233,10 @@ class HsRangerTraitsSheetTest extends TestCase
         $this->assertSame('FB', $adj[0]['pitch'] ?? null);
         $this->assertSame('1200', $adj[0]['p'] ?? null);
         $this->assertSame('.310', $adj[0]['bipx'] ?? null);
+        $this->assertSame('38.0%', $adj[0]['gb_pct'] ?? null);
+        $this->assertSame('11.0%', $adj[0]['swm'] ?? null);
+        $this->assertSame('7.0%', $adj[0]['izswm'] ?? null);
+        $this->assertSame('22.0%', $adj[0]['ch_pct'] ?? null);
         $this->assertSame('BB', $adj[1]['pitch'] ?? null);
         $this->assertSame('400', $adj[1]['p'] ?? null);
         $this->assertSame('OS', $adj[2]['pitch'] ?? null);

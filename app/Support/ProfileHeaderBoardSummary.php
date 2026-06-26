@@ -26,8 +26,8 @@ final class ProfileHeaderBoardSummary
             return self::empty();
         }
 
-        $entriesByBoardPlayer = self::indexBoardEntries($user);
-        $entry = self::boardEntryForPlayer($player, $entriesByBoardPlayer);
+        $entriesByPlayerId = WorkingBoardEntry::masterEntriesIndexedByPlayerId($user);
+        $entry = WorkingBoardEntry::masterEntryForPlayer($player, $entriesByPlayerId);
 
         $roleGrade = is_numeric($player->grade_role) ? (float) $player->grade_role : null;
         $batGrade = $player->batGrade();
@@ -64,43 +64,6 @@ final class ProfileHeaderBoardSummary
             riskCellStyle: WorkingBoardCellAppearance::riskFillStyle(null),
             confidenceCellStyle: WorkingBoardCellAppearance::confidenceFillStyle(null),
         );
-    }
-
-    /**
-     * @return array<string, array<int, WorkingBoardEntry>>
-     */
-    private static function indexBoardEntries(User $user): array
-    {
-        /** @var array<string, array<int, WorkingBoardEntry>> $indexed */
-        $indexed = [];
-
-        foreach (WorkingBoardEntry::query()->where('user_id', $user->id)->get() as $entry) {
-            $indexed[$entry->board_type][$entry->player_id] = $entry;
-        }
-
-        return $indexed;
-    }
-
-    /**
-     * @param  array<string, array<int, WorkingBoardEntry>>  $entriesByBoardPlayer
-     */
-    private static function boardEntryForPlayer(Player $player, array $entriesByBoardPlayer): ?WorkingBoardEntry
-    {
-        $pool = PlayerNoteFieldKeys::canonicalPoolForNotes((string) $player->player_pool);
-        $preferredBoard = match ($pool) {
-            'hs' => WorkingBoardEntry::BOARD_HS,
-            'ncaa' => WorkingBoardEntry::BOARD_NCAA,
-            default => WorkingBoardEntry::BOARD_MASTER,
-        };
-
-        foreach ([$preferredBoard, WorkingBoardEntry::BOARD_MASTER] as $boardType) {
-            $entry = $entriesByBoardPlayer[$boardType][$player->id] ?? null;
-            if ($entry !== null) {
-                return $entry;
-            }
-        }
-
-        return null;
     }
 
     private static function formatGrade(?float $value): string

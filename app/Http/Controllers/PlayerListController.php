@@ -81,7 +81,7 @@ class PlayerListController extends Controller
     /**
      * @param  Collection<int, Player>  $players
      * @return array{
-     *     entriesByBoardPlayer: array<string, array<int, WorkingBoardEntry>>,
+     *     entriesByPlayerId: array<int, WorkingBoardEntry>,
      *     batBounds: array{min: ?float, max: ?float, median: ?float},
      *     gradeBounds: array{min: int, max: int}
      * }
@@ -100,7 +100,7 @@ class PlayerListController extends Controller
         }
 
         return [
-            'entriesByBoardPlayer' => $this->indexBoardEntries($user),
+            'entriesByPlayerId' => WorkingBoardEntry::masterEntriesIndexedByPlayerId($user),
             'batBounds' => WorkingBoardCellAppearance::percentileBoundsFromValues($batValues),
             'gradeBounds' => PlayerNoteFieldKeys::gradeBoundsForNoteField('master_take'),
         ];
@@ -108,7 +108,7 @@ class PlayerListController extends Controller
 
     /**
      * @param  array{
-     *     entriesByBoardPlayer: array<string, array<int, WorkingBoardEntry>>,
+     *     entriesByPlayerId: array<int, WorkingBoardEntry>,
      *     batBounds: array{min: ?float, max: ?float, median: ?float},
      *     gradeBounds: array{min: int, max: int}
      * }  $context
@@ -118,7 +118,7 @@ class PlayerListController extends Controller
     {
         $pool = PlayerNoteFieldKeys::canonicalPoolForNotes((string) $player->player_pool);
         $isHs = $pool === 'hs';
-        $entry = $this->boardEntryForPlayer($player, $context['entriesByBoardPlayer']);
+        $entry = WorkingBoardEntry::masterEntryForPlayer($player, $context['entriesByPlayerId']);
         $gradeBounds = $context['gradeBounds'];
         $bat = $player->batGrade();
 
@@ -184,43 +184,6 @@ class PlayerListController extends Controller
             },
             'profile_complete' => PlayerProfileCompleteness::isComplete($player),
         ];
-    }
-
-    /**
-     * @return array<string, array<int, WorkingBoardEntry>>
-     */
-    private function indexBoardEntries(User $user): array
-    {
-        /** @var array<string, array<int, WorkingBoardEntry>> $indexed */
-        $indexed = [];
-
-        foreach (WorkingBoardEntry::query()->where('user_id', $user->id)->get() as $entry) {
-            $indexed[$entry->board_type][$entry->player_id] = $entry;
-        }
-
-        return $indexed;
-    }
-
-    /**
-     * @param  array<string, array<int, WorkingBoardEntry>>  $entriesByBoardPlayer
-     */
-    private function boardEntryForPlayer(Player $player, array $entriesByBoardPlayer): ?WorkingBoardEntry
-    {
-        $pool = PlayerNoteFieldKeys::canonicalPoolForNotes((string) $player->player_pool);
-        $preferredBoard = match ($pool) {
-            'hs' => WorkingBoardEntry::BOARD_HS,
-            'ncaa' => WorkingBoardEntry::BOARD_NCAA,
-            default => WorkingBoardEntry::BOARD_MASTER,
-        };
-
-        foreach ([$preferredBoard, WorkingBoardEntry::BOARD_MASTER] as $boardType) {
-            $entry = $entriesByBoardPlayer[$boardType][$player->id] ?? null;
-            if ($entry !== null) {
-                return $entry;
-            }
-        }
-
-        return null;
     }
 
     private function gradeNumeric(mixed $raw): ?float

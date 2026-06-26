@@ -25,13 +25,8 @@ class WorkingBoardTest extends TestCase
             ->get(route('board.index'))
             ->assertOk()
             ->assertSee('MASTER BOARD', false)
-            ->assertSee('NCAA BOARD', false)
-            ->assertSee('HS BOARD', false)
-            ->assertSee('⚰️', false)
-            ->assertSee('setActiveBoard', false)
-            ->assertSee('>Master<', false)
-            ->assertSee('>HS<', false)
-            ->assertSee('>NCAA<', false);
+            ->assertDontSee('⚰️', false)
+            ->assertDontSee('working-board-toggle-row', false);
     }
 
     public function test_board_player_pool_includes_bat_grade_fields(): void
@@ -71,8 +66,8 @@ class WorkingBoardTest extends TestCase
 
         $res = $this->actingAs($user)->get(route('board.index'));
         $res->assertOk();
-        $res->assertSee('board-picker-input-hs', false);
-        $res->assertSee('board-picker-listbox-hs', false);
+        $res->assertSee('board-picker-input-master', false);
+        $res->assertSee('board-picker-listbox-master', false);
         $res->assertSee('Type player name', false);
         $res->assertSee('Add selected to round', false);
         $res->assertSee('aria-multiselectable="true"', false);
@@ -144,7 +139,7 @@ class WorkingBoardTest extends TestCase
         ]);
 
         $payload = $this->boardsPayload([
-            WorkingBoardEntry::BOARD_HS => [
+            WorkingBoardEntry::BOARD_MASTER => [
                 '1' => [
                     ['player_id' => $a->id, 'confidence' => '1', 'risk' => '1'],
                 ],
@@ -158,7 +153,7 @@ class WorkingBoardTest extends TestCase
 
         $this->assertDatabaseHas('working_board_entries', [
             'user_id' => $user->id,
-            'board_type' => WorkingBoardEntry::BOARD_HS,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
             'player_id' => $a->id,
             'round_key' => '1',
             'sort_order' => 0,
@@ -167,7 +162,7 @@ class WorkingBoardTest extends TestCase
         ]);
         $this->assertDatabaseHas('working_board_entries', [
             'user_id' => $user->id,
-            'board_type' => WorkingBoardEntry::BOARD_HS,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
             'player_id' => $b->id,
             'round_key' => '2',
             'sort_order' => 0,
@@ -176,14 +171,15 @@ class WorkingBoardTest extends TestCase
         $this->assertSame(2, WorkingBoardEntry::query()->where('user_id', $user->id)->count());
     }
 
-    public function test_board_patch_persists_coffin_round(): void
+    public function test_board_patch_persists_non_target_divider_in_round(): void
     {
         $user = User::factory()->admin()->create();
         $player = Player::factory()->create(['player_pool' => 'hs']);
 
         $payload = $this->boardsPayload([
-            WorkingBoardEntry::BOARD_HS => [
-                WorkingBoardEntry::ROUND_COFFIN => [
+            WorkingBoardEntry::BOARD_MASTER => [
+                'post-10' => [
+                    ['entry_type' => WorkingBoardEntry::ENTRY_TYPE_NON_TARGET_DIVIDER],
                     ['player_id' => $player->id, 'confidence' => '', 'risk' => ''],
                 ],
             ],
@@ -193,10 +189,45 @@ class WorkingBoardTest extends TestCase
 
         $this->assertDatabaseHas('working_board_entries', [
             'user_id' => $user->id,
-            'board_type' => WorkingBoardEntry::BOARD_HS,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
+            'entry_type' => WorkingBoardEntry::ENTRY_TYPE_NON_TARGET_DIVIDER,
+            'player_id' => null,
+            'round_key' => 'post-10',
+            'sort_order' => 0,
+        ]);
+        $this->assertDatabaseHas('working_board_entries', [
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
+            'player_id' => $player->id,
+            'round_key' => 'post-10',
+            'sort_order' => 1,
+        ]);
+    }
+
+    public function test_board_migrates_legacy_coffin_round_into_post_10_with_non_target_divider(): void
+    {
+        $user = User::factory()->admin()->create();
+        $player = Player::factory()->create([
+            'player_pool' => 'hs',
+            'last_name' => 'Coffin',
+            'first_name' => 'Case',
+        ]);
+
+        WorkingBoardEntry::query()->create([
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
             'player_id' => $player->id,
             'round_key' => WorkingBoardEntry::ROUND_COFFIN,
+            'sort_order' => 0,
+            'confidence' => '2',
+            'risk' => '3',
         ]);
+
+        $html = $this->actingAs($user)->get(route('board.index'))->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('⚰️', $html);
+        $this->assertStringContainsString('Non-Targets', $html);
+        $this->assertStringContainsString('"label":"COFFIN, CASE"', $html);
     }
 
     public function test_board_patch_persists_ncaa_board(): void
@@ -205,7 +236,7 @@ class WorkingBoardTest extends TestCase
         $player = Player::factory()->create(['player_pool' => 'ncaa', 'last_name' => 'Collegiate', 'first_name' => 'Star']);
 
         $payload = $this->boardsPayload([
-            WorkingBoardEntry::BOARD_NCAA => [
+            WorkingBoardEntry::BOARD_MASTER => [
                 '1' => [
                     ['player_id' => $player->id, 'confidence' => '5', 'risk' => '1'],
                 ],
@@ -216,7 +247,7 @@ class WorkingBoardTest extends TestCase
 
         $this->assertDatabaseHas('working_board_entries', [
             'user_id' => $user->id,
-            'board_type' => WorkingBoardEntry::BOARD_NCAA,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
             'player_id' => $player->id,
             'round_key' => '1',
         ]);
@@ -228,7 +259,7 @@ class WorkingBoardTest extends TestCase
         $a = Player::factory()->create(['player_pool' => 'hs']);
 
         $payload = $this->boardsPayload([
-            WorkingBoardEntry::BOARD_HS => [
+            WorkingBoardEntry::BOARD_MASTER => [
                 '1' => [['player_id' => $a->id, 'confidence' => '', 'risk' => '']],
                 '2' => [['player_id' => $a->id, 'confidence' => '', 'risk' => '']],
             ],
@@ -244,7 +275,7 @@ class WorkingBoardTest extends TestCase
         $b = Player::factory()->create(['player_pool' => 'hs', 'last_name' => 'Tier', 'first_name' => 'Bottom']);
 
         $payload = $this->boardsPayload([
-            WorkingBoardEntry::BOARD_HS => [
+            WorkingBoardEntry::BOARD_MASTER => [
                 '1' => [
                     ['entry_type' => WorkingBoardEntry::ENTRY_TYPE_PLAYER, 'player_id' => $a->id, 'confidence' => '', 'risk' => ''],
                     ['entry_type' => WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER],
@@ -257,7 +288,7 @@ class WorkingBoardTest extends TestCase
 
         $entries = WorkingBoardEntry::query()
             ->where('user_id', $user->id)
-            ->where('board_type', WorkingBoardEntry::BOARD_HS)
+            ->where('board_type', WorkingBoardEntry::BOARD_MASTER)
             ->where('round_key', '1')
             ->orderBy('sort_order')
             ->get();
@@ -276,18 +307,105 @@ class WorkingBoardTest extends TestCase
             ->assertSee('"entry_type":"tier_divider"', false);
     }
 
-    public function test_board_patch_rejects_non_hs_player_on_hs_board(): void
+    public function test_board_page_includes_master_players_and_non_targets_divider(): void
+    {
+        $user = User::factory()->admin()->create();
+        $player = Player::factory()->create([
+            'player_pool' => 'hs',
+            'first_name' => 'Jane',
+            'last_name' => 'Doe',
+            'position' => 'SS',
+            'grade_role' => 5.5,
+            'grade_swing' => 6,
+        ]);
+
+        WorkingBoardEntry::query()->create([
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
+            'entry_type' => WorkingBoardEntry::ENTRY_TYPE_PLAYER,
+            'player_id' => $player->id,
+            'round_key' => '1',
+            'sort_order' => 0,
+            'confidence' => '4',
+            'risk' => '2',
+        ]);
+
+        $html = $this->actingAs($user)->get(route('board.index'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('"label":"DOE, JANE"', $html);
+        $this->assertStringContainsString('"player_id":'.$player->id, $html);
+        $this->assertStringContainsString('Non-Targets', $html);
+        $this->assertStringContainsString('working-board-non-target-divider', $html);
+    }
+
+    public function test_board_view_does_not_modify_database(): void
+    {
+        $user = User::factory()->admin()->create();
+        $top = Player::factory()->create(['player_pool' => 'hs', 'last_name' => 'Alpha', 'first_name' => 'One']);
+        $bottom = Player::factory()->create(['player_pool' => 'hs', 'last_name' => 'Beta', 'first_name' => 'Two']);
+
+        WorkingBoardEntry::query()->create([
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
+            'entry_type' => WorkingBoardEntry::ENTRY_TYPE_PLAYER,
+            'player_id' => $top->id,
+            'round_key' => '1',
+            'sort_order' => 0,
+            'confidence' => '5',
+            'risk' => '1',
+        ]);
+        WorkingBoardEntry::query()->create([
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
+            'entry_type' => WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER,
+            'player_id' => null,
+            'round_key' => '1',
+            'sort_order' => 1,
+            'confidence' => null,
+            'risk' => null,
+        ]);
+        WorkingBoardEntry::query()->create([
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
+            'entry_type' => WorkingBoardEntry::ENTRY_TYPE_PLAYER,
+            'player_id' => $bottom->id,
+            'round_key' => '1',
+            'sort_order' => 2,
+            'confidence' => '3',
+            'risk' => '4',
+        ]);
+
+        $before = WorkingBoardEntry::query()
+            ->where('user_id', $user->id)
+            ->orderBy('id')
+            ->get(['board_type', 'entry_type', 'player_id', 'round_key', 'sort_order', 'confidence', 'risk'])
+            ->map(fn (WorkingBoardEntry $e) => $e->only(['board_type', 'entry_type', 'player_id', 'round_key', 'sort_order', 'confidence', 'risk']))
+            ->all();
+
+        $this->actingAs($user)->get(route('board.index'))->assertOk();
+
+        $after = WorkingBoardEntry::query()
+            ->where('user_id', $user->id)
+            ->orderBy('id')
+            ->get(['board_type', 'entry_type', 'player_id', 'round_key', 'sort_order', 'confidence', 'risk'])
+            ->map(fn (WorkingBoardEntry $e) => $e->only(['board_type', 'entry_type', 'player_id', 'round_key', 'sort_order', 'confidence', 'risk']))
+            ->all();
+
+        $this->assertSame($before, $after);
+    }
+
+    public function test_board_patch_rejects_ncaa_player_on_master_board_when_invalid(): void
     {
         $user = User::factory()->admin()->create();
         $p = Player::factory()->create(['player_pool' => 'ncaa']);
 
         $payload = $this->boardsPayload([
-            WorkingBoardEntry::BOARD_HS => [
+            WorkingBoardEntry::BOARD_MASTER => [
                 '1' => [['player_id' => $p->id, 'confidence' => '', 'risk' => '']],
             ],
         ]);
 
-        $this->actingAs($user)->patchJson(route('board.update'), $payload)->assertStatus(422);
+        $this->actingAs($user)->patchJson(route('board.update'), $payload)->assertOk();
     }
 
     /**
@@ -296,20 +414,20 @@ class WorkingBoardTest extends TestCase
      */
     private function boardsPayload(array $roundOverrides = []): array
     {
-        $boards = [];
-        foreach (WorkingBoardEntry::BOARD_TYPES as $boardType) {
-            $rounds = [];
-            foreach (WorkingBoardEntry::ROUND_KEYS as $rk) {
-                $rounds[$rk] = [];
+        $rounds = [];
+        foreach (WorkingBoardEntry::BOARD_ROUND_KEYS as $rk) {
+            $rounds[$rk] = [];
+        }
+        if (isset($roundOverrides[WorkingBoardEntry::BOARD_MASTER])) {
+            foreach ($roundOverrides[WorkingBoardEntry::BOARD_MASTER] as $rk => $list) {
+                $rounds[$rk] = $list;
             }
-            if (isset($roundOverrides[$boardType])) {
-                foreach ($roundOverrides[$boardType] as $rk => $list) {
-                    $rounds[$rk] = $list;
-                }
-            }
-            $boards[$boardType] = ['rounds' => $rounds];
         }
 
-        return ['boards' => $boards];
+        return [
+            'boards' => [
+                WorkingBoardEntry::BOARD_MASTER => ['rounds' => $rounds],
+            ],
+        ];
     }
 }

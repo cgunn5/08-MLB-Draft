@@ -11,6 +11,8 @@ class WorkingBoardEntry extends Model
 
     public const ENTRY_TYPE_TIER_DIVIDER = 'tier_divider';
 
+    public const ENTRY_TYPE_NON_TARGET_DIVIDER = 'non_target_divider';
+
     public const BOARD_MASTER = 'master';
 
     public const BOARD_NCAA = 'ncaa';
@@ -36,11 +38,14 @@ class WorkingBoardEntry extends Model
     /** @var list<list<string>> Round columns grouped into rows (4 per row, left to right). */
     public const ROUND_ROW_GROUPS = [
         ['1', '2', '3', '4'],
-        ['5-7', '8-10', 'post-10', self::ROUND_COFFIN],
+        ['5-7', '8-10', 'post-10'],
     ];
 
     /** @var list<string> Left-to-right column order on the working board. */
-    public const ROUND_KEYS = ['1', '2', '3', '4', '5-7', '8-10', 'post-10', self::ROUND_COFFIN];
+    public const BOARD_ROUND_KEYS = ['1', '2', '3', '4', '5-7', '8-10', 'post-10'];
+
+    /** @var list<string> Includes legacy coffin round for loading old data. */
+    public const ROUND_KEYS = [...self::BOARD_ROUND_KEYS, self::ROUND_COFFIN];
 
     /** @var array<string, string> Round key → divider / picker display label */
     public const ROUND_DISPLAY_LABELS = [
@@ -137,6 +142,34 @@ class WorkingBoardEntry extends Model
         }
 
         return self::RISK_DISPLAY_LABELS[$value] ?? $value;
+    }
+
+    /**
+     * Working-board conf/risk/round values shown on profiles and exports.
+     *
+     * @return array<int, self>
+     */
+    public static function masterEntriesIndexedByPlayerId(User $user): array
+    {
+        $indexed = [];
+
+        foreach (self::query()
+            ->where('user_id', $user->id)
+            ->where('board_type', self::BOARD_MASTER)
+            ->whereNotNull('player_id')
+            ->get() as $entry) {
+            $indexed[(int) $entry->player_id] = $entry;
+        }
+
+        return $indexed;
+    }
+
+    /**
+     * @param  array<int, self>  $entriesByPlayerId
+     */
+    public static function masterEntryForPlayer(Player $player, array $entriesByPlayerId): ?self
+    {
+        return $entriesByPlayerId[$player->id] ?? null;
     }
 
     protected $fillable = [

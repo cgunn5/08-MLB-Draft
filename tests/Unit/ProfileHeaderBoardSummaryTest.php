@@ -31,7 +31,7 @@ class ProfileHeaderBoardSummaryTest extends TestCase
         ]);
         WorkingBoardEntry::query()->create([
             'user_id' => $user->id,
-            'board_type' => WorkingBoardEntry::BOARD_NCAA,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
             'player_id' => $player->id,
             'round_key' => '2',
             'sort_order' => 0,
@@ -69,6 +69,77 @@ class ProfileHeaderBoardSummaryTest extends TestCase
         $this->assertSame('-', $summary->targetRoundDisplay);
         $this->assertSame('-', $summary->riskDisplay);
         $this->assertSame('-', $summary->confidenceDisplay);
+    }
+
+    #[Test]
+    public function summary_ignores_pool_board_when_player_is_only_on_hs_or_ncaa_board(): void
+    {
+        $user = User::factory()->create();
+        $player = Player::factory()->create([
+            'player_pool' => 'ncaa',
+            'grade_role' => 5.5,
+            'grade_perf' => 6,
+            'grade_approach' => 5,
+            'grade_damage' => 6,
+            'grade_adj' => 5,
+            'grade_contact' => 6,
+            'grade_swing' => 5,
+        ]);
+        WorkingBoardEntry::query()->create([
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_NCAA,
+            'player_id' => $player->id,
+            'round_key' => '2',
+            'sort_order' => 0,
+            'confidence' => '4',
+            'risk' => '2',
+        ]);
+
+        $summary = ProfileHeaderBoardSummary::forPlayer($player, $user);
+
+        $this->assertSame('-', $summary->targetRoundDisplay);
+        $this->assertSame('-', $summary->riskDisplay);
+        $this->assertSame('-', $summary->confidenceDisplay);
+    }
+
+    #[Test]
+    public function summary_prefers_master_board_over_pool_board(): void
+    {
+        $user = User::factory()->create();
+        $player = Player::factory()->create([
+            'player_pool' => 'ncaa',
+            'grade_role' => 5.5,
+            'grade_perf' => 6,
+            'grade_approach' => 5,
+            'grade_damage' => 6,
+            'grade_adj' => 5,
+            'grade_contact' => 6,
+            'grade_swing' => 5,
+        ]);
+        WorkingBoardEntry::query()->create([
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_NCAA,
+            'player_id' => $player->id,
+            'round_key' => '2',
+            'sort_order' => 0,
+            'confidence' => '1',
+            'risk' => '5',
+        ]);
+        WorkingBoardEntry::query()->create([
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
+            'player_id' => $player->id,
+            'round_key' => '1',
+            'sort_order' => 0,
+            'confidence' => '4',
+            'risk' => '2',
+        ]);
+
+        $summary = ProfileHeaderBoardSummary::forPlayer($player, $user);
+
+        $this->assertSame('1st', $summary->targetRoundDisplay);
+        $this->assertSame('M-H', $summary->riskDisplay);
+        $this->assertSame('4', $summary->confidenceDisplay);
     }
 
     #[Test]

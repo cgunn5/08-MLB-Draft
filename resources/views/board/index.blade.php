@@ -4,7 +4,8 @@
     $defaultActiveBoard = WorkingBoardEntry::BOARD_MASTER;
 
     $workingBoardJsConfig = [
-        'boardTypes' => $boardPanelOrder,
+        'boardTypes' => $boardTypes,
+        'visibleBoardTypes' => $boardVisibleTypes,
         'defaultActiveBoard' => $defaultActiveBoard,
         'roundKeys' => $boardRoundKeys,
         'roundLabels' => $boardRoundLabels,
@@ -41,24 +42,6 @@
                         ></span>
                     </div>
 
-                    <div
-                        class="working-board-toggle-row flex flex-wrap items-center justify-center gap-2 normal-case"
-                        role="tablist"
-                        aria-label="{{ __('Board') }}"
-                    >
-                        @foreach ($boardToggleOrder as $toggleBoardType)
-                            <button
-                                type="button"
-                                role="tab"
-                                class="working-board-toggle-btn rounded border px-4 py-1.5 text-sm font-bold shadow-sm transition"
-                                :class="activeBoard === '{{ $toggleBoardType }}'
-                                    ? 'border-indigo-600 bg-indigo-600 text-white'
-                                    : 'border-slate-300 bg-white text-slate-800 hover:border-indigo-400 hover:bg-indigo-50'"
-                                :aria-selected="activeBoard === '{{ $toggleBoardType }}'"
-                                @click="setActiveBoard('{{ $toggleBoardType }}')"
-                            >{{ $boardToggleLabels[$toggleBoardType] }}</button>
-                        @endforeach
-                    </div>
                 </div>
 
                 <div class="working-boards-row flex min-h-0 min-w-0 flex-1 flex-col pb-1">

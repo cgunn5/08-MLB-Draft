@@ -52,7 +52,7 @@ class PlayerEvaluationsCsvExportTest extends TestCase
 
         WorkingBoardEntry::query()->create([
             'user_id' => $user->id,
-            'board_type' => WorkingBoardEntry::BOARD_NCAA,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
             'player_id' => $player->id,
             'round_key' => '2',
             'sort_order' => 0,
@@ -74,7 +74,7 @@ class PlayerEvaluationsCsvExportTest extends TestCase
 
         $row = str_getcsv($lines[1]);
         $this->assertSame('DOE, JOHN', $row[0]);
-        $this->assertSame('2', $row[1]);
+        $this->assertSame('2nd', $row[1]);
         $this->assertSame('5', $row[2]);
         $this->assertSame('4', $row[3]);
         $this->assertSame('M-H', $row[4]);
