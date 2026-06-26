@@ -803,6 +803,15 @@
         background-color: #fff !important;
     }
 
+    .working-board-drop-tail td {
+        height: 1.75rem;
+        min-height: 1.75rem;
+        padding: 0 !important;
+        border: 0 !important;
+        background: transparent !important;
+        vertical-align: top;
+    }
+
     .working-board-non-target-cell {
         min-height: 1.45rem;
         padding: 0.2rem 0.35rem !important;
@@ -839,6 +848,11 @@
         white-space: nowrap;
     }
 
+    .working-board-non-target-player td {
+        min-height: 1.75rem;
+        vertical-align: middle;
+    }
+
     .working-board-non-target-player .working-board-name-cell,
     .working-board-non-target-player .working-board-col-pos,
     .working-board-non-target-player .working-board-non-target-role-cell {
@@ -857,16 +871,11 @@
         text-decoration: none;
     }
 
-    .working-board-non-target-grade-value {
-        display: inline-flex;
+    .working-board-non-target-player .working-board-scale-cell {
         min-height: 1.75rem;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        font-weight: 700;
+        padding: 0 !important;
     }
 
-    .working-board-non-target-player .working-board-scale-cell,
     .working-board-non-target-player .working-board-grade-cell:not(.working-board-non-target-role-cell) {
         text-decoration: line-through;
         text-decoration-color: currentColor;

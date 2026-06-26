@@ -3054,6 +3054,10 @@ document.addEventListener('alpine:init', () => {
             return dividerIdx !== -1 && idx > dividerIdx;
         },
 
+        nonTargetDividerListIndex(boardType, rk) {
+            return nonTargetDividerIndex(this.roundCards(boardType, rk));
+        },
+
         isTierDivider(item) {
             return isTierDivider(item);
         },
@@ -3400,28 +3404,52 @@ document.addEventListener('alpine:init', () => {
             if (!Array.isArray(list) || idx < 0 || idx >= list.length) {
                 return;
             }
+            if (isNonTargetDivider(list[idx])) {
+                ev.preventDefault();
+                return;
+            }
             const payload = JSON.stringify({ boardType, rk, idx });
             ev.dataTransfer.setData('application/x-working-board', payload);
             ev.dataTransfer.setData('text/plain', payload);
             ev.dataTransfer.effectAllowed = 'move';
         },
 
-        dropIndexFromEvent(ev) {
+        dropIndexFromEvent(ev, list) {
             const tbody = ev.currentTarget;
-            const rows = [...tbody.querySelectorAll('tr[data-board-row]')];
+            const rows = [...tbody.querySelectorAll('tr[data-board-list-row]')];
+            const tail = tbody.querySelector('tr[data-board-drop-tail]');
+            const y = ev.clientY;
+
+            if (tail) {
+                const tailRect = tail.getBoundingClientRect();
+                if (y >= tailRect.top && y <= tailRect.bottom) {
+                    return Array.isArray(list) ? list.length : rows.length;
+                }
+            }
+
             if (rows.length === 0) {
                 return 0;
             }
-            const y = ev.clientY;
+
             for (let i = 0; i < rows.length; i++) {
-                const r = rows[i].getBoundingClientRect();
-                const mid = r.top + r.height / 2;
+                const row = rows[i];
+                const rect = row.getBoundingClientRect();
+
+                if (row.dataset.nonTargetDivider === 'true') {
+                    if (y >= rect.top && y <= rect.bottom) {
+                        return i + 1;
+                    }
+
+                    continue;
+                }
+
+                const mid = rect.top + rect.height / 2;
                 if (y < mid) {
                     return i;
                 }
             }
 
-            return rows.length;
+            return Array.isArray(list) ? list.length : rows.length;
         },
 
         onRoundDrop(ev, boardType, targetRk) {
@@ -3443,7 +3471,8 @@ document.addEventListener('alpine:init', () => {
             }
             const fromRk = payload.rk;
             const fromIdx = Number(payload.idx);
-            let insertAt = this.dropIndexFromEvent(ev);
+            const targetList = this.boardRounds[boardType]?.[targetRk] ?? [];
+            let insertAt = this.dropIndexFromEvent(ev, targetList);
             const list = this.boardRounds[boardType]?.[fromRk];
             if (!Array.isArray(list) || fromIdx < 0 || fromIdx >= list.length) {
                 return;

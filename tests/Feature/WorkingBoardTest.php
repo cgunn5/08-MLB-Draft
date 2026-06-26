@@ -226,7 +226,7 @@ class WorkingBoardTest extends TestCase
         $html = $this->actingAs($user)->get(route('board.index'))->assertOk()->getContent();
 
         $this->assertStringNotContainsString('⚰️', $html);
-        $this->assertStringContainsString('Non-Targets', $html);
+        $this->assertStringContainsString('Pass', $html);
         $this->assertStringContainsString('"label":"COFFIN, CASE"', $html);
     }
 
@@ -334,7 +334,7 @@ class WorkingBoardTest extends TestCase
 
         $this->assertStringContainsString('"label":"DOE, JANE"', $html);
         $this->assertStringContainsString('"player_id":'.$player->id, $html);
-        $this->assertStringContainsString('Non-Targets', $html);
+        $this->assertStringContainsString('Pass', $html);
         $this->assertStringContainsString('working-board-non-target-divider', $html);
     }
 

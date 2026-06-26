@@ -41,6 +41,7 @@
                 <template x-for="(card, idx) in roundCards('{{ $boardType }}', '{{ $boardRoundKey }}')" :key="roundRowKey('{{ $boardType }}', '{{ $boardRoundKey }}', card, idx)">
                     <tr
                         data-board-row
+                        data-board-list-row
                         :class="[
                             isTierDivider(card)
                                 ? 'working-board-tier-row border-b border-slate-200'
@@ -52,7 +53,7 @@
                                 : '',
                             readOnly ? '' : 'cursor-grab active:cursor-grabbing',
                         ]"
-                        :draggable="!readOnly"
+                        :draggable="!readOnly && !isNonTargetDivider(card)"
                         :data-player-row="!isRoundDivider(card) ? true : null"
                         :data-tier-divider="isTierDivider(card) ? true : null"
                         :data-non-target-divider="isNonTargetDivider(card) ? true : null"
@@ -96,7 +97,7 @@
                                             <span>-</span>
                                         @endfor
                                     </span>
-                                    <span class="working-board-non-target-divider-label">{{ __('Non-Targets') }}</span>
+                                    <span class="working-board-non-target-divider-label">{{ __('Pass') }}</span>
                                     <span class="working-board-tier-dashes working-board-non-target-divider-dashes">
                                         @for ($dash = 0; $dash < 14; $dash++)
                                             <span>-</span>
@@ -104,7 +105,7 @@
                                     </span>
                                 </div>
                             </div>
-                            <span class="sr-only">{{ __('Non-Targets divider') }}</span>
+                            <span class="sr-only">{{ __('Pass divider') }}</span>
                         </td>
                         <td
                             x-show="!isRoundDivider(card)"
@@ -113,8 +114,8 @@
                         >
                             <span
                                 x-show="isBelowNonTargetDivider('{{ $boardType }}', '{{ $boardRoundKey }}', idx)"
-                                class="working-board-non-target-grade-value"
-                                x-text="confidenceLabel(card.confidence)"
+                                class="block min-h-[1.75rem] w-full"
+                                aria-hidden="true"
                             ></span>
                             <div
                                 x-show="!isBelowNonTargetDivider('{{ $boardType }}', '{{ $boardRoundKey }}', idx)"
@@ -141,8 +142,8 @@
                         >
                             <span
                                 x-show="isBelowNonTargetDivider('{{ $boardType }}', '{{ $boardRoundKey }}', idx)"
-                                class="working-board-non-target-grade-value"
-                                x-text="riskLabel(card.risk)"
+                                class="block min-h-[1.75rem] w-full"
+                                aria-hidden="true"
                             ></span>
                             <div x-show="!isBelowNonTargetDivider('{{ $boardType }}', '{{ $boardRoundKey }}', idx)">
                                 <label class="sr-only">{{ __('Risk') }}</label>
@@ -209,12 +210,22 @@
                     </tr>
                 </template>
                 <tr
+                    x-show="nonTargetDividerListIndex('{{ $boardType }}', '{{ $boardRoundKey }}') !== -1"
+                    x-cloak
+                    data-board-row
+                    data-board-drop-tail
+                    class="working-board-drop-tail"
+                    aria-hidden="true"
+                >
+                    <td colspan="7"></td>
+                </tr>
+                <tr
                     x-show="roundPlayerCount('{{ $boardType }}', '{{ $boardRoundKey }}') === 0"
                     x-cloak
                     class="working-board-empty bg-slate-50/80"
                 >
                     <td colspan="7" class="px-2 py-4 text-center text-[10px] font-medium leading-snug text-slate-500 normal-case">
-                        {{ __('Drop players above the Non-Targets line or use the search box.') }}
+                        {{ __('Drop players above the Pass line or use the search box.') }}
                     </td>
                 </tr>
             </tbody>
