@@ -11,7 +11,7 @@
         @vite(['resources/css/app.css', 'resources/js/app.js'])
     </head>
     <body class="font-sans font-normal antialiased uppercase">
-        <div class="flex min-h-screen flex-col bg-gray-100">
+        <div @class(['flex min-h-screen flex-col', 'bg-white' => $flushWhite, 'bg-gray-100' => ! $flushWhite])>
             @include('layouts.navigation')
 
             <!-- Page Heading -->
@@ -24,7 +24,7 @@
             @endisset
 
             <!-- Page Content -->
-            <main class="flex min-h-0 flex-1 flex-col">
+            <main @class(['flex min-h-0 flex-1 flex-col', 'bg-white' => $flushWhite])>
                 {{ $slot }}
             </main>
         </div>

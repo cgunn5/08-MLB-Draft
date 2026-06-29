@@ -700,10 +700,16 @@
 
     .working-boards-page {
         font-family: Carbon, ui-sans-serif, system-ui, sans-serif;
+        background-color: #ffffff;
+        margin-top: 0;
+        padding-top: 0;
     }
 
     .working-boards-row {
         min-height: calc(100vh - 7.5rem);
+        background-color: #ffffff;
+        margin-top: 0;
+        padding-top: 0;
     }
 
     .working-board-toggle-row {
@@ -719,6 +725,12 @@
         min-height: calc(100vh - 7.5rem);
         width: 100%;
         max-width: none;
+        background-color: #ffffff;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        margin-top: 0;
+        padding-top: 0;
     }
 
     .working-board-columns-viewport {
@@ -733,8 +745,8 @@
     .working-board-columns-scroll {
         display: flex;
         flex-direction: column;
-        gap: 0.375rem;
-        padding-inline: 0.5rem;
+        gap: 1.125rem;
+        padding-inline: 0.75rem;
         padding-bottom: 0.5rem;
         transform-origin: top center;
         will-change: transform;
@@ -744,7 +756,11 @@
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
         align-items: stretch;
-        gap: 0.5rem;
+        gap: 1rem;
+    }
+
+    .working-board-columns-row + .working-board-columns-row {
+        margin-top: 0;
     }
 
     .working-board-round-column {
@@ -758,7 +774,7 @@
     }
 
     .working-board-round-header .working-board-round-label {
-        color: #000000 !important;
+        color: #ffffff !important;
         font-weight: 700 !important;
     }
 
@@ -775,7 +791,7 @@
         border: 0;
         border-radius: 9999px;
         background: transparent;
-        color: #475569;
+        color: #e2e8f0;
         font-size: 12px;
         font-weight: 700;
         line-height: 1;
@@ -784,19 +800,23 @@
     }
 
     .working-board-add-tier-btn:hover {
-        color: #0f172a;
-        background: rgba(255, 255, 255, 0.65);
+        color: #ffffff;
+        background: rgba(255, 255, 255, 0.2);
     }
 
     .working-board-tier-row {
         background-color: #f7f8f9 !important;
+        height: 1.75rem;
     }
 
     .working-board-tier-cell {
-        min-height: 1.3rem;
-        padding: 0.1rem 0.25rem !important;
+        height: 1.75rem;
+        min-height: 1.75rem;
+        max-height: 1.75rem;
+        padding: 0 !important;
         vertical-align: middle;
         background-color: #f7f8f9 !important;
+        box-sizing: border-box;
     }
 
     .working-board-non-target-row {
@@ -816,30 +836,36 @@
         min-height: 1.45rem;
         padding: 0.2rem 0.35rem !important;
         vertical-align: middle;
+        text-align: center;
         background-color: #fff !important;
     }
 
-    .working-board-non-target-divider-wrap {
-        padding-right: 0.125rem;
-    }
-
-    .working-board-non-target-divider {
-        display: flex;
+    .working-board-pass-divider {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
         align-items: center;
-        gap: 0.75rem;
-        width: 96%;
-        max-width: 100%;
+        column-gap: 0.75rem;
+        width: 100%;
+        box-sizing: border-box;
     }
 
-    .working-board-non-target-divider-dashes {
-        flex: 1 1 0;
-        min-width: 0;
-        width: auto;
+    .working-board-pass-divider-dashes {
+        display: flex;
+        justify-content: space-between;
+        overflow: hidden;
+        color: #000000;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 1.3rem;
+        user-select: none;
     }
 
-    .working-board-non-target-divider-label {
+    .working-board-pass-divider-dashes > span {
         flex: 0 0 auto;
-        padding-inline: 0.125rem;
+    }
+
+    .working-board-pass-divider-label {
+        flex: 0 0 auto;
         color: #dc2626;
         font-size: 10px;
         font-weight: 700;
@@ -881,14 +907,84 @@
         text-decoration-color: currentColor;
     }
 
+    .working-board-round-column--pass .working-board-card-row > td:not([colspan='7']) {
+        min-height: 1.75rem;
+        vertical-align: middle;
+    }
+
+    .working-board-round-column--pass .working-board-card-row .working-board-name-cell,
+    .working-board-round-column--pass .working-board-card-row .working-board-col-pos,
+    .working-board-round-column--pass .working-board-card-row .working-board-non-target-role-cell {
+        color: #64748b !important;
+        text-decoration: line-through;
+        text-decoration-color: #94a3b8;
+    }
+
+    .working-board-round-column--pass .working-board-card-row .working-board-player-name {
+        color: #64748b !important;
+        text-decoration: line-through !important;
+        text-decoration-color: #94a3b8 !important;
+    }
+
+    .working-board-round-column--pass .working-board-card-row .working-board-remove-btn {
+        text-decoration: none !important;
+    }
+
+    .working-board-round-column--pass .working-board-card-row .working-board-grade-cell:not(.working-board-non-target-role-cell) {
+        text-decoration: line-through;
+        text-decoration-color: currentColor;
+    }
+
+    .working-board-pass-body .working-board-card-row {
+        height: 1.75rem;
+    }
+
+    .working-board-pass-body .working-board-card-row .working-board-name-cell,
+    .working-board-pass-body .working-board-card-row .working-board-col-pos,
+    .working-board-pass-body .working-board-card-row .working-board-non-target-role-cell,
+    .working-board-pass-body .working-board-card-row .working-board-grade-cell:not(.working-board-non-target-role-cell) {
+        color: #64748b !important;
+        text-decoration-line: line-through !important;
+        text-decoration-color: #94a3b8 !important;
+    }
+
+    .working-board-pass-body .working-board-player-name,
+    .working-board-pass-body .working-board-player-name--pass {
+        color: #64748b !important;
+        text-decoration-line: line-through !important;
+        text-decoration-color: #94a3b8 !important;
+    }
+
+    .working-board-pass-body .working-board-remove-btn {
+        text-decoration: none !important;
+    }
+
+    .working-board-card-row {
+        height: 1.75rem;
+    }
+
+    .working-board-card-row > td:not([colspan='7']) {
+        height: 1.75rem;
+        min-height: 1.75rem;
+        max-height: 1.75rem;
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        vertical-align: middle;
+        box-sizing: border-box;
+        overflow: hidden;
+    }
+
     .working-board-tier-dashes-wrap {
         display: flex;
-        min-height: 1.3rem;
+        height: 1.75rem;
+        min-height: 1.75rem;
+        max-height: 1.75rem;
         align-items: center;
         justify-content: center;
         width: 100%;
         padding-inline: 0.125rem;
         padding-right: 1rem;
+        box-sizing: border-box;
     }
 
     .working-board-tier-dashes {
@@ -901,7 +997,7 @@
         color: #000000;
         font-size: 10px;
         font-weight: 600;
-        line-height: 1.3rem;
+        line-height: 1;
         user-select: none;
     }
 
@@ -940,33 +1036,43 @@
     .working-board-pane-header--logo {
         border-bottom: none !important;
         line-height: 0;
-        padding-top: calc(0.625rem * 1.65) !important;
-        padding-right: 0.5rem !important;
-        padding-bottom: calc(0.125rem * 1.15) !important;
-        padding-left: 0.5rem !important;
-        background: transparent !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #000000 !important;
     }
 
     .working-board-picker-section {
-        padding-top: calc(0.625rem * 1.65) !important;
-        padding-bottom: 0.625rem !important;
+        padding-top: 0.875rem !important;
+        padding-bottom: 0.75rem !important;
+        padding-inline: 0 !important;
     }
 
-    .working-board-picker-row {
+    .working-board-picker-band {
+        --working-board-picker-gap: 0.375rem;
         display: flex;
-        align-items: stretch;
-        gap: 0.375rem;
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 50%;
+        max-width: 100%;
+        margin-inline: auto;
+    }
+
+    .working-board-picker-row,
+    .working-board-round-row {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: var(--working-board-picker-gap);
+        width: 100%;
     }
 
     .working-board-picker-row .working-board-picker-wrap {
-        flex: 7 1 0%;
+        grid-column: 1 / 4;
         min-width: 0;
     }
 
     .working-board-add-btn {
-        flex: 3 1 0%;
+        grid-column: 4;
         min-width: 0;
-        align-self: stretch;
         min-height: calc(2.25rem * 0.7 * 1.15);
         padding-top: calc(0.5rem * 0.7 * 1.15);
         padding-bottom: calc(0.5rem * 0.7 * 1.15);
@@ -983,23 +1089,39 @@
     }
 
     .working-board-round-btn {
-        padding-top: calc(0.125rem * 0.7 * 1.15);
-        padding-bottom: calc(0.125rem * 0.7 * 1.15);
+        min-width: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: calc(2.25rem * 0.7 * 1.15);
+        padding-top: calc(0.5rem * 0.7 * 1.15);
+        padding-bottom: calc(0.5rem * 0.7 * 1.15);
+        padding-inline: 0.25rem;
         font-size: calc(10px * 0.7);
         line-height: 1.2;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .working-board-pane-header-logo {
         display: block;
-        width: auto;
+        width: 100%;
         max-width: 100%;
-        height: 2.112rem;
+        height: auto;
         object-fit: contain;
     }
 
     @media (min-width: 640px) {
         .working-board-pane-header-logo {
-            height: 2.368rem;
+            max-height: 5.5rem;
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .working-board-pane-header-logo {
+            max-height: 6.25rem;
         }
     }
 
@@ -1030,12 +1152,12 @@
     }
 
     .working-board-table thead tr {
-        background-color: #475b78 !important;
+        background-color: #e5e7eb !important;
     }
 
     .working-board-table thead .working-board-th {
-        color: #ffffff !important;
-        border-color: #3d4f68 !important;
+        color: #000000 !important;
+        border-color: #cbd5e1 !important;
         font-weight: 700 !important;
     }
 
@@ -1102,7 +1224,7 @@
 
     .working-board-grade-cell {
         font-weight: 700 !important;
-        padding: 0.125rem 0.25rem !important;
+        padding: 0 !important;
         vertical-align: middle;
     }
 

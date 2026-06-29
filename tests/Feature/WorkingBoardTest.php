@@ -140,10 +140,10 @@ class WorkingBoardTest extends TestCase
 
         $payload = $this->boardsPayload([
             WorkingBoardEntry::BOARD_MASTER => [
-                '1' => [
+                '1-targets' => [
                     ['player_id' => $a->id, 'confidence' => '1', 'risk' => '1'],
                 ],
-                '2' => [
+                'tweeners-3-targets' => [
                     ['player_id' => $b->id, 'confidence' => '', 'risk' => '2'],
                 ],
             ],
@@ -155,7 +155,7 @@ class WorkingBoardTest extends TestCase
             'user_id' => $user->id,
             'board_type' => WorkingBoardEntry::BOARD_MASTER,
             'player_id' => $a->id,
-            'round_key' => '1',
+            'round_key' => '1-targets',
             'sort_order' => 0,
             'confidence' => '1',
             'risk' => '1',
@@ -164,22 +164,21 @@ class WorkingBoardTest extends TestCase
             'user_id' => $user->id,
             'board_type' => WorkingBoardEntry::BOARD_MASTER,
             'player_id' => $b->id,
-            'round_key' => '2',
+            'round_key' => 'tweeners-3-targets',
             'sort_order' => 0,
             'risk' => '2',
         ]);
         $this->assertSame(2, WorkingBoardEntry::query()->where('user_id', $user->id)->count());
     }
 
-    public function test_board_patch_persists_non_target_divider_in_round(): void
+    public function test_board_patch_persists_pass_column_players(): void
     {
         $user = User::factory()->admin()->create();
         $player = Player::factory()->create(['player_pool' => 'hs']);
 
         $payload = $this->boardsPayload([
             WorkingBoardEntry::BOARD_MASTER => [
-                'post-10' => [
-                    ['entry_type' => WorkingBoardEntry::ENTRY_TYPE_NON_TARGET_DIVIDER],
+                '6-plus-pass' => [
                     ['player_id' => $player->id, 'confidence' => '', 'risk' => ''],
                 ],
             ],
@@ -190,21 +189,13 @@ class WorkingBoardTest extends TestCase
         $this->assertDatabaseHas('working_board_entries', [
             'user_id' => $user->id,
             'board_type' => WorkingBoardEntry::BOARD_MASTER,
-            'entry_type' => WorkingBoardEntry::ENTRY_TYPE_NON_TARGET_DIVIDER,
-            'player_id' => null,
-            'round_key' => 'post-10',
-            'sort_order' => 0,
-        ]);
-        $this->assertDatabaseHas('working_board_entries', [
-            'user_id' => $user->id,
-            'board_type' => WorkingBoardEntry::BOARD_MASTER,
             'player_id' => $player->id,
-            'round_key' => 'post-10',
-            'sort_order' => 1,
+            'round_key' => '6-plus-pass',
+            'sort_order' => 0,
         ]);
     }
 
-    public function test_board_migrates_legacy_coffin_round_into_post_10_with_non_target_divider(): void
+    public function test_board_migrates_legacy_coffin_round_into_six_plus_pass(): void
     {
         $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
@@ -226,7 +217,7 @@ class WorkingBoardTest extends TestCase
         $html = $this->actingAs($user)->get(route('board.index'))->assertOk()->getContent();
 
         $this->assertStringNotContainsString('⚰️', $html);
-        $this->assertStringContainsString('Pass', $html);
+        $this->assertStringContainsString('6TH ROUND + / PASS', $html);
         $this->assertStringContainsString('"label":"COFFIN, CASE"', $html);
     }
 
@@ -237,7 +228,7 @@ class WorkingBoardTest extends TestCase
 
         $payload = $this->boardsPayload([
             WorkingBoardEntry::BOARD_MASTER => [
-                '1' => [
+                '1-targets' => [
                     ['player_id' => $player->id, 'confidence' => '5', 'risk' => '1'],
                 ],
             ],
@@ -249,7 +240,7 @@ class WorkingBoardTest extends TestCase
             'user_id' => $user->id,
             'board_type' => WorkingBoardEntry::BOARD_MASTER,
             'player_id' => $player->id,
-            'round_key' => '1',
+            'round_key' => '1-targets',
         ]);
     }
 
@@ -260,8 +251,8 @@ class WorkingBoardTest extends TestCase
 
         $payload = $this->boardsPayload([
             WorkingBoardEntry::BOARD_MASTER => [
-                '1' => [['player_id' => $a->id, 'confidence' => '', 'risk' => '']],
-                '2' => [['player_id' => $a->id, 'confidence' => '', 'risk' => '']],
+                '1-targets' => [['player_id' => $a->id, 'confidence' => '', 'risk' => '']],
+                'tweeners-3-targets' => [['player_id' => $a->id, 'confidence' => '', 'risk' => '']],
             ],
         ]);
 
@@ -276,7 +267,7 @@ class WorkingBoardTest extends TestCase
 
         $payload = $this->boardsPayload([
             WorkingBoardEntry::BOARD_MASTER => [
-                '1' => [
+                '1-targets' => [
                     ['entry_type' => WorkingBoardEntry::ENTRY_TYPE_PLAYER, 'player_id' => $a->id, 'confidence' => '', 'risk' => ''],
                     ['entry_type' => WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER],
                     ['entry_type' => WorkingBoardEntry::ENTRY_TYPE_PLAYER, 'player_id' => $b->id, 'confidence' => '', 'risk' => ''],
@@ -289,7 +280,7 @@ class WorkingBoardTest extends TestCase
         $entries = WorkingBoardEntry::query()
             ->where('user_id', $user->id)
             ->where('board_type', WorkingBoardEntry::BOARD_MASTER)
-            ->where('round_key', '1')
+            ->where('round_key', '1-targets')
             ->orderBy('sort_order')
             ->get();
 
@@ -307,7 +298,7 @@ class WorkingBoardTest extends TestCase
             ->assertSee('"entry_type":"tier_divider"', false);
     }
 
-    public function test_board_page_includes_master_players_and_non_targets_divider(): void
+    public function test_board_page_includes_master_players_and_pass_columns(): void
     {
         $user = User::factory()->admin()->create();
         $player = Player::factory()->create([
@@ -324,7 +315,7 @@ class WorkingBoardTest extends TestCase
             'board_type' => WorkingBoardEntry::BOARD_MASTER,
             'entry_type' => WorkingBoardEntry::ENTRY_TYPE_PLAYER,
             'player_id' => $player->id,
-            'round_key' => '1',
+            'round_key' => '1-targets',
             'sort_order' => 0,
             'confidence' => '4',
             'risk' => '2',
@@ -334,8 +325,8 @@ class WorkingBoardTest extends TestCase
 
         $this->assertStringContainsString('"label":"DOE, JANE"', $html);
         $this->assertStringContainsString('"player_id":'.$player->id, $html);
-        $this->assertStringContainsString('Pass', $html);
-        $this->assertStringContainsString('working-board-non-target-divider', $html);
+        $this->assertStringContainsString('1ST ROUND / TARGETS', $html);
+        $this->assertStringContainsString('1ST ROUND / PASS', $html);
     }
 
     public function test_board_view_does_not_modify_database(): void
@@ -349,7 +340,7 @@ class WorkingBoardTest extends TestCase
             'board_type' => WorkingBoardEntry::BOARD_MASTER,
             'entry_type' => WorkingBoardEntry::ENTRY_TYPE_PLAYER,
             'player_id' => $top->id,
-            'round_key' => '1',
+            'round_key' => '1-targets',
             'sort_order' => 0,
             'confidence' => '5',
             'risk' => '1',
@@ -359,7 +350,7 @@ class WorkingBoardTest extends TestCase
             'board_type' => WorkingBoardEntry::BOARD_MASTER,
             'entry_type' => WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER,
             'player_id' => null,
-            'round_key' => '1',
+            'round_key' => '1-targets',
             'sort_order' => 1,
             'confidence' => null,
             'risk' => null,
@@ -369,7 +360,7 @@ class WorkingBoardTest extends TestCase
             'board_type' => WorkingBoardEntry::BOARD_MASTER,
             'entry_type' => WorkingBoardEntry::ENTRY_TYPE_PLAYER,
             'player_id' => $bottom->id,
-            'round_key' => '1',
+            'round_key' => '1-targets',
             'sort_order' => 2,
             'confidence' => '3',
             'risk' => '4',
@@ -401,7 +392,7 @@ class WorkingBoardTest extends TestCase
 
         $payload = $this->boardsPayload([
             WorkingBoardEntry::BOARD_MASTER => [
-                '1' => [['player_id' => $p->id, 'confidence' => '', 'risk' => '']],
+                '1-targets' => [['player_id' => $p->id, 'confidence' => '', 'risk' => '']],
             ],
         ]);
 

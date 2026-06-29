@@ -14,16 +14,16 @@
 @endphp
 <div
     @class([
-        'working-board-pane flex min-h-0 w-full min-w-[18rem] flex-1 flex-col overflow-hidden rounded-md border border-gray-300 bg-white shadow-sm',
+        'working-board-pane flex min-h-0 w-full min-w-[18rem] flex-1 flex-col overflow-hidden bg-white',
         'working-board-pane--' . $boardType => true,
     ])
     data-board-type="{{ $boardType }}"
 >
     @if ($boardHeaderImage)
-        <div class="working-board-pane-header working-board-pane-header--logo flex shrink-0 justify-center bg-transparent">
+        <div class="working-board-pane-header working-board-pane-header--logo flex shrink-0 justify-center bg-black">
             <img
                 src="{{ asset($boardHeaderImage) }}"
-                alt="{{ $panel['title'] }}"
+                alt="{{ __('2026 MLB Draft - The Board') }}"
                 class="working-board-pane-header-logo"
                 decoding="async"
             />
@@ -32,7 +32,7 @@
 
     @unless ($boardReadOnly)
         <section
-            class="working-board-picker-section relative z-50 shrink-0 bg-white px-3 normal-case shadow-sm"
+            class="working-board-picker-section relative z-50 shrink-0 bg-white normal-case"
             aria-label="{{ __('Add player') }} — {{ $panel['title'] }}"
         >
             @if (! $hasPoolPlayers)
@@ -45,11 +45,12 @@
                     x-data="boardPlayerPicker({
                         boardType: @js($boardType),
                         players: @js($poolPlayers),
-                        roundKeys: @js($boardRoundKeys),
+                        roundKeys: @js($boardPickerRoundKeys),
                         readOnly: @json($boardReadOnly),
                     })"
                     @keydown.escape.window="open && close()"
                 >
+                    <div class="working-board-picker-band">
                     <div class="working-board-picker-row">
                     <div
                         class="working-board-picker-wrap relative z-50 min-w-0"
@@ -189,8 +190,8 @@
                     </button>
                     </div>
 
-                    <div class="working-board-round-row flex flex-wrap items-center justify-center gap-1.5">
-                        @foreach ($boardRoundKeys as $boardRoundKey)
+                    <div class="working-board-round-row">
+                        @foreach ($boardPickerRoundKeys as $boardRoundKey)
                             <button
                                 type="button"
                                 class="working-board-round-btn rounded border px-2 font-bold shadow-sm transition"
@@ -198,7 +199,7 @@
                                     ? 'border-indigo-600 bg-indigo-600 text-white'
                                     : 'border-slate-300 bg-white text-slate-800 hover:border-indigo-400 hover:bg-indigo-50'"
                                 @click="round = '{{ $boardRoundKey }}'"
-                            >{{ $boardRoundLabels[$boardRoundKey] ?? $boardRoundKey }}</button>
+                            >{{ $boardPickerRoundLabels[$boardRoundKey] ?? $boardRoundKey }}</button>
                         @endforeach
                     </div>
 
@@ -209,6 +210,7 @@
                     >
                         <span x-text="`${selectedCount()} players selected`"></span>
                     </p>
+                    </div>
                 </div>
             @endif
         </section>

@@ -54,7 +54,7 @@ class PlayerEvaluationsCsvExportTest extends TestCase
             'user_id' => $user->id,
             'board_type' => WorkingBoardEntry::BOARD_MASTER,
             'player_id' => $player->id,
-            'round_key' => '2',
+            'round_key' => 'tweeners-3-targets',
             'sort_order' => 0,
             'confidence' => '4',
             'risk' => '2',
@@ -74,7 +74,7 @@ class PlayerEvaluationsCsvExportTest extends TestCase
 
         $row = str_getcsv($lines[1]);
         $this->assertSame('DOE, JOHN', $row[0]);
-        $this->assertSame('2nd', $row[1]);
+        $this->assertSame('2nd-3rd', $row[1]);
         $this->assertSame('5', $row[2]);
         $this->assertSame('4', $row[3]);
         $this->assertSame('M-H', $row[4]);

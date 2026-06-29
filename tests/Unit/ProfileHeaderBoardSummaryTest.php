@@ -33,7 +33,7 @@ class ProfileHeaderBoardSummaryTest extends TestCase
             'user_id' => $user->id,
             'board_type' => WorkingBoardEntry::BOARD_MASTER,
             'player_id' => $player->id,
-            'round_key' => '2',
+            'round_key' => 'tweeners-3-targets',
             'sort_order' => 0,
             'confidence' => '4',
             'risk' => '2',
@@ -43,7 +43,7 @@ class ProfileHeaderBoardSummaryTest extends TestCase
 
         $this->assertSame('5.5', $summary->roleDisplay);
         $this->assertSame('5.5', $summary->batGradeDisplay);
-        $this->assertSame('2nd', $summary->targetRoundDisplay);
+        $this->assertSame('2nd-3rd', $summary->targetRoundDisplay);
         $this->assertSame('M-H', $summary->riskDisplay);
         $this->assertSame('4', $summary->confidenceDisplay);
     }
@@ -89,7 +89,7 @@ class ProfileHeaderBoardSummaryTest extends TestCase
             'user_id' => $user->id,
             'board_type' => WorkingBoardEntry::BOARD_NCAA,
             'player_id' => $player->id,
-            'round_key' => '2',
+            'round_key' => 'tweeners-3-targets',
             'sort_order' => 0,
             'confidence' => '4',
             'risk' => '2',
@@ -120,7 +120,7 @@ class ProfileHeaderBoardSummaryTest extends TestCase
             'user_id' => $user->id,
             'board_type' => WorkingBoardEntry::BOARD_NCAA,
             'player_id' => $player->id,
-            'round_key' => '2',
+            'round_key' => 'tweeners-3-targets',
             'sort_order' => 0,
             'confidence' => '1',
             'risk' => '5',
@@ -129,7 +129,7 @@ class ProfileHeaderBoardSummaryTest extends TestCase
             'user_id' => $user->id,
             'board_type' => WorkingBoardEntry::BOARD_MASTER,
             'player_id' => $player->id,
-            'round_key' => '1',
+            'round_key' => '1-targets',
             'sort_order' => 0,
             'confidence' => '4',
             'risk' => '2',
@@ -143,17 +143,16 @@ class ProfileHeaderBoardSummaryTest extends TestCase
     }
 
     #[Test]
-    public function profile_header_target_round_labels_use_ordinals_and_post_10(): void
+    public function profile_header_target_round_labels_use_bucket_labels(): void
     {
-        $this->assertSame('1st', WorkingBoardEntry::profileHeaderTargetRoundLabel('1'));
-        $this->assertSame('2nd', WorkingBoardEntry::profileHeaderTargetRoundLabel('2'));
-        $this->assertSame('3rd', WorkingBoardEntry::profileHeaderTargetRoundLabel('3'));
-        $this->assertSame('4th', WorkingBoardEntry::profileHeaderTargetRoundLabel('4'));
-        $this->assertSame('5th-7th', WorkingBoardEntry::profileHeaderTargetRoundLabel('5-7'));
-        $this->assertSame('8th-10th', WorkingBoardEntry::profileHeaderTargetRoundLabel('8-10'));
-        $this->assertSame('Post 10', WorkingBoardEntry::profileHeaderTargetRoundLabel('post-10'));
-        $this->assertSame('4th', WorkingBoardEntry::profileHeaderTargetRoundLabel('4+'));
-        $this->assertSame('Post 10', WorkingBoardEntry::profileHeaderTargetRoundLabel('10+'));
+        $this->assertSame('1st', WorkingBoardEntry::profileHeaderTargetRoundLabel('1-targets'));
+        $this->assertSame('1st', WorkingBoardEntry::profileHeaderTargetRoundLabel('1-pass'));
+        $this->assertSame('2nd-3rd', WorkingBoardEntry::profileHeaderTargetRoundLabel('tweeners-3-targets'));
+        $this->assertSame('4th-5th', WorkingBoardEntry::profileHeaderTargetRoundLabel('4-5-pass'));
+        $this->assertSame('6th+', WorkingBoardEntry::profileHeaderTargetRoundLabel('6-plus-targets'));
+        $this->assertSame('2nd-3rd', WorkingBoardEntry::profileHeaderTargetRoundLabel('2'));
+        $this->assertSame('4th-5th', WorkingBoardEntry::profileHeaderTargetRoundLabel('5-7'));
+        $this->assertSame('6th+', WorkingBoardEntry::profileHeaderTargetRoundLabel('post-10'));
     }
 
     #[Test]

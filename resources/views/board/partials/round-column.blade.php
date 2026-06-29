@@ -1,10 +1,16 @@
+@php
+    $isPassColumn = str_ends_with($boardRoundKey, '-pass');
+@endphp
 <div
-    class="working-board-round-column flex shrink-0 flex-col overflow-hidden rounded-md border bg-white shadow-sm"
+    @class([
+        'working-board-round-column flex shrink-0 flex-col overflow-hidden rounded-md border bg-white shadow-sm',
+        'working-board-round-column--pass' => $isPassColumn,
+    ])
     data-round="{{ $boardRoundKey }}"
     data-board-type="{{ $boardType }}"
 >
-    <div class="working-board-round-header relative shrink-0 border-b border-gray-200 bg-[#e5e7eb] px-2 py-1.5 text-center">
-        <span class="working-board-round-label text-[10px] font-bold tracking-widest text-black">
+    <div class="working-board-round-header relative shrink-0 border-b border-[#3d4f68] bg-[#475b78] px-2 py-1.5 text-center">
+        <span class="working-board-round-label text-[10px] font-bold tracking-wide text-white">
             {{ $boardRoundLabels[$boardRoundKey] ?? $boardRoundKey }}
         </span>
         @unless ($boardReadOnly)
@@ -23,7 +29,7 @@
     <div class="working-board-round-table-wrap">
         <table class="working-board-table working-board-round-table w-full min-w-0 border-collapse text-center text-[10px]">
             <thead>
-                <tr class="border-b border-[#3d4f68] text-[9px] font-bold tracking-wide text-white">
+                <tr class="border-b border-slate-300 text-[9px] font-bold tracking-wide text-slate-900">
                     <th class="working-board-th working-board-col-scale px-0.5 py-1">{{ __('CONF') }}</th>
                     <th class="working-board-th working-board-col-scale px-0.5 py-1">{{ __('RISK') }}</th>
                     <th class="working-board-th working-board-col-grade px-0.5 py-1">{{ __('ROLE') }}</th>
@@ -34,7 +40,10 @@
                 </tr>
             </thead>
             <tbody
-                class="working-board-round-body bg-white"
+                @class([
+                    'working-board-round-body bg-white',
+                    'working-board-pass-body' => $isPassColumn,
+                ])
                 @dragover.prevent
                 @drop.prevent="onRoundDrop($event, '{{ $boardType }}', '{{ $boardRoundKey }}')"
             >
@@ -45,18 +54,15 @@
                         :class="[
                             isTierDivider(card)
                                 ? 'working-board-tier-row border-b border-slate-200'
-                                : isNonTargetDivider(card)
-                                  ? 'working-board-non-target-row border-b border-slate-200'
-                                  : 'working-board-card-row border-b border-slate-200 bg-white text-center font-bold text-slate-900 hover:bg-slate-50/80',
-                            !isRoundDivider(card) && isBelowNonTargetDivider('{{ $boardType }}', '{{ $boardRoundKey }}', idx)
+                                : 'working-board-card-row border-b border-slate-200 bg-white text-center font-bold text-slate-900 hover:bg-slate-50/80',
+                            !isRoundDivider(card) && isPassRoundKey('{{ $boardRoundKey }}')
                                 ? 'working-board-non-target-player'
                                 : '',
                             readOnly ? '' : 'cursor-grab active:cursor-grabbing',
                         ]"
-                        :draggable="!readOnly && !isNonTargetDivider(card)"
+                        :draggable="!readOnly"
                         :data-player-row="!isRoundDivider(card) ? true : null"
                         :data-tier-divider="isTierDivider(card) ? true : null"
-                        :data-non-target-divider="isNonTargetDivider(card) ? true : null"
                         @dragstart="onDragStart($event, '{{ $boardType }}', '{{ $boardRoundKey }}', idx)"
                     >
                         <td
@@ -86,44 +92,22 @@
                             @endunless
                         </td>
                         <td
-                            x-show="isNonTargetDivider(card)"
-                            colspan="7"
-                            class="working-board-non-target-cell relative p-0"
-                        >
-                            <div class="working-board-tier-dashes-wrap working-board-non-target-divider-wrap">
-                                <div class="working-board-non-target-divider" aria-hidden="true">
-                                    <span class="working-board-tier-dashes working-board-non-target-divider-dashes">
-                                        @for ($dash = 0; $dash < 14; $dash++)
-                                            <span>-</span>
-                                        @endfor
-                                    </span>
-                                    <span class="working-board-non-target-divider-label">{{ __('Pass') }}</span>
-                                    <span class="working-board-tier-dashes working-board-non-target-divider-dashes">
-                                        @for ($dash = 0; $dash < 14; $dash++)
-                                            <span>-</span>
-                                        @endfor
-                                    </span>
-                                </div>
-                            </div>
-                            <span class="sr-only">{{ __('Pass divider') }}</span>
-                        </td>
-                        <td
                             x-show="!isRoundDivider(card)"
                             class="working-board-scale-cell working-board-col-scale border-r border-slate-200 p-0 align-middle normal-case"
                             :style="boardScaleFillStyle(card.confidence)"
                         >
                             <span
-                                x-show="isBelowNonTargetDivider('{{ $boardType }}', '{{ $boardRoundKey }}', idx)"
-                                class="block min-h-[1.75rem] w-full"
+                                x-show="isPassRoundKey('{{ $boardRoundKey }}')"
+                                class="block h-full w-full"
                                 aria-hidden="true"
                             ></span>
                             <div
-                                x-show="!isBelowNonTargetDivider('{{ $boardType }}', '{{ $boardRoundKey }}', idx)"
+                                x-show="!isPassRoundKey('{{ $boardRoundKey }}')"
                                 @click="openScaleSelect($event)"
                             >
                                 <label class="sr-only">{{ __('Confidence') }}</label>
                                 <select
-                                    class="working-board-scale-select h-full min-h-[1.75rem] w-full cursor-pointer border-0 bg-transparent text-transparent shadow-none focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/50"
+                                    class="working-board-scale-select h-full w-full cursor-pointer border-0 bg-transparent text-transparent shadow-none focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/50"
                                     x-model="card.confidence"
                                     :disabled="readOnly"
                                     @change="scheduleSave()"
@@ -138,17 +122,17 @@
                             x-show="!isRoundDivider(card)"
                             class="working-board-scale-cell working-board-col-scale border-r border-slate-200 p-0 align-middle normal-case"
                             :style="boardScaleFillStyle(card.risk)"
-                            @click="!isBelowNonTargetDivider('{{ $boardType }}', '{{ $boardRoundKey }}', idx) && openScaleSelect($event)"
+                            @click="!isPassRoundKey('{{ $boardRoundKey }}') && openScaleSelect($event)"
                         >
                             <span
-                                x-show="isBelowNonTargetDivider('{{ $boardType }}', '{{ $boardRoundKey }}', idx)"
-                                class="block min-h-[1.75rem] w-full"
+                                x-show="isPassRoundKey('{{ $boardRoundKey }}')"
+                                class="block h-full w-full"
                                 aria-hidden="true"
                             ></span>
-                            <div x-show="!isBelowNonTargetDivider('{{ $boardType }}', '{{ $boardRoundKey }}', idx)">
+                            <div x-show="!isPassRoundKey('{{ $boardRoundKey }}')">
                                 <label class="sr-only">{{ __('Risk') }}</label>
                                 <select
-                                    class="working-board-scale-select h-full min-h-[1.75rem] w-full cursor-pointer border-0 bg-transparent text-transparent shadow-none focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/50"
+                                    class="working-board-scale-select h-full w-full cursor-pointer border-0 bg-transparent text-transparent shadow-none focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500/50"
                                     x-model="card.risk"
                                     :disabled="readOnly"
                                     @change="scheduleSave()"
@@ -167,14 +151,22 @@
                         ></td>
                         <td
                             x-show="!isRoundDivider(card)"
-                            class="working-board-name-cell working-board-col-name border-r border-slate-200 bg-white px-1 py-0.5 align-middle leading-snug"
+                            class="working-board-name-cell working-board-col-name border-r border-slate-200 bg-white px-1 align-middle leading-none"
                         >
                             <div class="flex items-center justify-center gap-0.5">
-                                <a
-                                    class="working-board-player-name min-w-0 text-black underline decoration-slate-400 decoration-1 underline-offset-2 hover:decoration-black"
-                                    :href="playerUrl(card)"
-                                    x-text="boardName(card)"
-                                ></a>
+                                @if ($isPassColumn)
+                                    <a
+                                        class="working-board-player-name working-board-player-name--pass min-w-0"
+                                        :href="playerUrl(card)"
+                                        x-text="boardName(card)"
+                                    ></a>
+                                @else
+                                    <a
+                                        class="working-board-player-name min-w-0 text-black underline decoration-slate-400 decoration-1 underline-offset-2 hover:decoration-black"
+                                        :href="playerUrl(card)"
+                                        x-text="boardName(card)"
+                                    ></a>
+                                @endif
                                 @unless ($boardReadOnly)
                                     <button
                                         type="button"
@@ -210,22 +202,16 @@
                     </tr>
                 </template>
                 <tr
-                    x-show="nonTargetDividerListIndex('{{ $boardType }}', '{{ $boardRoundKey }}') !== -1"
-                    x-cloak
-                    data-board-row
-                    data-board-drop-tail
-                    class="working-board-drop-tail"
-                    aria-hidden="true"
-                >
-                    <td colspan="7"></td>
-                </tr>
-                <tr
                     x-show="roundPlayerCount('{{ $boardType }}', '{{ $boardRoundKey }}') === 0"
                     x-cloak
                     class="working-board-empty bg-slate-50/80"
                 >
                     <td colspan="7" class="px-2 py-4 text-center text-[10px] font-medium leading-snug text-slate-500 normal-case">
-                        {{ __('Drop players above the Pass line or use the search box.') }}
+                        @if ($isPassColumn)
+                            {{ __('Drop passed players here or drag from targets above.') }}
+                        @else
+                            {{ __('Drop players here or use the search box.') }}
+                        @endif
                     </td>
                 </tr>
             </tbody>

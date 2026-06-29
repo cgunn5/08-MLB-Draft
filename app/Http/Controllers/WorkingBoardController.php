@@ -64,7 +64,9 @@ class WorkingBoardController extends Controller
 
         return view('board.index', [
             'boardRoundKeys' => WorkingBoardEntry::BOARD_ROUND_KEYS,
+            'boardPickerRoundKeys' => WorkingBoardEntry::BOARD_PICKER_ROUND_KEYS,
             'boardRoundLabels' => WorkingBoardEntry::roundColumnLabels(),
+            'boardPickerRoundLabels' => WorkingBoardEntry::pickerRoundLabels(),
             'boardConfidenceOptions' => WorkingBoardEntry::CONFIDENCE_OPTIONS,
             'boardRiskOptions' => WorkingBoardEntry::RISK_OPTIONS,
             'boardRiskLabels' => WorkingBoardEntry::RISK_DISPLAY_LABELS,
@@ -159,9 +161,9 @@ class WorkingBoardController extends Controller
      */
     private function roundsFromEntries(Collection $entries, string $boardType): array
     {
-        $rkPos = array_flip(WorkingBoardEntry::ROUND_KEYS);
+        $rkPos = array_flip(WorkingBoardEntry::BOARD_ROUND_KEYS);
         $rounds = [];
-        foreach (WorkingBoardEntry::ROUND_KEYS as $rk) {
+        foreach (WorkingBoardEntry::BOARD_ROUND_KEYS as $rk) {
             $rounds[$rk] = [];
         }
 
@@ -175,56 +177,100 @@ class WorkingBoardController extends Controller
 
         foreach ($boardEntries as $entry) {
             $rk = WorkingBoardEntry::normalizeRoundKey((string) $entry->round_key);
-            if (! in_array($rk, WorkingBoardEntry::ROUND_KEYS, true)) {
+            if (! in_array($rk, WorkingBoardEntry::BOARD_ROUND_KEYS, true)) {
                 continue;
             }
 
-            if ($entry->entry_type === WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER) {
-                $rounds[$rk][] = [
-                    'entry_type' => WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER,
-                ];
-
-                continue;
-            }
-
-            if ($entry->entry_type === WorkingBoardEntry::ENTRY_TYPE_NON_TARGET_DIVIDER) {
-                $rounds[$rk][] = [
-                    'entry_type' => WorkingBoardEntry::ENTRY_TYPE_NON_TARGET_DIVIDER,
-                ];
-
-                continue;
-            }
-
-            $player = $entry->player;
-            if ($player === null) {
-                continue;
-            }
-            if (! $this->playerAllowedOnBoard($player, $boardType)) {
-                continue;
-            }
-            $rounds[$rk][] = $this->cardPayloadFromPlayer(
-                $player,
-                $entry->confidence,
-                $entry->risk,
-            );
+            $this->appendBoardEntryToRound($rounds, $rk, $entry, $boardType);
         }
 
-        $coffin = $rounds[WorkingBoardEntry::ROUND_COFFIN] ?? [];
-        if ($coffin !== []) {
-            $postTen = $rounds['post-10'] ?? [];
-            $rounds['post-10'] = array_merge(
-                $postTen,
-                [['entry_type' => WorkingBoardEntry::ENTRY_TYPE_NON_TARGET_DIVIDER]],
-                $coffin,
-            );
+        return $this->mergeLegacyRounds($rounds, $boardEntries, $boardType);
+    }
+
+    /**
+     * @param  array<string, list<array<string, mixed>>>  $rounds
+     */
+    private function appendBoardEntryToRound(array &$rounds, string $rk, WorkingBoardEntry $entry, string $boardType): void
+    {
+        if ($entry->entry_type === WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER) {
+            $rounds[$rk][] = [
+                'entry_type' => WorkingBoardEntry::ENTRY_TYPE_TIER_DIVIDER,
+            ];
+
+            return;
         }
 
-        $display = [];
-        foreach (WorkingBoardEntry::BOARD_ROUND_KEYS as $rk) {
-            $display[$rk] = $rounds[$rk] ?? [];
+        if ($entry->entry_type === WorkingBoardEntry::ENTRY_TYPE_NON_TARGET_DIVIDER) {
+            return;
         }
 
-        return $display;
+        $player = $entry->player;
+        if ($player === null) {
+            return;
+        }
+        if (! $this->playerAllowedOnBoard($player, $boardType)) {
+            return;
+        }
+        $rounds[$rk][] = $this->cardPayloadFromPlayer(
+            $player,
+            $entry->confidence,
+            $entry->risk,
+        );
+    }
+
+    /**
+     * @param  array<string, list<array<string, mixed>>>  $rounds
+     * @param  Collection<int, WorkingBoardEntry>  $entries
+     * @return array<string, list<array<string, mixed>>>
+     */
+    private function mergeLegacyRounds(array $rounds, Collection $entries, string $boardType): array
+    {
+        $legacyOrder = ['1', '2', '3', '4', '5-7', '8-10', 'post-10', WorkingBoardEntry::ROUND_COFFIN];
+        foreach ($legacyOrder as $legacyRound) {
+            $legacyEntries = $entries
+                ->filter(fn (WorkingBoardEntry $e): bool => $e->board_type === $boardType
+                    && WorkingBoardEntry::normalizeRoundKey((string) $e->round_key) === $legacyRound)
+                ->sortBy('sort_order')
+                ->values();
+
+            if ($legacyEntries->isEmpty()) {
+                continue;
+            }
+
+            $bucket = WorkingBoardEntry::LEGACY_ROUND_TO_BUCKET[$legacyRound] ?? null;
+            if ($bucket === null) {
+                continue;
+            }
+
+            if ($legacyRound === WorkingBoardEntry::ROUND_COFFIN) {
+                foreach ($legacyEntries as $entry) {
+                    $this->appendBoardEntryToRound(
+                        $rounds,
+                        WorkingBoardEntry::passRoundKeyForBucket($bucket),
+                        $entry,
+                        $boardType,
+                    );
+                }
+
+                continue;
+            }
+
+            $belowPass = false;
+            foreach ($legacyEntries as $entry) {
+                if ($entry->entry_type === WorkingBoardEntry::ENTRY_TYPE_NON_TARGET_DIVIDER) {
+                    $belowPass = true;
+
+                    continue;
+                }
+
+                $targetRound = $belowPass
+                    ? WorkingBoardEntry::passRoundKeyForBucket($bucket)
+                    : WorkingBoardEntry::targetsRoundKeyForBucket($bucket);
+                $this->appendBoardEntryToRound($rounds, $targetRound, $entry, $boardType);
+            }
+        }
+
+        return $rounds;
     }
 
     private function playerAllowedOnBoard(Player $player, string $boardType): bool

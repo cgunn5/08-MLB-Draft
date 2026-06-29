@@ -291,6 +291,10 @@ function isTierDivider(item) {
     return item?.entry_type === 'tier_divider';
 }
 
+function isPassRoundKey(roundKey) {
+    return String(roundKey ?? '').endsWith('-pass');
+}
+
 function isNonTargetDivider(item) {
     return item?.entry_type === 'non_target_divider';
 }
@@ -316,37 +320,16 @@ function dedupeNonTargetDividers(list) {
     if (!Array.isArray(list)) {
         return [];
     }
-    let seen = false;
 
-    return list.filter((item) => {
-        if (!isNonTargetDivider(item)) {
-            return true;
-        }
-        if (seen) {
-            return false;
-        }
-        seen = true;
-
-        return true;
-    });
+    return list.filter((item) => !isNonTargetDivider(item));
 }
 
 function ensureNonTargetDividerOnList(list) {
-    const normalized = dedupeNonTargetDividers(Array.isArray(list) ? list : []);
-    if (nonTargetDividerIndex(normalized) === -1) {
-        return [...normalized, { entry_type: 'non_target_divider' }];
-    }
-
-    return normalized;
+    return dedupeNonTargetDividers(Array.isArray(list) ? list : []);
 }
 
 function insertIndexBeforeNonTargetDivider(list) {
-    const dividerIdx = nonTargetDividerIndex(list);
-    if (dividerIdx === -1) {
-        return list.length;
-    }
-
-    return dividerIdx;
+    return Array.isArray(list) ? list.length : 0;
 }
 
 function collectBatGradesOnBoard(boardRounds, boardType, roundKeys) {
@@ -2723,8 +2706,8 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('boardPlayerPicker', (config) => ({
         boardType: config.boardType ?? 'hs',
         players: Array.isArray(config.players) ? config.players : [],
-        roundKeys: Array.isArray(config.roundKeys) ? config.roundKeys : ['1'],
-        round: Array.isArray(config.roundKeys) && config.roundKeys.length > 0 ? config.roundKeys[0] : '1',
+        roundKeys: Array.isArray(config.roundKeys) ? config.roundKeys : ['1-targets'],
+        round: Array.isArray(config.roundKeys) && config.roundKeys.length > 0 ? config.roundKeys[0] : '1-targets',
         readOnly: Boolean(config.readOnly),
         open: false,
         query: '',
@@ -2915,6 +2898,10 @@ document.addEventListener('alpine:init', () => {
             this.roundKeys = Array.isArray(config.roundKeys) ? config.roundKeys : [];
             this.roundLabels =
                 config.roundLabels && typeof config.roundLabels === 'object' ? config.roundLabels : {};
+            this.pickerRoundLabels =
+                config.pickerRoundLabels && typeof config.pickerRoundLabels === 'object'
+                    ? config.pickerRoundLabels
+                    : {};
             this.confidenceOptions = Array.isArray(config.confidenceOptions) ? config.confidenceOptions : [];
             this.riskOptions = Array.isArray(config.riskOptions) ? config.riskOptions : [];
             this.riskLabels =
@@ -2948,9 +2935,8 @@ document.addEventListener('alpine:init', () => {
                     this.boardRounds.master[rk] = [];
                 }
                 this.boardRounds.master[rk] = this.boardRounds.master[rk].filter(
-                    (item) => isRoundDivider(item) || item?.player_id,
+                    (item) => !isNonTargetDivider(item) && (isRoundDivider(item) || item?.player_id),
                 );
-                this.boardRounds.master[rk] = ensureNonTargetDividerOnList(this.boardRounds.master[rk]);
             }
 
             this.boardRounds = { ...this.boardRounds };
@@ -3049,13 +3035,16 @@ document.addEventListener('alpine:init', () => {
             return this.roundCards(boardType, rk).filter((item) => !isRoundDivider(item)).length;
         },
 
-        isBelowNonTargetDivider(boardType, rk, idx) {
-            const dividerIdx = nonTargetDividerIndex(this.roundCards(boardType, rk));
-            return dividerIdx !== -1 && idx > dividerIdx;
+        isPassRoundKey(roundKey) {
+            return isPassRoundKey(roundKey);
         },
 
-        nonTargetDividerListIndex(boardType, rk) {
-            return nonTargetDividerIndex(this.roundCards(boardType, rk));
+        isBelowNonTargetDivider(boardType, rk, idx) {
+            return isPassRoundKey(rk);
+        },
+
+        nonTargetDividerListIndex() {
+            return -1;
         },
 
         isTierDivider(item) {
@@ -3089,15 +3078,18 @@ document.addEventListener('alpine:init', () => {
                 this.boardRounds[boardType][rk] = [];
             }
             const list = [...this.boardRounds[boardType][rk]];
-            const insertAt = insertIndexBeforeNonTargetDivider(list);
-            list.splice(insertAt, 0, { entry_type: 'tier_divider' });
-            this.boardRounds[boardType][rk] = ensureNonTargetDividerOnList(list);
+            list.splice(list.length, 0, { entry_type: 'tier_divider' });
+            this.boardRounds[boardType][rk] = list;
             this.boardRounds = { ...this.boardRounds };
             this.scheduleSave(50);
         },
 
         roundLabel(roundKey) {
-            return this.roundLabels?.[roundKey] ?? roundKey;
+            return (
+                this.pickerRoundLabels?.[roundKey] ??
+                this.roundLabels?.[roundKey] ??
+                roundKey
+            );
         },
 
         resolveActiveBoard() {
@@ -3230,9 +3222,8 @@ document.addEventListener('alpine:init', () => {
             };
             const rounds = { ...(this.boardRounds[boardType] ?? {}) };
             const list = [...(rounds[rk] ?? [])];
-            const insertAt = insertIndexBeforeNonTargetDivider(list);
-            list.splice(insertAt, 0, card);
-            rounds[rk] = ensureNonTargetDividerOnList(list);
+            list.push(card);
+            rounds[rk] = list;
             this.boardRounds[boardType] = rounds;
             this.boardRounds = { ...this.boardRounds };
             if (!silent) {
@@ -3392,7 +3383,6 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
             this.boardRounds[boardType][rk].splice(idx, 1);
-            this.boardRounds[boardType][rk] = ensureNonTargetDividerOnList(this.boardRounds[boardType][rk]);
             this.scheduleSave();
         },
 
@@ -3417,15 +3407,7 @@ document.addEventListener('alpine:init', () => {
         dropIndexFromEvent(ev, list) {
             const tbody = ev.currentTarget;
             const rows = [...tbody.querySelectorAll('tr[data-board-list-row]')];
-            const tail = tbody.querySelector('tr[data-board-drop-tail]');
             const y = ev.clientY;
-
-            if (tail) {
-                const tailRect = tail.getBoundingClientRect();
-                if (y >= tailRect.top && y <= tailRect.bottom) {
-                    return Array.isArray(list) ? list.length : rows.length;
-                }
-            }
 
             if (rows.length === 0) {
                 return 0;
@@ -3434,15 +3416,6 @@ document.addEventListener('alpine:init', () => {
             for (let i = 0; i < rows.length; i++) {
                 const row = rows[i];
                 const rect = row.getBoundingClientRect();
-
-                if (row.dataset.nonTargetDivider === 'true') {
-                    if (y >= rect.top && y <= rect.bottom) {
-                        return i + 1;
-                    }
-
-                    continue;
-                }
-
                 const mid = rect.top + rect.height / 2;
                 if (y < mid) {
                     return i;
@@ -3481,15 +3454,12 @@ document.addEventListener('alpine:init', () => {
             if (fromRk === targetRk && insertAt > fromIdx) {
                 insertAt -= 1;
             }
-            this.boardRounds[boardType][fromRk] = ensureNonTargetDividerOnList(list);
+            this.boardRounds[boardType][fromRk] = list;
             if (!Array.isArray(this.boardRounds[boardType][targetRk])) {
                 this.boardRounds[boardType][targetRk] = [];
             }
             insertAt = Math.max(0, Math.min(insertAt, this.boardRounds[boardType][targetRk].length));
             this.boardRounds[boardType][targetRk].splice(insertAt, 0, card);
-            this.boardRounds[boardType][targetRk] = ensureNonTargetDividerOnList(
-                this.boardRounds[boardType][targetRk],
-            );
             this.boardRounds = { ...this.boardRounds };
             this.scheduleSave();
         },
