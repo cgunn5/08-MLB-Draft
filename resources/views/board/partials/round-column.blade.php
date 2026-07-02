@@ -28,12 +28,21 @@
 
     <div class="working-board-round-table-wrap">
         <table class="working-board-table working-board-round-table w-full min-w-0 border-collapse text-center text-[10px]">
+            <colgroup>
+                <col class="working-board-col-metric" />
+                <col class="working-board-col-metric" />
+                <col class="working-board-col-metric" />
+                <col class="working-board-col-name" />
+                <col class="working-board-col-metric" />
+                <col class="working-board-col-metric" />
+                <col class="working-board-col-metric" />
+            </colgroup>
             <thead>
                 <tr class="border-b border-slate-300 text-[9px] font-bold tracking-wide text-slate-900">
                     <th class="working-board-th working-board-col-scale px-0.5 py-1">{{ __('CONF') }}</th>
                     <th class="working-board-th working-board-col-scale px-0.5 py-1">{{ __('RISK') }}</th>
                     <th class="working-board-th working-board-col-grade px-0.5 py-1">{{ __('ROLE') }}</th>
-                    <th class="working-board-th working-board-col-name px-1 py-1">{{ __('NAME') }}</th>
+                    <th class="working-board-th working-board-col-name px-1 py-1">{{ __('Player') }}</th>
                     <th class="working-board-th working-board-col-pos px-0.5 py-1">{{ __('POS') }}</th>
                     <th class="working-board-th working-board-col-grade px-0.5 py-1">{{ __('BAT') }}</th>
                     <th class="working-board-th working-board-col-grade px-0.5 py-1">{{ __('Sw') }}</th>
@@ -153,33 +162,92 @@
                             x-show="!isRoundDivider(card)"
                             class="working-board-name-cell working-board-col-name border-r border-slate-200 bg-white px-1 align-middle leading-none"
                         >
-                            <div class="flex items-center justify-center gap-0.5">
-                                @if ($isPassColumn)
-                                    <a
-                                        class="working-board-player-name working-board-player-name--pass min-w-0"
-                                        :href="playerUrl(card)"
-                                        x-text="boardName(card)"
-                                    ></a>
+                            <div class="working-board-name-row">
+                                @if ($boardReadOnly)
+                                    <span class="working-board-name-anchor working-board-name-anchor--readonly">
+                                        @if ($isPassColumn)
+                                            <a
+                                                class="working-board-player-name working-board-player-name--pass min-w-0 truncate"
+                                                :href="playerUrl(card)"
+                                                x-text="boardName(card)"
+                                            ></a>
+                                        @else
+                                            <a
+                                                class="working-board-player-name min-w-0 truncate text-black underline decoration-slate-400 decoration-1 underline-offset-2 hover:decoration-black"
+                                                :href="playerUrl(card)"
+                                                x-text="boardName(card)"
+                                            ></a>
+                                        @endif
+                                        <button
+                                            x-show="hasAnyAnnotation(card)"
+                                            type="button"
+                                            class="working-board-notes-summary-btn shrink-0"
+                                            title="{{ __('View notes') }}"
+                                            @mousedown.stop
+                                            @click.prevent
+                                            @mouseenter="showAnnotationSummaryTooltip($event, card)"
+                                            @mouseleave="hideAnnotationTooltip()"
+                                        >
+                                            <span class="sr-only">{{ __('View notes') }}</span>
+                                            <span aria-hidden="true">📝</span>
+                                        </button>
+                                    </span>
                                 @else
-                                    <a
-                                        class="working-board-player-name min-w-0 text-black underline decoration-slate-400 decoration-1 underline-offset-2 hover:decoration-black"
-                                        :href="playerUrl(card)"
-                                        x-text="boardName(card)"
-                                    ></a>
+                                    <span class="working-board-name-anchor">
+                                        @if ($isPassColumn)
+                                            <a
+                                                class="working-board-player-name working-board-player-name--pass min-w-0 truncate"
+                                                :href="playerUrl(card)"
+                                                x-text="boardName(card)"
+                                            ></a>
+                                        @else
+                                            <a
+                                                class="working-board-player-name min-w-0 truncate text-black underline decoration-slate-400 decoration-1 underline-offset-2 hover:decoration-black"
+                                                :href="playerUrl(card)"
+                                                x-text="boardName(card)"
+                                            ></a>
+                                        @endif
+                                        <span class="working-board-player-actions flex shrink-0 items-center gap-0.5">
+                                            <button
+                                                x-show="hasAnyAnnotation(card)"
+                                                type="button"
+                                                class="working-board-notes-summary-btn shrink-0"
+                                                title="{{ __('View notes') }}"
+                                                draggable="false"
+                                                @mousedown.stop
+                                                @mouseenter="showAnnotationSummaryTooltip($event, card)"
+                                                @mouseleave="hideAnnotationTooltip()"
+                                                @click.stop="openAnnotationPicker('{{ $boardType }}', '{{ $boardRoundKey }}', idx, $event)"
+                                            >
+                                                <span class="sr-only">{{ __('View notes') }}</span>
+                                                <span aria-hidden="true">📝</span>
+                                            </button>
+                                            <button
+                                                x-show="!hasAnyAnnotation(card)"
+                                                type="button"
+                                                class="working-board-add-annotation-btn shrink-0"
+                                                title="{{ __('Add note') }}"
+                                                draggable="false"
+                                                @mousedown.stop
+                                                @click.stop="openAnnotationPicker('{{ $boardType }}', '{{ $boardRoundKey }}', idx, $event)"
+                                            >
+                                                <span class="sr-only">{{ __('Add note') }}</span>
+                                                <span aria-hidden="true">+</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="working-board-remove-btn shrink-0"
+                                                title="{{ __('Remove from board') }}"
+                                                draggable="false"
+                                                @mousedown.stop
+                                                @click.stop="removeFromRound('{{ $boardType }}', '{{ $boardRoundKey }}', idx)"
+                                            >
+                                                <span class="sr-only">{{ __('Remove') }}</span>
+                                                <span aria-hidden="true">×</span>
+                                            </button>
+                                        </span>
+                                    </span>
                                 @endif
-                                @unless ($boardReadOnly)
-                                    <button
-                                        type="button"
-                                        class="working-board-remove-btn shrink-0"
-                                        title="{{ __('Remove from board') }}"
-                                        draggable="false"
-                                        @mousedown.stop
-                                        @click.stop="removeFromRound('{{ $boardType }}', '{{ $boardRoundKey }}', idx)"
-                                    >
-                                        <span class="sr-only">{{ __('Remove') }}</span>
-                                        <span aria-hidden="true">×</span>
-                                    </button>
-                                @endunless
                             </div>
                         </td>
                         <td
@@ -195,7 +263,7 @@
                         ></td>
                         <td
                             x-show="!isRoundDivider(card)"
-                            class="working-board-grade-cell working-board-col-grade bg-white p-0 align-middle font-bold text-black"
+                            class="working-board-grade-cell working-board-col-grade border-r border-slate-200 bg-white p-0 align-middle font-bold text-black"
                             :style="swingCellStyle(card)"
                             x-text="gradeFmt(card.grade_swing)"
                         ></td>

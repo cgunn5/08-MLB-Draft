@@ -146,13 +146,34 @@ class ProfileHeaderBoardSummaryTest extends TestCase
     public function profile_header_target_round_labels_use_bucket_labels(): void
     {
         $this->assertSame('1st', WorkingBoardEntry::profileHeaderTargetRoundLabel('1-targets'));
-        $this->assertSame('1st', WorkingBoardEntry::profileHeaderTargetRoundLabel('1-pass'));
+        $this->assertSame('1st / Pass', WorkingBoardEntry::profileHeaderTargetRoundLabel('1-pass'));
         $this->assertSame('2nd-3rd', WorkingBoardEntry::profileHeaderTargetRoundLabel('tweeners-3-targets'));
-        $this->assertSame('4th-5th', WorkingBoardEntry::profileHeaderTargetRoundLabel('4-5-pass'));
+        $this->assertSame('4th-5th / Pass', WorkingBoardEntry::profileHeaderTargetRoundLabel('4-5-pass'));
         $this->assertSame('6th+', WorkingBoardEntry::profileHeaderTargetRoundLabel('6-plus-targets'));
+        $this->assertSame('6th+ / Pass', WorkingBoardEntry::profileHeaderTargetRoundLabel('6-plus-pass'));
         $this->assertSame('2nd-3rd', WorkingBoardEntry::profileHeaderTargetRoundLabel('2'));
         $this->assertSame('4th-5th', WorkingBoardEntry::profileHeaderTargetRoundLabel('5-7'));
         $this->assertSame('6th+', WorkingBoardEntry::profileHeaderTargetRoundLabel('post-10'));
+    }
+
+    #[Test]
+    public function summary_shows_pass_status_for_players_in_pass_columns(): void
+    {
+        $user = User::factory()->create();
+        $player = Player::factory()->create(['player_pool' => 'hs']);
+        WorkingBoardEntry::query()->create([
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
+            'player_id' => $player->id,
+            'round_key' => 'tweeners-3-pass',
+            'sort_order' => 0,
+            'confidence' => '3',
+            'risk' => '4',
+        ]);
+
+        $summary = ProfileHeaderBoardSummary::forPlayer($player, $user);
+
+        $this->assertSame('2nd-3rd / Pass', $summary->targetRoundDisplay);
     }
 
     #[Test]

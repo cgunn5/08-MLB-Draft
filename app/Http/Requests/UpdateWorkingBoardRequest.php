@@ -57,6 +57,13 @@ class UpdateWorkingBoardRequest extends FormRequest
                 'max:32',
                 Rule::in(WorkingBoardEntry::RISK_OPTIONS),
             ];
+            foreach (WorkingBoardEntry::ANNOTATION_KEYS as $annotationKey) {
+                $rules["boards.$boardType.rounds.$key.*.$annotationKey"] = [
+                    'nullable',
+                    'string',
+                    'max:5000',
+                ];
+            }
         }
 
         return $rules;

@@ -201,7 +201,14 @@ class WorkingBoardEntry extends Model
     /** Profile header target-round chip. */
     public static function profileHeaderTargetRoundLabel(string $roundKey): string
     {
-        return self::bucketDisplayLabel(self::boardBucketKey($roundKey));
+        $normalized = self::normalizeRoundKey($roundKey);
+        $label = self::bucketDisplayLabel(self::boardBucketKey($normalized));
+
+        if (self::isPassRoundKey($normalized)) {
+            return $label.' / Pass';
+        }
+
+        return $label;
     }
 
     /**
@@ -248,6 +255,41 @@ class WorkingBoardEntry extends Model
 
     /** @var list<string> Board risk scale 1–5 (empty = unset). */
     public const RISK_OPTIONS = ['', '1', '2', '3', '4', '5'];
+
+    /** @var list<string> Player-card annotation field keys (stored on board entries). */
+    public const ANNOTATION_KEYS = [
+        'quick_take',
+        'separators',
+        'red_flags',
+        'dev_opportunities',
+    ];
+
+    /** @var array<string, array{icon: string, label: string, short_label: string}> */
+    public const ANNOTATION_META = [
+        'quick_take' => ['icon' => '💭', 'label' => 'Quick Take', 'short_label' => '💭'],
+        'separators' => ['icon' => '⭐️', 'label' => 'Separators', 'short_label' => '⭐️'],
+        'red_flags' => ['icon' => '🚨', 'label' => 'Red Flags', 'short_label' => '🚨'],
+        'dev_opportunities' => ['icon' => '📈', 'label' => 'Dev Opportunities', 'short_label' => '📈'],
+    ];
+
+    /**
+     * @return list<array{key: string, icon: string, label: string, shortLabel: string}>
+     */
+    public static function annotationTypes(): array
+    {
+        $types = [];
+        foreach (self::ANNOTATION_KEYS as $key) {
+            $meta = self::ANNOTATION_META[$key] ?? ['icon' => '', 'label' => $key, 'short_label' => $key];
+            $types[] = [
+                'key' => $key,
+                'icon' => $meta['icon'],
+                'label' => $meta['label'],
+                'shortLabel' => $meta['short_label'] ?? $meta['label'],
+            ];
+        }
+
+        return $types;
+    }
 
     /** @var array<string, string> Stored risk value → display label */
     public const RISK_DISPLAY_LABELS = [
@@ -304,6 +346,10 @@ class WorkingBoardEntry extends Model
         'sort_order',
         'confidence',
         'risk',
+        'quick_take',
+        'separators',
+        'red_flags',
+        'dev_opportunities',
     ];
 
     /**

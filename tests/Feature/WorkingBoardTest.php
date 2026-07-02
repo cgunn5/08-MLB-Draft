@@ -120,6 +120,117 @@ class WorkingBoardTest extends TestCase
         $this->assertStringContainsString('Add all players to round', $html);
     }
 
+    public function test_board_patch_persists_player_annotations(): void
+    {
+        $user = User::factory()->admin()->create();
+        $player = Player::factory()->create(['player_pool' => 'hs']);
+
+        $payload = $this->boardsPayload([
+            WorkingBoardEntry::BOARD_MASTER => [
+                '1-targets' => [[
+                    'player_id' => $player->id,
+                    'confidence' => '3',
+                    'risk' => '2',
+                    'quick_take' => 'Plus bat speed.',
+                    'separators' => 'Tier 1 arm.',
+                    'red_flags' => 'Medical history.',
+                    'dev_opportunities' => 'Could stick at SS.',
+                ]],
+            ],
+        ]);
+
+        $this->actingAs($user)->patchJson(route('board.update'), $payload)->assertOk();
+
+        $this->assertDatabaseHas('working_board_entries', [
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
+            'player_id' => $player->id,
+            'round_key' => '1-targets',
+            'quick_take' => 'Plus bat speed.',
+            'separators' => 'Tier 1 arm.',
+            'red_flags' => 'Medical history.',
+            'dev_opportunities' => 'Could stick at SS.',
+        ]);
+    }
+
+    public function test_board_page_includes_saved_player_annotations(): void
+    {
+        $user = User::factory()->admin()->create();
+        $player = Player::factory()->create([
+            'player_pool' => 'hs',
+            'first_name' => 'Ann',
+            'last_name' => 'Otate',
+        ]);
+
+        WorkingBoardEntry::query()->create([
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
+            'entry_type' => WorkingBoardEntry::ENTRY_TYPE_PLAYER,
+            'player_id' => $player->id,
+            'round_key' => '1-targets',
+            'sort_order' => 0,
+            'confidence' => '4',
+            'risk' => '2',
+            'quick_take' => 'Smooth LH stroke.',
+            'red_flags' => 'Limited track record.',
+        ]);
+
+        $html = $this->actingAs($user)->get(route('board.index'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('"quick_take":"Smooth LH stroke."', $html);
+        $this->assertStringContainsString('"red_flags":"Limited track record."', $html);
+        $this->assertStringContainsString('working-board-notes-summary-btn', $html);
+        $this->assertStringContainsString('working-board-add-annotation-btn', $html);
+        $this->assertStringContainsString('working-board-annotation-popover--fixed', $html);
+        $this->assertStringContainsString('working-board-annotation-tooltip-table', $html);
+        $this->assertStringContainsString('>Player<', $html);
+        $this->assertStringContainsString('working-board-name-anchor', $html);
+        $this->assertStringNotContainsString('working-board-col-notes', $html);
+        $this->assertStringContainsString('x-teleport="body"', $html);
+        $this->assertStringContainsString('"annotationTypes":[{"key":"quick_take"', $html);
+        $this->assertStringContainsString('"label":"Red Flags"', $html);
+    }
+
+    public function test_read_only_user_can_view_notes_summary_without_edit_controls(): void
+    {
+        $user = User::factory()->create();
+        $player = Player::factory()->create([
+            'player_pool' => 'hs',
+            'first_name' => 'View',
+            'last_name' => 'Only',
+        ]);
+
+        WorkingBoardEntry::query()->create([
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
+            'entry_type' => WorkingBoardEntry::ENTRY_TYPE_PLAYER,
+            'player_id' => $player->id,
+            'round_key' => '1-targets',
+            'sort_order' => 0,
+            'quick_take' => 'Read-only summary.',
+        ]);
+
+        $html = $this->actingAs($user)->get(route('board.index'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('"readOnly":true', $html);
+        $this->assertStringContainsString('working-board-notes-summary-btn', $html);
+        $this->assertStringContainsString('working-board-name-anchor--readonly', $html);
+        $this->assertStringContainsString('showAnnotationSummaryTooltip', $html);
+        $this->assertStringNotContainsString('working-board-add-annotation-btn', $html);
+        $this->assertStringNotContainsString('openAnnotationPicker(', $html);
+
+        $payload = $this->boardsPayload([
+            WorkingBoardEntry::BOARD_MASTER => [
+                '1-targets' => [[
+                    'player_id' => $player->id,
+                    'quick_take' => 'Should not save.',
+                ]],
+            ],
+        ]);
+
+        $this->actingAs($user)->patchJson(route('board.update'), $payload)->assertForbidden();
+    }
+
     public function test_board_patch_persists_rounds(): void
     {
         $user = User::factory()->admin()->create();

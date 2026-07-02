@@ -14,6 +14,7 @@
         'confidenceOptions' => $boardConfidenceOptions,
         'riskOptions' => $boardRiskOptions,
         'riskLabels' => $boardRiskLabels,
+        'annotationTypes' => $boardAnnotationTypes,
         'boards' => $boardAlpineBoards,
         'batGradeBounds' => $boardBatGradeBounds,
         'updateUrl' => route('board.update'),
@@ -58,6 +59,8 @@
                         </div>
                     @endforeach
                 </div>
+
+                @include('board.partials.annotation-popover')
             </div>
         </div>
     </div>

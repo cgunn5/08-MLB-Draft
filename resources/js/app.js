@@ -2872,6 +2872,11 @@ document.addEventListener('alpine:init', () => {
         confidenceOptions: [],
         riskOptions: [],
         riskLabels: {},
+        annotationTypes: [],
+        annotationEditor: null,
+        annotationEditorPosition: { top: 0, left: 0 },
+        annotationTooltip: null,
+        annotationTooltipPosition: { top: 0, left: 0 },
         boardRounds: {},
         boardPools: {},
         updateUrl: '',
@@ -2906,6 +2911,7 @@ document.addEventListener('alpine:init', () => {
             this.riskOptions = Array.isArray(config.riskOptions) ? config.riskOptions : [];
             this.riskLabels =
                 config.riskLabels && typeof config.riskLabels === 'object' ? config.riskLabels : {};
+            this.annotationTypes = Array.isArray(config.annotationTypes) ? config.annotationTypes : [];
             this.updateUrl = config.updateUrl ?? '';
             this.hsPlayerBaseUrl = String(config.hsPlayerBaseUrl ?? '').replace(/\/$/, '');
             this.ncaaPlayerBaseUrl = String(config.ncaaPlayerBaseUrl ?? '').replace(/\/$/, '');
@@ -3219,6 +3225,10 @@ document.addEventListener('alpine:init', () => {
                 ...template,
                 confidence: '',
                 risk: '',
+                quick_take: '',
+                separators: '',
+                red_flags: '',
+                dev_opportunities: '',
             };
             const rounds = { ...(this.boardRounds[boardType] ?? {}) };
             const list = [...(rounds[rk] ?? [])];
@@ -3251,6 +3261,216 @@ document.addEventListener('alpine:init', () => {
             }
 
             return `${ln.toUpperCase()}, ${fn.toUpperCase()}`;
+        },
+
+        hasAnnotation(card, key) {
+            return String(card?.[key] ?? '').trim() !== '';
+        },
+
+        hasAnyAnnotation(card) {
+            return this.annotationTypes.some((ann) => this.hasAnnotation(card, ann.key));
+        },
+
+        annotationText(card, key) {
+            return String(card?.[key] ?? '').trim();
+        },
+
+        showAnnotationSummaryTooltip(event, card) {
+            if (!this.hasAnyAnnotation(card)) {
+                return;
+            }
+            const row = event?.currentTarget?.closest?.('tr[data-player-row]');
+            this.positionAnnotationTooltip(row ?? event?.currentTarget);
+            this.annotationTooltip = {
+                rows: this.annotationTypes.map((ann) => ({
+                    label: ann.shortLabel ?? ann.label,
+                    text: this.annotationText(card, ann.key),
+                })),
+            };
+        },
+
+        hideAnnotationTooltip() {
+            this.annotationTooltip = null;
+        },
+
+        positionAnnotationTooltip(anchor) {
+            if (!anchor?.getBoundingClientRect) {
+                return;
+            }
+            const rect = anchor.getBoundingClientRect();
+            const width = 322;
+            const height = 160;
+            let top = rect.bottom + 6;
+            let left = rect.left + rect.width / 2 - width / 2;
+            if (top + height > window.innerHeight - 8) {
+                top = Math.max(8, rect.top - height - 6);
+            }
+            left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
+            this.annotationTooltipPosition = { top, left };
+        },
+
+        annotationTooltipStyle() {
+            const { top, left } = this.annotationTooltipPosition ?? { top: 0, left: 0 };
+
+            return `top: ${top}px; left: ${left}px;`;
+        },
+
+        isAnnotationPickerOpen(boardType, rk, idx) {
+            const editor = this.annotationEditor;
+            if (!editor) {
+                return false;
+            }
+
+            return (
+                editor.boardType === boardType &&
+                editor.rk === rk &&
+                Number(editor.idx) === Number(idx)
+            );
+        },
+
+        positionAnnotationEditor(anchor) {
+            if (!anchor?.getBoundingClientRect) {
+                return;
+            }
+            const rect = anchor.getBoundingClientRect();
+            const width = 208;
+            const height = 240;
+            let top = rect.bottom + 4;
+            let left = rect.right - width;
+            if (top + height > window.innerHeight - 8) {
+                top = Math.max(8, rect.top - height - 4);
+            }
+            left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
+            this.annotationEditorPosition = { top, left };
+        },
+
+        annotationEditorStyle() {
+            const { top, left } = this.annotationEditorPosition ?? { top: 0, left: 0 };
+
+            return `top: ${top}px; left: ${left}px;`;
+        },
+
+        openAnnotationPicker(boardType, rk, idx, event) {
+            if (this.readOnly) {
+                return;
+            }
+            this.hideAnnotationTooltip();
+            const card = this.boardRounds?.[boardType]?.[rk]?.[idx];
+            if (!card || isRoundDivider(card)) {
+                return;
+            }
+            this.positionAnnotationEditor(event?.currentTarget);
+            this.annotationEditor = {
+                boardType,
+                rk,
+                idx,
+                key: '',
+                label: '',
+                icon: '',
+                draft: '',
+            };
+        },
+
+        openAnnotationEditor(boardType, rk, idx, ann, event) {
+            if (this.readOnly) {
+                return;
+            }
+            this.hideAnnotationTooltip();
+            const card = this.boardRounds?.[boardType]?.[rk]?.[idx];
+            if (!card || isRoundDivider(card)) {
+                return;
+            }
+            this.positionAnnotationEditor(event?.currentTarget);
+            this.annotationEditor = {
+                boardType,
+                rk,
+                idx,
+                key: ann.key,
+                label: ann.label,
+                icon: ann.icon,
+                draft: this.annotationText(card, ann.key),
+            };
+        },
+
+        selectAnnotationType(key) {
+            const editor = this.annotationEditor;
+            if (!editor) {
+                return;
+            }
+            const ann = this.annotationTypes.find((item) => item.key === key);
+            if (!ann) {
+                return;
+            }
+            const card = this.boardRounds?.[editor.boardType]?.[editor.rk]?.[editor.idx];
+            if (!card || isRoundDivider(card)) {
+                return;
+            }
+            editor.key = ann.key;
+            editor.label = ann.label;
+            editor.icon = ann.icon;
+            editor.draft = this.annotationText(card, ann.key);
+        },
+
+        annotationTypeIsSelected(key) {
+            return this.annotationEditor?.key === key;
+        },
+
+        canSaveAnnotationEditor() {
+            const editor = this.annotationEditor;
+            if (!editor?.key) {
+                return false;
+            }
+
+            return String(editor.draft ?? '').trim() !== '';
+        },
+
+        canClearAnnotationEditor() {
+            const editor = this.annotationEditor;
+            if (!editor?.key) {
+                return false;
+            }
+            const card = this.boardRounds?.[editor.boardType]?.[editor.rk]?.[editor.idx];
+            if (!card || isRoundDivider(card)) {
+                return false;
+            }
+
+            return this.hasAnnotation(card, editor.key);
+        },
+
+        closeAnnotationEditor() {
+            this.annotationEditor = null;
+        },
+
+        saveAnnotationEditor() {
+            const editor = this.annotationEditor;
+            if (!editor?.key || !this.canSaveAnnotationEditor()) {
+                return;
+            }
+            const card = this.boardRounds?.[editor.boardType]?.[editor.rk]?.[editor.idx];
+            if (!card || isRoundDivider(card)) {
+                this.closeAnnotationEditor();
+                return;
+            }
+            card[editor.key] = String(editor.draft ?? '').trim();
+            this.boardRounds = { ...this.boardRounds };
+            this.closeAnnotationEditor();
+            this.scheduleSave(50);
+        },
+
+        clearAnnotationEditor() {
+            const editor = this.annotationEditor;
+            if (!editor) {
+                return;
+            }
+            const card = this.boardRounds?.[editor.boardType]?.[editor.rk]?.[editor.idx];
+            if (!card || isRoundDivider(card)) {
+                this.closeAnnotationEditor();
+                return;
+            }
+            card[editor.key] = '';
+            this.boardRounds = { ...this.boardRounds };
+            this.closeAnnotationEditor();
+            this.scheduleSave(50);
         },
 
         gradeFmt(v) {
@@ -3482,6 +3702,10 @@ document.addEventListener('alpine:init', () => {
                             player_id: Number(c.player_id),
                             confidence: c.confidence ?? '',
                             risk: c.risk ?? '',
+                            quick_take: c.quick_take ?? '',
+                            separators: c.separators ?? '',
+                            red_flags: c.red_flags ?? '',
+                            dev_opportunities: c.dev_opportunities ?? '',
                         };
                     });
                 }

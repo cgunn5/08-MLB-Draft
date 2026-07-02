@@ -70,6 +70,7 @@ class WorkingBoardController extends Controller
             'boardConfidenceOptions' => WorkingBoardEntry::CONFIDENCE_OPTIONS,
             'boardRiskOptions' => WorkingBoardEntry::RISK_OPTIONS,
             'boardRiskLabels' => WorkingBoardEntry::RISK_DISPLAY_LABELS,
+            'boardAnnotationTypes' => WorkingBoardEntry::annotationTypes(),
             'boardPanels' => $boardPanels,
             'boardPanelOrder' => [WorkingBoardEntry::BOARD_MASTER],
             'boardTypes' => [WorkingBoardEntry::BOARD_MASTER],
@@ -142,6 +143,10 @@ class WorkingBoardController extends Controller
                             'sort_order' => $order,
                             'confidence' => $this->nullableBoardString($row['confidence'] ?? null),
                             'risk' => $this->nullableBoardString($row['risk'] ?? null),
+                            'quick_take' => $this->nullableBoardString($row['quick_take'] ?? null),
+                            'separators' => $this->nullableBoardString($row['separators'] ?? null),
+                            'red_flags' => $this->nullableBoardString($row['red_flags'] ?? null),
+                            'dev_opportunities' => $this->nullableBoardString($row['dev_opportunities'] ?? null),
                         ]);
                         $order++;
                     }
@@ -215,6 +220,7 @@ class WorkingBoardController extends Controller
             $player,
             $entry->confidence,
             $entry->risk,
+            $entry,
         );
     }
 
@@ -317,7 +323,7 @@ class WorkingBoardController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function cardPayloadFromPlayer(Player $player, ?string $confidence, ?string $risk): array
+    private function cardPayloadFromPlayer(Player $player, ?string $confidence, ?string $risk, ?WorkingBoardEntry $entry = null): array
     {
         $last = (string) $player->last_name;
         $first = (string) $player->first_name;
@@ -330,6 +336,10 @@ class WorkingBoardController extends Controller
             'player_pool' => (string) $player->player_pool,
             'confidence' => $confidence ?? '',
             'risk' => $risk ?? '',
+            'quick_take' => (string) ($entry?->quick_take ?? ''),
+            'separators' => (string) ($entry?->separators ?? ''),
+            'red_flags' => (string) ($entry?->red_flags ?? ''),
+            'dev_opportunities' => (string) ($entry?->dev_opportunities ?? ''),
             'last_name' => $last,
             'first_name' => $first,
             'position' => $position,
