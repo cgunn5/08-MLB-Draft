@@ -42,6 +42,7 @@ class LaravelCloudBootstrapCommand extends Command
 
         if (! ApplicationDatabaseBootstrap::needsFirstRunSetup()) {
             $this->components->info('Database ready — at least one user account exists.');
+            $this->ensureViewerUserFromEnvironment();
 
             return self::SUCCESS;
         }
@@ -65,6 +66,27 @@ class LaravelCloudBootstrapCommand extends Command
 
         $this->line(trim(Artisan::output()));
 
+        $this->ensureViewerUserFromEnvironment();
+
         return self::SUCCESS;
+    }
+
+    private function ensureViewerUserFromEnvironment(): void
+    {
+        $email = trim((string) env('VIEWER_EMAIL', ''));
+        $password = (string) env('VIEWER_PASSWORD', '');
+
+        if ($email === '' || $password === '') {
+            return;
+        }
+
+        Artisan::call('app:ensure-user', [
+            '--email' => $email,
+            '--password' => $password,
+            '--name' => (string) env('VIEWER_NAME', ''),
+            '--no-interaction' => true,
+        ]);
+
+        $this->line(trim(Artisan::output()));
     }
 }
