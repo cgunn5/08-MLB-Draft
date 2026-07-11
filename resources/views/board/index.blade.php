@@ -61,6 +61,7 @@
                 </div>
 
                 @include('board.partials.annotation-popover')
+                @include('board.partials.draft-money-popover')
             </div>
         </div>
     </div>

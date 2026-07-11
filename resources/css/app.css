@@ -1190,27 +1190,156 @@
     }
 
     .working-board-name-row {
-        display: flex;
-        justify-content: center;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        align-items: center;
         width: 100%;
         min-width: 0;
+        column-gap: 0.125rem;
     }
 
-    .working-board-name-anchor {
+    .working-board-name-side {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+    }
+
+    .working-board-name-side--left {
+        justify-content: flex-end;
+    }
+
+    .working-board-card-actions {
         display: inline-flex;
         align-items: center;
+        justify-content: flex-end;
         gap: 0.125rem;
-        max-width: 100%;
-        min-width: 0;
-        transform: translateX(0.875rem);
+        width: 2.6125rem;
+        flex-shrink: 0;
     }
 
-    .working-board-name-anchor--readonly {
-        transform: translateX(0.4375rem);
+    .working-board-name-side--right .working-board-card-actions {
+        justify-content: flex-start;
     }
 
-    .working-board-player-actions {
+    .working-board-signing-bonus-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 0.7875rem;
+        height: 0.7875rem;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        font-size: 9px;
         line-height: 1;
+        cursor: pointer;
+        opacity: 0.72;
+    }
+
+    .working-board-signing-bonus-btn:hover,
+    .working-board-signing-bonus-btn--active {
+        opacity: 1;
+    }
+
+    .working-board-signing-bonus-popover {
+        width: 13rem;
+        padding: 0.375rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.375rem;
+        background: #ffffff;
+        box-shadow: 0 4px 12px rgb(15 23 42 / 0.12);
+        text-align: center;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    .working-board-draft-money-popover {
+        width: 13rem;
+        padding: 0.375rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.375rem;
+        background: #ffffff;
+        box-shadow: 0 4px 12px rgb(15 23 42 / 0.12);
+        text-align: center;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    .working-board-draft-money-divider {
+        margin: 0.5rem 0;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .working-board-signing-bonus-popover-header {
+        text-align: center;
+    }
+
+    .working-board-signing-bonus-input {
+        display: block;
+        width: 100%;
+        margin-bottom: 0.375rem;
+        padding: 0.375rem 0.5rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.25rem;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 1.2;
+        text-align: center;
+        text-transform: none;
+        letter-spacing: normal;
+    }
+
+    .working-board-signing-bonus-input:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 2px rgb(99 102 241 / 0.2);
+    }
+
+    .working-board-name-side--right {
+        justify-content: flex-start;
+    }
+
+    .working-board-signing-bonus-tooltip {
+        width: 11.25rem;
+        max-width: calc(100vw - 1rem);
+        padding: 0.375rem 0.5rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.375rem;
+        background: #ffffff;
+        box-shadow: 0 6px 16px rgb(15 23 42 / 0.16);
+        text-align: center;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    .working-board-signing-bonus-tooltip-header {
+        margin-bottom: 0.25rem;
+        font-size: 9px;
+        color: #64748b;
+    }
+
+    .working-board-signing-bonus-tooltip-value {
+        font-size: 11px;
+        font-weight: 700;
+        color: #0f172a;
+        text-transform: none;
+        letter-spacing: normal;
+        word-break: break-word;
+    }
+
+    .working-board-player-name {
+        justify-self: center;
+        min-width: 0;
+        max-width: 100%;
+        font-weight: 700 !important;
+        font-family: Carbon, ui-sans-serif, system-ui, sans-serif;
+        white-space: nowrap;
+        text-align: center;
     }
 
     .working-board-notes-summary-btn {
@@ -1266,13 +1395,6 @@
         vertical-align: middle;
         font-size: 9px !important;
         font-variant-numeric: tabular-nums;
-    }
-
-    .working-board-player-name {
-        font-weight: 700 !important;
-        font-family: Carbon, ui-sans-serif, system-ui, sans-serif;
-        white-space: nowrap;
-        text-align: center;
     }
 
     .working-board-remove-btn {
@@ -1331,6 +1453,130 @@
 
     .working-board-add-annotation-btn:hover {
         color: #15803d;
+    }
+
+    .working-board-drafted-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 0.7875rem;
+        height: 0.7875rem;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        font-size: 9px;
+        line-height: 1;
+        cursor: pointer;
+        opacity: 0.72;
+    }
+
+    .working-board-drafted-btn--rangers {
+        width: 1.35rem;
+        height: 1.0125rem;
+    }
+
+    .working-board-drafted-btn:hover,
+    .working-board-drafted-btn--active {
+        opacity: 1;
+    }
+
+    .working-board-drafted-popover {
+        width: 10.5rem;
+        padding: 0.375rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.375rem;
+        background: #ffffff;
+        box-shadow: 0 4px 12px rgb(15 23 42 / 0.12);
+        text-align: center;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    .working-board-drafted-popover-header {
+        text-transform: uppercase;
+        text-align: center;
+    }
+
+    .working-board-drafted-options {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .working-board-drafted-option-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.375rem;
+        width: 100%;
+        padding: 0.375rem 0.5rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.25rem;
+        background: #ffffff;
+        color: #0f172a;
+        font-size: 10px;
+        font-weight: 600;
+        line-height: 1.2;
+        text-align: center;
+        cursor: pointer;
+    }
+
+    .working-board-drafted-option-btn:hover {
+        background: #f8fafc;
+    }
+
+    .working-board-drafted-option-btn--selected {
+        border-color: #94a3b8;
+        background: #f1f5f9;
+    }
+
+    .working-board-drafted-option-btn--clear {
+        color: #64748b;
+    }
+
+    .working-board-drafted-team-logo {
+        display: block;
+        width: 1.35rem;
+        height: auto;
+        max-height: 1.0125rem;
+        object-fit: contain;
+    }
+
+    .working-board-card-row--drafted-other,
+    .working-board-card-row--drafted-other:hover {
+        background-color: #e8edf2 !important;
+    }
+
+    .working-board-card-row--drafted-other td {
+        background-color: #e8edf2 !important;
+        color: rgb(15 23 42 / 0.38) !important;
+    }
+
+    .working-board-card-row--drafted-other .working-board-grade-cell,
+    .working-board-card-row--drafted-other .working-board-scale-cell {
+        background-color: #e8edf2 !important;
+        color: rgb(15 23 42 / 0.38) !important;
+    }
+
+    .working-board-card-row--drafted-other .working-board-player-name {
+        color: rgb(15 23 42 / 0.38) !important;
+        text-decoration-color: rgb(15 23 42 / 0.22) !important;
+    }
+
+    .working-board-card-row--drafted-us,
+    .working-board-card-row--drafted-us:hover {
+        outline: 2px solid #16a34a;
+        outline-offset: -2px;
+        background-color: #ffffff !important;
+    }
+
+    .working-board-card-row--drafted-us td {
+        background-color: #ffffff !important;
+    }
+
+    .working-board-card-row--drafted-us .working-board-name-cell {
+        background-color: #ffffff !important;
     }
 
     .working-board-annotation-popover {

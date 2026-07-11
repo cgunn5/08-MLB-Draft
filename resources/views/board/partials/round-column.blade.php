@@ -67,6 +67,7 @@
                             !isRoundDivider(card) && isPassRoundKey('{{ $boardRoundKey }}')
                                 ? 'working-board-non-target-player'
                                 : '',
+                            !isRoundDivider(card) ? draftedRowClasses(card) : '',
                             readOnly ? '' : 'cursor-grab active:cursor-grabbing',
                         ]"
                         :draggable="!readOnly"
@@ -164,20 +165,21 @@
                         >
                             <div class="working-board-name-row">
                                 @if ($boardReadOnly)
-                                    <span class="working-board-name-anchor working-board-name-anchor--readonly">
-                                        @if ($isPassColumn)
-                                            <a
-                                                class="working-board-player-name working-board-player-name--pass min-w-0 truncate"
-                                                :href="playerUrl(card)"
-                                                x-text="boardName(card)"
-                                            ></a>
-                                        @else
-                                            <a
-                                                class="working-board-player-name min-w-0 truncate text-black underline decoration-slate-400 decoration-1 underline-offset-2 hover:decoration-black"
-                                                :href="playerUrl(card)"
-                                                x-text="boardName(card)"
-                                            ></a>
-                                        @endif
+                                    <div class="working-board-name-side working-board-name-side--left" aria-hidden="true"></div>
+                                    @if ($isPassColumn)
+                                        <a
+                                            class="working-board-player-name working-board-player-name--pass min-w-0 truncate"
+                                            :href="playerUrl(card)"
+                                            x-text="boardName(card)"
+                                        ></a>
+                                    @else
+                                        <a
+                                            class="working-board-player-name min-w-0 truncate text-black underline decoration-slate-400 decoration-1 underline-offset-2 hover:decoration-black"
+                                            :href="playerUrl(card)"
+                                            x-text="boardName(card)"
+                                        ></a>
+                                    @endif
+                                    <div class="working-board-name-side working-board-name-side--right">
                                         <button
                                             x-show="hasAnyAnnotation(card)"
                                             type="button"
@@ -191,62 +193,80 @@
                                             <span class="sr-only">{{ __('View notes') }}</span>
                                             <span aria-hidden="true">📝</span>
                                         </button>
-                                    </span>
+                                    </div>
                                 @else
-                                    <span class="working-board-name-anchor">
-                                        @if ($isPassColumn)
-                                            <a
-                                                class="working-board-player-name working-board-player-name--pass min-w-0 truncate"
-                                                :href="playerUrl(card)"
-                                                x-text="boardName(card)"
-                                            ></a>
-                                        @else
-                                            <a
-                                                class="working-board-player-name min-w-0 truncate text-black underline decoration-slate-400 decoration-1 underline-offset-2 hover:decoration-black"
-                                                :href="playerUrl(card)"
-                                                x-text="boardName(card)"
-                                            ></a>
-                                        @endif
-                                        <span class="working-board-player-actions flex shrink-0 items-center gap-0.5">
-                                            <button
-                                                x-show="hasAnyAnnotation(card)"
-                                                type="button"
-                                                class="working-board-notes-summary-btn shrink-0"
-                                                title="{{ __('View notes') }}"
-                                                draggable="false"
-                                                @mousedown.stop
-                                                @mouseenter="showAnnotationSummaryTooltip($event, card)"
-                                                @mouseleave="hideAnnotationTooltip()"
-                                                @click.stop="openAnnotationPicker('{{ $boardType }}', '{{ $boardRoundKey }}', idx, $event)"
-                                            >
-                                                <span class="sr-only">{{ __('View notes') }}</span>
-                                                <span aria-hidden="true">📝</span>
-                                            </button>
-                                            <button
-                                                x-show="!hasAnyAnnotation(card)"
-                                                type="button"
-                                                class="working-board-add-annotation-btn shrink-0"
-                                                title="{{ __('Add note') }}"
-                                                draggable="false"
-                                                @mousedown.stop
-                                                @click.stop="openAnnotationPicker('{{ $boardType }}', '{{ $boardRoundKey }}', idx, $event)"
-                                            >
-                                                <span class="sr-only">{{ __('Add note') }}</span>
-                                                <span aria-hidden="true">+</span>
-                                            </button>
+                                    <div class="working-board-name-side working-board-name-side--left">
+                                        <div class="working-board-card-actions">
                                             <button
                                                 type="button"
-                                                class="working-board-remove-btn shrink-0"
-                                                title="{{ __('Remove from board') }}"
+                                                class="working-board-signing-bonus-btn shrink-0"
+                                                :class="hasDraftMoneyDetails(card) ? 'working-board-signing-bonus-btn--active' : ''"
+                                                title="{{ __('Draft & signing bonus') }}"
                                                 draggable="false"
                                                 @mousedown.stop
-                                                @click.stop="removeFromRound('{{ $boardType }}', '{{ $boardRoundKey }}', idx)"
+                                                @mouseenter="showSigningBonusTooltip($event, card)"
+                                                @mouseleave="hideSigningBonusTooltip()"
+                                                @click.stop="openDraftMoneyEditor('{{ $boardType }}', '{{ $boardRoundKey }}', idx, $event)"
                                             >
-                                                <span class="sr-only">{{ __('Remove') }}</span>
-                                                <span aria-hidden="true">×</span>
+                                                <span class="sr-only">{{ __('Draft & signing bonus') }}</span>
+                                                <span aria-hidden="true">💰</span>
                                             </button>
-                                        </span>
-                                    </span>
+                                        </div>
+                                    </div>
+                                    @if ($isPassColumn)
+                                        <a
+                                            class="working-board-player-name working-board-player-name--pass min-w-0 truncate"
+                                            :href="playerUrl(card)"
+                                            x-text="boardName(card)"
+                                        ></a>
+                                    @else
+                                        <a
+                                            class="working-board-player-name min-w-0 truncate text-black underline decoration-slate-400 decoration-1 underline-offset-2 hover:decoration-black"
+                                            :href="playerUrl(card)"
+                                            x-text="boardName(card)"
+                                        ></a>
+                                    @endif
+                                    <div class="working-board-name-side working-board-name-side--right">
+                                        <div class="working-board-card-actions">
+                                        <button
+                                            x-show="hasAnyAnnotation(card)"
+                                            type="button"
+                                            class="working-board-notes-summary-btn shrink-0"
+                                            title="{{ __('View notes') }}"
+                                            draggable="false"
+                                            @mousedown.stop
+                                            @mouseenter="showAnnotationSummaryTooltip($event, card)"
+                                            @mouseleave="hideAnnotationTooltip()"
+                                            @click.stop="openAnnotationPicker('{{ $boardType }}', '{{ $boardRoundKey }}', idx, $event)"
+                                        >
+                                            <span class="sr-only">{{ __('View notes') }}</span>
+                                            <span aria-hidden="true">📝</span>
+                                        </button>
+                                        <button
+                                            x-show="!hasAnyAnnotation(card)"
+                                            type="button"
+                                            class="working-board-add-annotation-btn shrink-0"
+                                            title="{{ __('Add note') }}"
+                                            draggable="false"
+                                            @mousedown.stop
+                                            @click.stop="openAnnotationPicker('{{ $boardType }}', '{{ $boardRoundKey }}', idx, $event)"
+                                        >
+                                            <span class="sr-only">{{ __('Add note') }}</span>
+                                            <span aria-hidden="true">+</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            class="working-board-remove-btn shrink-0"
+                                            title="{{ __('Remove from board') }}"
+                                            draggable="false"
+                                            @mousedown.stop
+                                            @click.stop="removeFromRound('{{ $boardType }}', '{{ $boardRoundKey }}', idx)"
+                                        >
+                                            <span class="sr-only">{{ __('Remove') }}</span>
+                                            <span aria-hidden="true">×</span>
+                                        </button>
+                                        </div>
+                                    </div>
                                 @endif
                             </div>
                         </td>

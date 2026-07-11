@@ -153,6 +153,119 @@ class WorkingBoardTest extends TestCase
         ]);
     }
 
+    public function test_board_patch_persists_drafted_status(): void
+    {
+        $user = User::factory()->admin()->create();
+        $player = Player::factory()->create(['player_pool' => 'hs']);
+
+        $payload = $this->boardsPayload([
+            WorkingBoardEntry::BOARD_MASTER => [
+                '1-targets' => [[
+                    'player_id' => $player->id,
+                    'confidence' => '4',
+                    'risk' => '2',
+                    'drafted_status' => WorkingBoardEntry::DRAFTED_STATUS_US,
+                ]],
+            ],
+        ]);
+
+        $this->actingAs($user)->patchJson(route('board.update'), $payload)->assertOk();
+
+        $this->assertDatabaseHas('working_board_entries', [
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
+            'player_id' => $player->id,
+            'round_key' => '1-targets',
+            'drafted_status' => WorkingBoardEntry::DRAFTED_STATUS_US,
+        ]);
+    }
+
+    public function test_board_patch_persists_requested_signing_bonus(): void
+    {
+        $user = User::factory()->admin()->create();
+        $player = Player::factory()->create(['player_pool' => 'hs']);
+
+        $payload = $this->boardsPayload([
+            WorkingBoardEntry::BOARD_MASTER => [
+                '1-targets' => [[
+                    'player_id' => $player->id,
+                    'confidence' => '4',
+                    'risk' => '2',
+                    'requested_signing_bonus' => '$2.5M',
+                ]],
+            ],
+        ]);
+
+        $this->actingAs($user)->patchJson(route('board.update'), $payload)->assertOk();
+
+        $this->assertDatabaseHas('working_board_entries', [
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
+            'player_id' => $player->id,
+            'round_key' => '1-targets',
+            'requested_signing_bonus' => '$2.5M',
+        ]);
+    }
+
+    public function test_board_page_includes_saved_requested_signing_bonus(): void
+    {
+        $user = User::factory()->admin()->create();
+        $player = Player::factory()->create([
+            'player_pool' => 'hs',
+            'first_name' => 'Bonus',
+            'last_name' => 'Player',
+        ]);
+
+        WorkingBoardEntry::query()->create([
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
+            'entry_type' => WorkingBoardEntry::ENTRY_TYPE_PLAYER,
+            'player_id' => $player->id,
+            'round_key' => '1-targets',
+            'sort_order' => 0,
+            'requested_signing_bonus' => '$3.1M',
+        ]);
+
+        $html = $this->actingAs($user)->get(route('board.index'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('"requested_signing_bonus":"$3.1M"', $html);
+        $this->assertStringContainsString('working-board-signing-bonus-btn', $html);
+        $this->assertStringContainsString('openDraftMoneyEditor(', $html);
+        $this->assertStringContainsString('showSigningBonusTooltip(', $html);
+        $this->assertStringContainsString('working-board-draft-money-popover', $html);
+        $this->assertStringContainsString('working-board-signing-bonus-tooltip', $html);
+        $this->assertStringContainsString('REQUESTED SIGNING BONUS', $html);
+    }
+
+    public function test_board_page_includes_saved_drafted_status(): void
+    {
+        $user = User::factory()->admin()->create();
+        $player = Player::factory()->create([
+            'player_pool' => 'hs',
+            'first_name' => 'Draft',
+            'last_name' => 'Day',
+        ]);
+
+        WorkingBoardEntry::query()->create([
+            'user_id' => $user->id,
+            'board_type' => WorkingBoardEntry::BOARD_MASTER,
+            'entry_type' => WorkingBoardEntry::ENTRY_TYPE_PLAYER,
+            'player_id' => $player->id,
+            'round_key' => '1-targets',
+            'sort_order' => 0,
+            'drafted_status' => WorkingBoardEntry::DRAFTED_STATUS_OTHER,
+        ]);
+
+        $html = $this->actingAs($user)->get(route('board.index'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('"drafted_status":"other"', $html);
+        $this->assertStringContainsString('working-board-signing-bonus-btn', $html);
+        $this->assertStringContainsString('openDraftMoneyEditor(', $html);
+        $this->assertStringContainsString('draftedRowClasses(card)', $html);
+        $this->assertStringContainsString('working-board-draft-money-popover', $html);
+        $this->assertStringContainsString('TEXAS RANGERS', $html);
+    }
+
     public function test_board_page_includes_saved_player_annotations(): void
     {
         $user = User::factory()->admin()->create();
@@ -184,7 +297,9 @@ class WorkingBoardTest extends TestCase
         $this->assertStringContainsString('working-board-annotation-popover--fixed', $html);
         $this->assertStringContainsString('working-board-annotation-tooltip-table', $html);
         $this->assertStringContainsString('>Player<', $html);
-        $this->assertStringContainsString('working-board-name-anchor', $html);
+        $this->assertStringContainsString('working-board-name-row', $html);
+        $this->assertStringContainsString('working-board-name-side', $html);
+        $this->assertStringContainsString('working-board-card-actions', $html);
         $this->assertStringNotContainsString('working-board-col-notes', $html);
         $this->assertStringContainsString('x-teleport="body"', $html);
         $this->assertStringContainsString('"annotationTypes":[{"key":"quick_take"', $html);
@@ -214,10 +329,12 @@ class WorkingBoardTest extends TestCase
 
         $this->assertStringContainsString('"readOnly":true', $html);
         $this->assertStringContainsString('working-board-notes-summary-btn', $html);
-        $this->assertStringContainsString('working-board-name-anchor--readonly', $html);
+        $this->assertStringContainsString('working-board-name-side--left', $html);
         $this->assertStringContainsString('showAnnotationSummaryTooltip', $html);
         $this->assertStringNotContainsString('working-board-add-annotation-btn', $html);
         $this->assertStringNotContainsString('openAnnotationPicker(', $html);
+        $this->assertStringNotContainsString('openDraftMoneyEditor(', $html);
+        $this->assertStringNotContainsString('working-board-signing-bonus-btn', $html);
 
         $payload = $this->boardsPayload([
             WorkingBoardEntry::BOARD_MASTER => [

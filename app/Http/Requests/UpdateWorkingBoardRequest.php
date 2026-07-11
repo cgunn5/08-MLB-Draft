@@ -64,6 +64,17 @@ class UpdateWorkingBoardRequest extends FormRequest
                     'max:5000',
                 ];
             }
+            $rules["boards.$boardType.rounds.$key.*.drafted_status"] = [
+                'nullable',
+                'string',
+                'max:16',
+                Rule::in(WorkingBoardEntry::DRAFTED_STATUS_OPTIONS),
+            ];
+            $rules["boards.$boardType.rounds.$key.*.requested_signing_bonus"] = [
+                'nullable',
+                'string',
+                'max:128',
+            ];
         }
 
         return $rules;

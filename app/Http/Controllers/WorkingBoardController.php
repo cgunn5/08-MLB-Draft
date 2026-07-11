@@ -147,6 +147,8 @@ class WorkingBoardController extends Controller
                             'separators' => $this->nullableBoardString($row['separators'] ?? null),
                             'red_flags' => $this->nullableBoardString($row['red_flags'] ?? null),
                             'dev_opportunities' => $this->nullableBoardString($row['dev_opportunities'] ?? null),
+                            'drafted_status' => $this->nullableBoardString($row['drafted_status'] ?? null),
+                            'requested_signing_bonus' => $this->nullableBoardString($row['requested_signing_bonus'] ?? null),
                         ]);
                         $order++;
                     }
@@ -340,6 +342,8 @@ class WorkingBoardController extends Controller
             'separators' => (string) ($entry?->separators ?? ''),
             'red_flags' => (string) ($entry?->red_flags ?? ''),
             'dev_opportunities' => (string) ($entry?->dev_opportunities ?? ''),
+            'drafted_status' => (string) ($entry?->drafted_status ?? ''),
+            'requested_signing_bonus' => (string) ($entry?->requested_signing_bonus ?? ''),
             'last_name' => $last,
             'first_name' => $first,
             'position' => $position,

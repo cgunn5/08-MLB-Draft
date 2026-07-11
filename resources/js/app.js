@@ -2875,6 +2875,10 @@ document.addEventListener('alpine:init', () => {
         annotationTypes: [],
         annotationEditor: null,
         annotationEditorPosition: { top: 0, left: 0 },
+        draftMoneyEditor: null,
+        draftMoneyEditorPosition: { top: 0, left: 0 },
+        signingBonusTooltip: null,
+        signingBonusTooltipPosition: { top: 0, left: 0 },
         annotationTooltip: null,
         annotationTooltipPosition: { top: 0, left: 0 },
         boardRounds: {},
@@ -3229,6 +3233,8 @@ document.addEventListener('alpine:init', () => {
                 separators: '',
                 red_flags: '',
                 dev_opportunities: '',
+                drafted_status: '',
+                requested_signing_bonus: '',
             };
             const rounds = { ...(this.boardRounds[boardType] ?? {}) };
             const list = [...(rounds[rk] ?? [])];
@@ -3263,6 +3269,216 @@ document.addEventListener('alpine:init', () => {
             return `${ln.toUpperCase()}, ${fn.toUpperCase()}`;
         },
 
+        draftedStatus(card) {
+            const status = String(card?.drafted_status ?? '').trim();
+            return status === 'other' || status === 'us' ? status : '';
+        },
+
+        isDraftedOther(card) {
+            return this.draftedStatus(card) === 'other';
+        },
+
+        isDraftedUs(card) {
+            return this.draftedStatus(card) === 'us';
+        },
+
+        draftedRowClasses(card) {
+            if (this.isDraftedOther(card)) {
+                return 'working-board-card-row--drafted-other';
+            }
+            if (this.isDraftedUs(card)) {
+                return 'working-board-card-row--drafted-us';
+            }
+
+            return '';
+        },
+
+        draftMoneyCard() {
+            const editor = this.draftMoneyEditor;
+            if (!editor) {
+                return null;
+            }
+            const card = this.boardRounds?.[editor.boardType]?.[editor.rk]?.[editor.idx];
+
+            return card && !isRoundDivider(card) ? card : null;
+        },
+
+        hasDraftMoneyDetails(card) {
+            return this.draftedStatus(card) !== '' || this.hasSigningBonus(card);
+        },
+
+        isDraftMoneyEditorOpen(boardType, rk, idx) {
+            const editor = this.draftMoneyEditor;
+            if (!editor) {
+                return false;
+            }
+
+            return (
+                editor.boardType === boardType &&
+                editor.rk === rk &&
+                Number(editor.idx) === Number(idx)
+            );
+        },
+
+        positionDraftMoneyEditor(anchor) {
+            if (!anchor?.getBoundingClientRect) {
+                return;
+            }
+            const rect = anchor.getBoundingClientRect();
+            const width = 208;
+            const height = 248;
+            let top = rect.bottom + 4;
+            let left = rect.left;
+            if (top + height > window.innerHeight - 8) {
+                top = Math.max(8, rect.top - height - 4);
+            }
+            left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
+            this.draftMoneyEditorPosition = { top, left };
+        },
+
+        draftMoneyEditorStyle() {
+            const { top, left } = this.draftMoneyEditorPosition ?? { top: 0, left: 0 };
+
+            return `top: ${top}px; left: ${left}px;`;
+        },
+
+        openDraftMoneyEditor(boardType, rk, idx, event) {
+            if (this.readOnly) {
+                return;
+            }
+            this.closeAnnotationEditor();
+            this.hideAnnotationTooltip();
+            this.hideSigningBonusTooltip();
+            const card = this.boardRounds?.[boardType]?.[rk]?.[idx];
+            if (!card || isRoundDivider(card)) {
+                return;
+            }
+            if (this.isDraftMoneyEditorOpen(boardType, rk, idx)) {
+                this.closeDraftMoneyEditor();
+
+                return;
+            }
+            this.positionDraftMoneyEditor(event?.currentTarget);
+            this.draftMoneyEditor = {
+                boardType,
+                rk,
+                idx,
+                bonusDraft: this.signingBonusText(card),
+            };
+        },
+
+        closeDraftMoneyEditor() {
+            this.draftMoneyEditor = null;
+        },
+
+        setDraftedStatus(status) {
+            const editor = this.draftMoneyEditor;
+            if (!editor || this.readOnly) {
+                return;
+            }
+            const card = this.draftMoneyCard();
+            if (!card) {
+                this.closeDraftMoneyEditor();
+
+                return;
+            }
+            const nextStatus = String(status ?? '').trim();
+            card.drafted_status =
+                nextStatus === 'other' || nextStatus === 'us' ? nextStatus : '';
+            this.boardRounds = { ...this.boardRounds };
+            this.scheduleSave(50);
+        },
+
+        hasSigningBonus(card) {
+            return this.signingBonusText(card) !== '';
+        },
+
+        signingBonusText(card) {
+            return String(card?.requested_signing_bonus ?? '').trim();
+        },
+
+        showSigningBonusTooltip(event, card) {
+            if (!this.hasSigningBonus(card)) {
+                return;
+            }
+            this.hideAnnotationTooltip();
+            const row = event?.currentTarget?.closest?.('tr[data-player-row]');
+            this.positionSigningBonusTooltip(row ?? event?.currentTarget);
+            this.signingBonusTooltip = {
+                text: this.signingBonusText(card),
+            };
+        },
+
+        hideSigningBonusTooltip() {
+            this.signingBonusTooltip = null;
+        },
+
+        positionSigningBonusTooltip(anchor) {
+            if (!anchor?.getBoundingClientRect) {
+                return;
+            }
+            const rect = anchor.getBoundingClientRect();
+            const width = 180;
+            const height = 64;
+            let top = rect.bottom + 6;
+            let left = rect.left + rect.width / 2 - width / 2;
+            if (top + height > window.innerHeight - 8) {
+                top = Math.max(8, rect.top - height - 6);
+            }
+            left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
+            this.signingBonusTooltipPosition = { top, left };
+        },
+
+        signingBonusTooltipStyle() {
+            const { top, left } = this.signingBonusTooltipPosition ?? { top: 0, left: 0 };
+
+            return `top: ${top}px; left: ${left}px;`;
+        },
+
+        canSaveDraftMoneyBonus() {
+            return String(this.draftMoneyEditor?.bonusDraft ?? '').trim() !== '';
+        },
+
+        canClearDraftMoneyBonus() {
+            const card = this.draftMoneyCard();
+
+            return card ? this.hasSigningBonus(card) : false;
+        },
+
+        saveDraftMoneyBonus() {
+            const editor = this.draftMoneyEditor;
+            if (!editor || !this.canSaveDraftMoneyBonus()) {
+                return;
+            }
+            const card = this.draftMoneyCard();
+            if (!card) {
+                this.closeDraftMoneyEditor();
+
+                return;
+            }
+            card.requested_signing_bonus = String(editor.bonusDraft ?? '').trim();
+            this.boardRounds = { ...this.boardRounds };
+            this.closeDraftMoneyEditor();
+            this.scheduleSave(50);
+        },
+
+        clearDraftMoneyBonus() {
+            const editor = this.draftMoneyEditor;
+            if (!editor) {
+                return;
+            }
+            const card = this.draftMoneyCard();
+            if (!card) {
+                this.closeDraftMoneyEditor();
+
+                return;
+            }
+            card.requested_signing_bonus = '';
+            editor.bonusDraft = '';
+            this.boardRounds = { ...this.boardRounds };
+            this.scheduleSave(50);
+        },
+
         hasAnnotation(card, key) {
             return String(card?.[key] ?? '').trim() !== '';
         },
@@ -3279,6 +3495,7 @@ document.addEventListener('alpine:init', () => {
             if (!this.hasAnyAnnotation(card)) {
                 return;
             }
+            this.hideSigningBonusTooltip();
             const row = event?.currentTarget?.closest?.('tr[data-player-row]');
             this.positionAnnotationTooltip(row ?? event?.currentTarget);
             this.annotationTooltip = {
@@ -3354,6 +3571,7 @@ document.addEventListener('alpine:init', () => {
             if (this.readOnly) {
                 return;
             }
+            this.closeDraftMoneyEditor();
             this.hideAnnotationTooltip();
             const card = this.boardRounds?.[boardType]?.[rk]?.[idx];
             if (!card || isRoundDivider(card)) {
@@ -3706,6 +3924,8 @@ document.addEventListener('alpine:init', () => {
                             separators: c.separators ?? '',
                             red_flags: c.red_flags ?? '',
                             dev_opportunities: c.dev_opportunities ?? '',
+                            drafted_status: c.drafted_status ?? '',
+                            requested_signing_bonus: c.requested_signing_bonus ?? '',
                         };
                     });
                 }

@@ -256,6 +256,13 @@ class WorkingBoardEntry extends Model
     /** @var list<string> Board risk scale 1–5 (empty = unset). */
     public const RISK_OPTIONS = ['', '1', '2', '3', '4', '5'];
 
+    public const DRAFTED_STATUS_OTHER = 'other';
+
+    public const DRAFTED_STATUS_US = 'us';
+
+    /** @var list<string> Live draft-day status (empty = on the board). */
+    public const DRAFTED_STATUS_OPTIONS = ['', self::DRAFTED_STATUS_OTHER, self::DRAFTED_STATUS_US];
+
     /** @var list<string> Player-card annotation field keys (stored on board entries). */
     public const ANNOTATION_KEYS = [
         'quick_take',
@@ -350,6 +357,8 @@ class WorkingBoardEntry extends Model
         'separators',
         'red_flags',
         'dev_opportunities',
+        'drafted_status',
+        'requested_signing_bonus',
     ];
 
     /**
